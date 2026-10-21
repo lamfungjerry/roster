@@ -3,627 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>極速排更助手</title>
+  <title>排更助手</title>
+  
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase Compat SDK -->
+  
+  <!-- 自訂獨立樣式表 -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <style>
-    /* iOS 平滑滾動與點擊優化 */
-    * { -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 85px); }
-  </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
 
-  <!-- ================= FIREBASE 設定區 ================= -->
-  <script>
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "firebase/app";
-    import { getAnalytics } from "firebase/analytics";
-    // TODO: Add SDKs for Firebase products that you want to use
-    // https://firebase.google.com/docs/web/setup#available-libraries
-    
-    // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-    const firebaseConfig = {
-      apiKey: "AIzaSyA6B-U_ffPcDnGhaeizwYh_uMsi4oAKaPo",
-      authDomain: "roster-9a699.firebaseapp.com",
-      databaseURL: "https://roster-9a699-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "roster-9a699",
-      storageBucket: "roster-9a699.firebasestorage.app",
-      messagingSenderId: "286093798970",
-      appId: "1:286093798970:web:842750f200e1ca3f684f03",
-      measurementId: "G-DD7WDKYHCM"
-    };
-    
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    
-    // 初始化 Firebase
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.database();
-  </script>
-
-  <!-- 頂部導航列 -->
-  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-    <div>
-      <h1 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-        <span>📅 極速排更</span>
-        <span id="sync-status" class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-normal">已就緒</span>
-      </h1>
-    </div>
+  <!-- 頂部極簡導航 -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 py-2.5 flex items-center justify-between">
     <div class="flex items-center gap-2">
-      <button onclick="openStatsModal()" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-600 active:bg-indigo-100">
+      <span class="text-base font-black text-slate-900 tracking-tight">📅 排更</span>
+      <span id="sync-badge" onclick="openSettingsModal()" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-medium cursor-pointer">
+        未綁定 Key (點此)
+      </span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button onclick="openStatsModal()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 active:bg-slate-200">
         📊 統計
       </button>
-      <button onclick="copySuperPrompt()" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white shadow-sm active:bg-emerald-700">
-        📋 Copy Prompt
+      <button onclick="copySuperPrompt()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white shadow-sm active:bg-emerald-700">
+        📋 Copy
       </button>
-      <button onclick="openSettingsModal()" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200">
+      <button onclick="openSettingsModal()" class="p-1.5 text-slate-500 rounded-lg active:bg-slate-100">
         ⚙️
       </button>
     </div>
   </header>
 
-  <!-- 控制面板 (排更週期) -->
-  <main class="max-w-md mx-auto p-4 safe-bottom">
-    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 mb-4">
-      <div class="flex items-center justify-between gap-3 text-sm">
-        <div class="flex-1">
-          <label class="block text-xs font-medium text-slate-500 mb-1">起始日期 (建議週一)</label>
-          <input type="date" id="start-date" onchange="onDateConfigChange()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div class="w-28">
-          <label class="block text-xs font-medium text-slate-500 mb-1">週期長度</label>
-          <select id="weeks-select" onchange="onDateConfigChange()" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="2">2 個星期</option>
-            <option value="3" selected>3 個星期</option>
-          </select>
-        </div>
-      </div>
+  <!-- 週期選擇 -->
+  <main class="max-w-md mx-auto p-3 safe-bottom">
+    <div class="bg-white rounded-xl p-2.5 shadow-sm border border-slate-200/80 mb-3 flex items-center justify-between gap-2">
+      <input type="date" id="start-date" onchange="onDateConfigChange()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none flex-1">
+      <select id="weeks-select" onchange="onDateConfigChange()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none">
+        <option value="2">2 星期</option>
+        <option value="3" selected>3 星期</option>
+      </select>
     </div>
 
-    <!-- 排更列表容器 -->
-    <div id="schedule-container" class="space-y-3">
-      <!-- 動態插入日期卡片 -->
-    </div>
+    <!-- 更表卡片容器 -->
+    <div id="schedule-container" class="space-y-2"></div>
   </main>
 
-  <!-- 底部固定虛擬九宮格鍵盤 (iPhone 手部熱區) -->
-  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-2 sm:pb-4 shadow-lg">
+  <!-- 底部固定虛擬鍵盤 (大拇指熱區) -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-2 sm:pb-4 shadow-xl">
     <div class="max-w-md mx-auto">
-      <!-- 快捷功能輔助列 -->
-      <div class="flex items-center justify-between px-2 mb-1.5 text-xs">
-        <span class="text-slate-500 font-medium">當前選中：<strong id="active-day-label" class="text-indigo-600">未選取</strong></span>
-        <div class="flex gap-2">
-          <button onclick="toggleActiveFullHoliday()" class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 active:bg-amber-100 font-medium">
-            🌴 全日休
-          </button>
-          <button onclick="clearActiveDay()" class="px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 active:bg-rose-100 font-medium">
-            ↺ 清空當天
-          </button>
-          <button onclick="jumpNextDay()" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 active:bg-slate-200 font-medium">
-            跳過 ➔
-          </button>
+      <div class="flex items-center justify-between px-1 mb-1.5">
+        <div id="active-day-label" class="text-xs font-extrabold text-indigo-600">--</div>
+        <div class="flex gap-1.5">
+          <button onclick="toggleActiveFullHoliday()" class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium active:bg-amber-100">🌴 全休</button>
+          <button onclick="clearActiveDay()" class="px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 text-xs font-medium active:bg-rose-100">↺ 清空</button>
+          <button onclick="jumpNextDay()" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium active:bg-slate-200">跳過 ➔</button>
         </div>
       </div>
-
-      <!-- 6 位員工大按鈕 -->
-      <div class="grid grid-cols-6 gap-1.5 px-1">
-        <button id="btn-Y" onclick="inputStaff('Y')" class="h-13 py-3 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow">Y</button>
-        <button id="btn-I" onclick="inputStaff('I')" class="h-13 py-3 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow">I</button>
-        <button id="btn-S" onclick="inputStaff('S')" class="h-13 py-3 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow">S</button>
-        <button id="btn-K" onclick="inputStaff('K')" class="h-13 py-3 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow">K</button>
-        <button id="btn-C" onclick="inputStaff('C')" class="h-13 py-3 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow">C</button>
-        <button id="btn-V" onclick="inputStaff('V')" class="h-13 py-3 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow">V</button>
-      </div>
+      <!-- 6 位員工按鈕 -->
+      <div id="staff-buttons-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
   </div>
 
   <!-- 統計 Modal -->
-  <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="text-base font-bold text-slate-900">📊 即時出勤統計 (公平性)</h3>
-        <button onclick="closeStatsModal()" class="text-slate-400 text-xl font-bold p-1">✕</button>
-      </div>
-      <div id="stats-content">
-        <!-- 統計表格渲染 -->
-      </div>
-      <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-sm">關閉</button>
-    </div>
-  </div>
-
-  <!-- 設定與 Prompt Modal -->
-  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-base font-bold text-slate-900">⚙️ 系統設定 & Super Prompt</h3>
-        <button onclick="closeSettingsModal()" class="text-slate-400 text-xl font-bold p-1">✕</button>
+        <h3 class="text-sm font-bold text-slate-900">📊 出勤公平性統計</h3>
+        <button onclick="closeStatsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
+      <div id="stats-content"></div>
+      <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">關閉</button>
+    </div>
+  </div>
+
+  <!-- 設定 Modal -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-2">
+        <h3 class="text-sm font-bold text-slate-900">⚙️ 系統設定</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
+      </div>
+      
+      <!-- API Key 儲存 -->
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <label class="block text-xs font-bold text-slate-700 mb-1">🔑 Firebase API Key (存於此手機)：</label>
+        <p class="text-[10px] text-slate-400 mb-1.5">只需輸入以 <code>AIzaSy...</code> 開頭的 Key 字串即可。</p>
+        <input type="text" id="api-key-input" placeholder="AIzaSy..." class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none">
+        <div class="flex justify-end mt-2">
+          <button onclick="saveApiKey()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">儲存 Key</button>
+        </div>
+      </div>
+
+      <!-- Super Prompt 模板 -->
       <div>
-        <label class="block text-xs font-semibold text-slate-600 mb-1">自訂 Super Prompt 模板 (同步至雲端)：</label>
-        <p class="text-[11px] text-slate-400 mb-2">可使用標籤：<code>{{DATE_RANGE}}</code>, <code>{{STATISTICS}}</code>, <code>{{SCHEDULE_DATA}}</code></p>
-        <textarea id="prompt-template-input" rows="8" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button onclick="savePromptTemplate()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm active:bg-indigo-700">儲存模板至雲端</button>
-        <button onclick="resetDefaultPrompt()" class="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">還原預設</button>
+        <label class="block text-xs font-bold text-slate-700 mb-1">📝 Super Prompt 模板：</label>
+        <textarea id="prompt-template-input" rows="6" class="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none"></textarea>
+        <div class="flex gap-2 mt-2">
+          <button onclick="savePromptTemplate()" class="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold text-xs">儲存 Prompt</button>
+          <button onclick="resetDefaultPrompt()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 font-semibold text-xs">還原預設</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- 提示 Toast -->
-  <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-4 py-2 rounded-full text-xs font-medium shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none">
-    提示訊息
-  </div>
+  <!-- Toast 提示 -->
+  <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md transition-opacity duration-200 opacity-0 pointer-events-none"></div>
 
-  <!-- ================= 主應用邏輯 ================= -->
-  <script>
-    const ALL_STAFF = ['Y', 'I', 'S', 'K', 'C', 'V'];
-    const WEEK_DAYS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-
-    const DEFAULT_PROMPT = `你現在是一位營運排班評估助手。以下是未來週期（{{DATE_RANGE}}）6 位員工（Y, I, S, K, C, V）的更表數據。
-除週日與全日假期外，每日需要排妥 6 人。
-
-【基本統計數據】
-{{STATISTICS}}
-
-【完整排班數據 (JSON)】
-\`\`\`json
-{{SCHEDULE_DATA}}
-\`\`\`
-
-請根據以上資料進行以下兩項分析與評估：
-1. 出勤公平性評估：比較 6 位員工（Y, I, S, K, C, V）的實際出勤總天數是否均勻，分析各人總工作天數是否存在顯著落差。
-2. 休假與分佈建議：檢視各人的個別休假與排班分佈；若出勤天數落差過大，請提出具體的微調或對調建議，以求總工作量更加平衡。`;
-
-    let state = {
-      startDate: '',
-      weeks: 3,
-      schedule: [], // [{ date, dayName, isSunday, isFullDayHoliday, shifts: [{ staff, status: 'ON'|'OFF' }] }]
-      activeDayIndex: 0,
-      promptTemplate: DEFAULT_PROMPT
-    };
-
-    // 初始化啟動
-    window.addEventListener('DOMContentLoaded', () => {
-      initDefaultDates();
-      loadCloudData();
-    });
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.innerText = msg;
-      toast.classList.remove('opacity-0');
-      setTimeout(() => toast.classList.add('opacity-0'), 2200);
-    }
-
-    function triggerHaptic() {
-      if (navigator.vibrate) navigator.vibrate(40);
-    }
-
-    // 預設取得下一個星期一
-    function initDefaultDates() {
-      const d = new Date();
-      const day = d.getDay();
-      const diff = (day === 0 ? 1 : (8 - day)); // 下個週一
-      d.setDate(d.getDate() + diff);
-      const iso = d.toISOString().split('T')[0];
-      state.startDate = iso;
-      document.getElementById('start-date').value = iso;
-      document.getElementById('weeks-select').value = state.weeks;
-    }
-
-    function onDateConfigChange() {
-      state.startDate = document.getElementById('start-date').value;
-      state.weeks = parseInt(document.getElementById('weeks-select').value, 10);
-      generateScheduleSkeleton();
-      saveCloudData();
-    }
-
-    // 建立更表骨架
-    function generateScheduleSkeleton(existingShifts = {}) {
-      const list = [];
-      const totalDays = state.weeks * 7;
-      const start = new Date(state.startDate);
-
-      for (let i = 0; i < totalDays; i++) {
-        const curr = new Date(start);
-        curr.setDate(start.getDate() + i);
-        const iso = curr.toISOString().split('T')[0];
-        const dayIdx = curr.getDay();
-        const isSun = (dayIdx === 0);
-
-        list.push({
-          date: iso,
-          dayName: WEEK_DAYS[dayIdx],
-          isSunday: isSun,
-          isFullDayHoliday: existingShifts[iso]?.isFullDayHoliday || false,
-          shifts: existingShifts[iso]?.shifts || []
-        });
-      }
-      state.schedule = list;
-      // 尋找第一個未排滿的工作日為 active
-      const firstActive = list.findIndex(d => !d.isSunday && !d.isFullDayHoliday && d.shifts.length < 6);
-      state.activeDayIndex = firstActive !== -1 ? firstActive : 0;
-      renderSchedule();
-      updateActiveDock();
-    }
-
-    // 渲染日期清單
-    function renderSchedule() {
-      const container = document.getElementById('schedule-container');
-      container.innerHTML = '';
-
-      state.schedule.forEach((day, idx) => {
-        const isActive = (idx === state.activeDayIndex);
-        const card = document.createElement('div');
-        card.className = `p-3.5 rounded-2xl border transition-all duration-150 ${
-          isActive 
-            ? 'bg-white border-indigo-500 shadow-md ring-2 ring-indigo-500/20' 
-            : day.isSunday 
-              ? 'bg-slate-200/50 border-slate-200 opacity-60' 
-              : day.isFullDayHoliday 
-                ? 'bg-amber-50/70 border-amber-200' 
-                : 'bg-white border-slate-200/90 shadow-sm'
-        }`;
-        card.onclick = () => selectActiveDay(idx);
-
-        // 卡片標題
-        let badges = '';
-        if (day.isSunday) {
-          badges = `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-300 text-slate-700">週日公休</span>`;
-        } else if (day.isFullDayHoliday) {
-          badges = `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-200 text-amber-800">🌴 全日假期</span>`;
-        } else {
-          badges = `<span class="text-[11px] font-medium text-slate-400">${day.shifts.length}/6 人</span>`;
-        }
-
-        let shiftsHtml = '';
-        if (!day.isSunday && !day.isFullDayHoliday) {
-          shiftsHtml = `<div class="flex flex-wrap gap-1.5 mt-2">
-            ${day.shifts.map((s, sIdx) => `
-              <button onclick="event.stopPropagation(); toggleShiftStatus(${idx},${sIdx});" 
-                class="px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
-                  s.status === 'ON' 
-                    ? 'bg-slate-900 text-white border-slate-900' 
-                    : 'bg-rose-100 text-rose-700 border-rose-300 line-through'
-                }">
-                ${s.staff}${s.status === 'OFF' ? '(休)' : ''}
-              </button>
-            `).join('')}
-            ${day.shifts.length === 0 ? '<span class="text-xs text-slate-300 italic">點擊下方鍵盤輸入...</span>' : ''}
-          </div>`;
-        }
-
-        card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-bold ${isActive ? 'text-indigo-600' : 'text-slate-800'}">${day.date.substring(5)} (${day.dayName})</span>
-              ${isActive ? '<span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>' : ''}
-            </div>
-            <div>${badges}</div>
-          </div>
-          ${shiftsHtml}
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    function selectActiveDay(idx) {
-      state.activeDayIndex = idx;
-      renderSchedule();
-      updateActiveDock();
-    }
-
-    // 更新底部鍵盤狀態
-    function updateActiveDock() {
-      const active = state.schedule[state.activeDayIndex];
-      const label = document.getElementById('active-day-label');
-      if (!active) {
-        label.innerText = '無選取';
-        return;
-      }
-      label.innerText = `${active.date.substring(5)} (${active.dayName})`;
-
-      const isLocked = active.isSunday || active.isFullDayHoliday;
-      const enteredStaff = active.shifts.map(s => s.staff);
-
-      ALL_STAFF.forEach(staff => {
-        const btn = document.getElementById(`btn-${staff}`);
-        const alreadyEntered = enteredStaff.includes(staff);
-        if (isLocked || alreadyEntered) {
-          btn.disabled = true;
-          btn.classList.add('opacity-25', 'pointer-events-none');
-        } else {
-          btn.disabled = false;
-          btn.classList.remove('opacity-25', 'pointer-events-none');
-        }
-      });
-    }
-
-    // 點擊員工輸入
-    function inputStaff(staff) {
-      triggerHaptic();
-      const current = state.schedule[state.activeDayIndex];
-      if (!current || current.isSunday || current.isFullDayHoliday) return;
-
-      if (!current.shifts.some(s => s.staff === staff)) {
-        current.shifts.push({ staff: staff, status: 'ON' });
-      }
-
-      // 如果當天已滿 6 人，自動跳到下一個未排滿的工作日
-      if (current.shifts.length >= 6) {
-        jumpNextDay();
-      } else {
-        renderSchedule();
-        updateActiveDock();
-      }
-      debounceSave();
-    }
-
-    // 切換某人上班/休假狀態 (ON / OFF)
-    function toggleShiftStatus(dayIdx, shiftIdx) {
-      triggerHaptic();
-      const shift = state.schedule[dayIdx].shifts[shiftIdx];
-      shift.status = (shift.status === 'ON' ? 'OFF' : 'ON');
-      renderSchedule();
-      debounceSave();
-    }
-
-    // 切換全日假期
-    function toggleActiveFullHoliday() {
-      triggerHaptic();
-      const current = state.schedule[state.activeDayIndex];
-      if (!current || current.isSunday) return;
-
-      current.isFullDayHoliday = !current.isFullDayHoliday;
-      if (current.isFullDayHoliday) {
-        current.shifts = [];
-        jumpNextDay();
-      } else {
-        renderSchedule();
-        updateActiveDock();
-      }
-      debounceSave();
-    }
-
-    // 清空當天更表
-    function clearActiveDay() {
-      const current = state.schedule[state.activeDayIndex];
-      if (!current) return;
-      current.shifts = [];
-      current.isFullDayHoliday = false;
-      renderSchedule();
-      updateActiveDock();
-      debounceSave();
-    }
-
-    // 自動跳往下一天
-    function jumpNextDay() {
-      let next = state.activeDayIndex + 1;
-      while (next < state.schedule.length && state.schedule[next].isSunday) {
-        next++;
-      }
-      if (next < state.schedule.length) {
-        state.activeDayIndex = next;
-      }
-      renderSchedule();
-      updateActiveDock();
-      // 自動滾動到視圖中
-      setTimeout(() => {
-        const container = document.getElementById('schedule-container');
-        if (container.children[state.activeDayIndex]) {
-          container.children[state.activeDayIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 50);
-    }
-
-    // 計算出勤與公平性統計
-    function calculateStatistics() {
-      const stats = {};
-      ALL_STAFF.forEach(s => {
-        stats[s] = { onCount: 0, offCount: 0, fullHolidays: 0 };
-      });
-
-      let totalWorkSlots = 0;
-      state.schedule.forEach(day => {
-        if (day.isSunday || day.isFullDayHoliday) {
-          ALL_STAFF.forEach(s => stats[s].fullHolidays++);
-        } else {
-          day.shifts.forEach(shift => {
-            if (shift.status === 'ON') {
-              stats[shift.staff].onCount++;
-              totalWorkSlots++;
-            } else if (shift.status === 'OFF') {
-              stats[shift.staff].offCount++;
-            }
-          });
-        }
-      });
-
-      const avgWorkDays = (totalWorkSlots / 6).toFixed(1);
-      return { stats, avgWorkDays };
-    }
-
-    // 打開統計面板
-    function openStatsModal() {
-      const { stats, avgWorkDays } = calculateStatistics();
-      let tableHtml = `
-        <div class="mb-3 p-3 bg-indigo-50/70 rounded-xl text-xs text-indigo-900 flex justify-between items-center">
-          <span>6 人平均出勤天數：</span>
-          <span class="text-base font-extrabold text-indigo-600">${avgWorkDays} 天</span>
-        </div>
-        <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
-          <table class="w-full text-center">
-            <thead class="bg-slate-50 text-slate-500 border-b">
-              <tr>
-                <th class="py-2">員工</th>
-                <th class="py-2">實出勤 (ON)</th>
-                <th class="py-2">輪休 (OFF)</th>
-                <th class="py-2">公休</th>
-                <th class="py-2">偏離平均</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-      `;
-
-      ALL_STAFF.forEach(staff => {
-        const s = stats[staff];
-        const diff = (s.onCount - avgWorkDays).toFixed(1);
-        const diffFormatted = diff > 0 ? `+${diff}` : diff;
-        const highlightClass = Math.abs(diff) >= 2 ? 'text-amber-600 font-bold' : 'text-slate-500';
-
-        tableHtml += `
-          <tr class="hover:bg-slate-50">
-            <td class="py-2.5 font-bold text-slate-800">${staff}</td>
-            <td class="py-2.5 font-semibold text-slate-900">${s.onCount} 天</td>
-            <td class="py-2.5 text-slate-500">${s.offCount} 天</td>
-            <td class="py-2.5 text-slate-400">${s.fullHolidays} 天</td>
-            <td class="py-2.5 ${highlightClass}">${diffFormatted}</td>
-          </tr>
-        `;
-      });
-
-      tableHtml += `</tbody></table></div>`;
-      document.getElementById('stats-content').innerHTML = tableHtml;
-      document.getElementById('stats-modal').classList.remove('hidden');
-    }
-
-    function closeStatsModal() {
-      document.getElementById('stats-modal').classList.add('hidden');
-    }
-
-    // 一鍵生成 & 複製 Super Prompt 到剪貼簿
-    async function copySuperPrompt() {
-      const { stats, avgWorkDays } = calculateStatistics();
-      const dateRangeStr = `${state.schedule[0]?.date || ''} 至 ${state.schedule[state.schedule.length - 1]?.date || ''}`;
-
-      // 產生統計文本
-      let statText = `【週期出勤統計 (平均：${avgWorkDays} 天)】\n`;
-      ALL_STAFF.forEach(st => {
-        const s = stats[st];
-        const diff = (s.onCount - avgWorkDays).toFixed(1);
-        statText += `員工 ${st}：出勤 ${s.onCount} 天 | 輪休 ${s.offCount} 天 | 落差 ${diff > 0 ? '+' : ''}${diff}\n`;
-      });
-
-      // 產出淨化後的排更 JSON
-      const jsonPayload = JSON.stringify({
-        period: dateRangeStr,
-        staff: ALL_STAFF,
-        schedule: state.schedule.map(d => ({
-          date: d.date,
-          dayOfWeek: d.dayName,
-          isFullDayHoliday: d.isFullDayHoliday,
-          shifts: d.shifts
-        }))
-      }, null, 2);
-
-      // 注入 Prompt 模板
-      let finalPrompt = state.promptTemplate
-        .replace('{{DATE_RANGE}}', dateRangeStr)
-        .replace('{{STATISTICS}}', statText)
-        .replace('{{SCHEDULE_DATA}}', jsonPayload);
-
-      try {
-        await navigator.clipboard.writeText(finalPrompt);
-        showToast('✅ Super Prompt 已複製！前往貼上即可');
-      } catch (err) {
-        showToast('請長按手動選取複製');
-      }
-    }
-
-    // 設定 Modal 相關
-    function openSettingsModal() {
-      document.getElementById('prompt-template-input').value = state.promptTemplate;
-      document.getElementById('settings-modal').classList.remove('hidden');
-    }
-
-    function closeSettingsModal() {
-      document.getElementById('settings-modal').classList.add('hidden');
-    }
-
-    function savePromptTemplate() {
-      const val = document.getElementById('prompt-template-input').value;
-      state.promptTemplate = val;
-      db.ref('config/promptTemplate').set(val).then(() => {
-        showToast('Prompt 模板已同步至雲端');
-        closeSettingsModal();
-      });
-    }
-
-    function resetDefaultPrompt() {
-      document.getElementById('prompt-template-input').value = DEFAULT_PROMPT;
-    }
-
-    // ================= 雲端即時同步 (Firebase) =================
-    let saveTimeout = null;
-    function debounceSave() {
-      document.getElementById('sync-status').innerText = '儲存中...';
-      document.getElementById('sync-status').className = 'text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-normal';
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(saveCloudData, 800);
-    }
-
-    function saveCloudData() {
-      const payload = {
-        startDate: state.startDate,
-        weeks: state.weeks,
-        schedule: state.schedule,
-        updatedAt: new Date().toISOString()
-      };
-
-      db.ref('schedule_data').set(payload)
-        .then(() => {
-          document.getElementById('sync-status').innerText = '已同步';
-          document.getElementById('sync-status').className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-normal';
-        })
-        .catch(err => {
-          console.error(err);
-          document.getElementById('sync-status').innerText = '離線';
-          document.getElementById('sync-status').className = 'text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-normal';
-        });
-    }
-
-    function loadCloudData() {
-      document.getElementById('sync-status').innerText = '載入中...';
-      
-      // 讀取 Prompt 模板
-      db.ref('config/promptTemplate').once('value').then(snap => {
-        if (snap.exists()) state.promptTemplate = snap.val();
-      });
-
-      // 讀取更表資料
-      db.ref('schedule_data').once('value').then(snap => {
-        if (snap.exists()) {
-          const val = snap.val();
-          state.startDate = val.startDate || state.startDate;
-          state.weeks = val.weeks || state.weeks;
-          document.getElementById('start-date').value = state.startDate;
-          document.getElementById('weeks-select').value = state.weeks;
-          
-          const shiftMap = {};
-          (val.schedule || []).forEach(d => {
-            shiftMap[d.date] = { shifts: d.shifts, isFullDayHoliday: d.isFullDayHoliday };
-          });
-          generateScheduleSkeleton(shiftMap);
-        } else {
-          generateScheduleSkeleton();
-        }
-        document.getElementById('sync-status').innerText = '已連線';
-        document.getElementById('sync-status').className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-normal';
-      }).catch(err => {
-        console.warn('Firebase 連線失敗，載入本機預設：', err);
-        generateScheduleSkeleton();
-      });
-    }
-  </script>
+  <!-- 依序載入設定檔與核心腳本 -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
