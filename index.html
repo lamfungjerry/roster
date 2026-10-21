@@ -31,7 +31,7 @@
       padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 55px);
     }
 
-    /* 等寬代號標籤 (以最寬的「V休」為準，固定 48px) */
+    /* 等寬代號標籤 (以最寬的「V休」為基準，固定 48px) */
     .staff-badge {
       display: inline-flex;
       align-items: center;
@@ -75,7 +75,7 @@
     <div class="flex items-center gap-2">
       <span class="text-base font-black text-slate-900 tracking-tight">📅 排更</span>
       <span id="sync-badge" onclick="openSettingsModal()" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-medium cursor-pointer">
-        檢查連線中...
+        載入中...
       </span>
     </div>
     <div class="flex items-center gap-1.5">
@@ -111,8 +111,6 @@
   <!-- 底部固定鍵盤 -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl transition-all duration-200 p-2 sm:pb-4">
     <div class="max-w-md mx-auto">
-      
-      <!-- 控制按鈕列 -->
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-1.5">
           <button id="toggle-dock-btn" onclick="toggleKeyboard()" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-extrabold flex items-center gap-1 active:bg-slate-200">
@@ -121,7 +119,6 @@
           <span id="active-day-label" class="text-xs font-extrabold text-indigo-600 pl-1">--</span>
         </div>
         
-        <!-- 加大快捷鍵 -->
         <div class="flex gap-1.5">
           <button onclick="toggleActiveFullHoliday()" class="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold active:bg-amber-100 shadow-xs">
             🌴 全休
@@ -135,7 +132,6 @@
         </div>
       </div>
 
-      <!-- 6 位員工大按鈕 -->
       <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
   </div>
@@ -158,7 +154,7 @@
     </div>
   </div>
 
-  <!-- 📊 統計 Modal (聚焦 1~6 號更位分佈) -->
+  <!-- 📊 統計 Modal -->
   <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
@@ -187,7 +183,7 @@
         <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-4 h-4 text-indigo-600 rounded">
       </div>
 
-      <!-- API Key 隱私管理 (絕不展示明文) -->
+      <!-- API Key 隱私管理 -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
         <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
         
@@ -221,27 +217,10 @@
     </div>
   </div>
 
-  <!-- Toast 提示 -->
   <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md transition-opacity duration-200 opacity-0 pointer-events-none"></div>
 
-  <!-- ================= 應用邏輯 ================= -->
+  <!-- ================= 應用核心邏輯 ================= -->
   <script>
-    const DEFAULT_POSITION_PROMPT = `你現在是一位營運排班評估助手。以下是未來週期（{{DATE_RANGE}}）6 位員工（Y, I, S, K, C, V）的更表數據。
-每日均排滿 6 人，分別對應第 1 至第 6 號更位。
-
-【1~6 號更位分佈統計數據】
-{{STATISTICS}}
-
-【完整排班數據 (JSON)】
-\`\`\`json
-{{SCHEDULE_DATA}}
-\`\`\`
-
-請針對 6 位員工在「第 1 至第 6 號更位」的分配進行深度公平性評估：
-1. 更位分佈公平性：分析每位員工在 1~6 號位置的分配是否均勻。是否有特定員工過度集中在某些更位（例如過多排在 1 號位或 6 號位）？
-2. 極端值與偏離檢測：指出偏離平均期望值最大的更位分配情況。
-3. 對調與輪換建議：若更位分配存在顯著不均，請列出具體建議在哪些日期將哪兩位員工的更位順序對調，以達成全體更位輪替的公平。`;
-
     let db = null;
     let state = {
       startDate: '',
@@ -249,31 +228,38 @@
       includeSaturday: false,
       schedule: [],
       activeDayIndex: 0,
-      promptTemplate: DEFAULT_POSITION_PROMPT,
+      promptTemplate: '',
       isKeyboardCollapsed: false
     };
 
-    // 動態載入防快取 config.js
+    // 嚴格載入 config.js：失敗時直接中斷並彈窗報錯，絕不使用硬編碼兜底
     (function loadFreshConfig() {
       const script = document.createElement('script');
       script.src = 'config.js?t=' + Date.now();
-      script.onload = () => initApp();
-      script.onerror = () => {
-        console.warn('config.js 載入失敗，啟動備用設定');
-        window.APP_CONFIG = {
-          STAFF_LIST: ['Y', 'I', 'S', 'K', 'C', 'V'],
-          WEEK_DAYS: ['日', '一', '二', '三', '四', '五', '六'],
-          DEFAULT_INCLUDE_SATURDAY: false,
-          dbPath: 'roster_data',
-          DEFAULT_PROMPT: DEFAULT_POSITION_PROMPT
-        };
+      
+      script.onload = () => {
+        if (!window.APP_CONFIG || !window.APP_CONFIG.STAFF_LIST) {
+          handleConfigError('config.js 內容格式不正確，缺少必要的配置參數！');
+          return;
+        }
         initApp();
       };
+
+      script.onerror = () => {
+        handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在於同層目錄或 GitHub 是否發布完成。');
+      };
+
       document.head.appendChild(script);
     })();
 
+    function handleConfigError(errorMessage) {
+      document.getElementById('sync-badge').innerText = '配置錯誤';
+      document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold';
+      alert(errorMessage);
+    }
+
     function initApp() {
-      state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT || DEFAULT_POSITION_PROMPT;
+      state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT || '';
       loadLocalPreferences();
       initKeyboardButtons();
       initDefaultDates();
@@ -612,12 +598,11 @@
       showToast('✅ 匯入成功並已同步');
     }
 
-    // ================= 核心：1~6 號更位位置統計演算法 =================
+    // 1~6 號更位分佈演算法
     function calculatePositionStats() {
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const matrix = {};
       
-      // 初始化矩陣：每人記錄 pos1 ~ pos6 的次數與總計
       staffList.forEach(s => {
         matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0 };
       });
@@ -628,7 +613,7 @@
         if (!day.isRest && !day.isFullDayHoliday && day.shifts.length > 0) {
           validWorkingDays++;
           day.shifts.forEach((shift, sIdx) => {
-            const pos = sIdx + 1; // 1 ~ 6 號位
+            const pos = sIdx + 1;
             if (pos <= 6 && matrix[shift.staff]) {
               matrix[shift.staff][pos]++;
               matrix[shift.staff].total++;
@@ -638,11 +623,9 @@
         }
       });
 
-      // 理想期望值：在均勻分佈下，每個更位出現的理論次數
       const expectedPerPosition = (validWorkingDays / 6).toFixed(1);
-
-      // 計算各位置排最多的人
       const topPerPosition = {};
+
       for (let p = 1; p <= 6; p++) {
         let maxCount = -1;
         let leaders = [];
@@ -661,7 +644,6 @@
       return { matrix, validWorkingDays, expectedPerPosition, topPerPosition };
     }
 
-    // 渲染統計面板 (精簡直觀橫向矩陣)
     function openStatsModal() {
       const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
       const staffList = window.APP_CONFIG.STAFF_LIST;
@@ -678,7 +660,6 @@
           </div>
         </div>
 
-        <!-- 1~6 更位分佈矩陣表 -->
         <div class="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
           <table class="w-full text-center text-xs">
             <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 text-[11px]">
@@ -707,7 +688,6 @@
 
         for (let p = 1; p <= 6; p++) {
           const val = row[p];
-          // 若偏離期望值達 2 次以上，標記提醒色
           const isHigh = validWorkingDays > 0 && (val - expectedPerPosition) >= 2;
           const isZero = validWorkingDays >= 6 && val === 0;
 
@@ -731,7 +711,6 @@
           </table>
         </div>
 
-        <!-- 各更位冠軍速覽卡片 -->
         <div class="mt-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">各更位排最多人選：</div>
           <div class="grid grid-cols-2 gap-1.5 text-xs">
@@ -762,7 +741,6 @@
       document.getElementById('stats-modal').classList.add('hidden');
     }
 
-    // 複製 Prompt (注入更位分佈統計數據)
     async function copySuperPrompt() {
       const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
       const staffList = window.APP_CONFIG.STAFF_LIST;
@@ -868,7 +846,7 @@
     }
 
     function resetDefaultPrompt() {
-      document.getElementById('prompt-template-input').value = DEFAULT_POSITION_PROMPT;
+      document.getElementById('prompt-template-input').value = window.APP_CONFIG.DEFAULT_PROMPT || '';
     }
 
     function initFirebaseWithStoredKey() {
