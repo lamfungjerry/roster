@@ -133,7 +133,7 @@
     </div>
   </div>
 
-  <!-- 🗓️ 視覺化自訂月曆 Modal -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -143,18 +143,17 @@
       </div>
 
       <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
+        <span class="text-rose-600 font-black">日</span>
         <span class="text-slate-600">一</span>
         <span class="text-slate-600">二</span>
         <span class="text-slate-600">三</span>
         <span class="text-slate-600">四</span>
         <span class="text-slate-600">五</span>
         <span class="text-slate-600">六</span>
-        <span class="text-rose-600 font-black">日</span>
       </div>
 
       <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
 
-      <!-- 精簡圖例說明 -->
       <div class="flex items-center justify-center gap-4 pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-bold">
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>已填</span>
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>未填</span>
@@ -262,7 +261,8 @@
       activeDate: '',
       promptTemplate: '',
       calYear: 2026,
-      calMonth: 9
+      calMonth: 9,
+      visibleDays: []
     };
 
     (function loadFreshConfig() {
@@ -290,11 +290,11 @@
     function getMondayOfDate(d) {
       const date = new Date(d);
       const day = date.getDay();
-      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-      return new Date(date.setDate(diff));
+      const diff = (day === 0) ? 1 : (1 - day);
+      date.setDate(date.getDate() + diff);
+      return date;
     }
 
-    // 計算本週結尾（星期日）的 ISO 日期字串
     function getThisWeekEndIso() {
       const now = new Date();
       const day = now.getDay();
@@ -414,14 +414,11 @@
       }, 150);
     }
 
-    function renderVisibleSchedule(resetActive = true) {
-      const container = document.getElementById('schedule-container');
-      container.innerHTML = '';
-
+    // 建立可見日期骨架列表 (僅週一至週六)
+    function buildVisibleDaysList() {
+      const list = [];
       const totalDays = state.weeksCount * 7;
       const start = new Date(state.startDate);
-      let firstUnsetIndex = -1;
-      let visibleIndex = 0;
 
       for (let i = 0; i < totalDays; i++) {
         const curr = new Date(start);
@@ -429,20 +426,36 @@
         const iso = curr.toISOString().split('T')[0];
         const dayIdx = curr.getDay();
 
-        if (dayIdx === 0) continue;
+        if (dayIdx === 0) continue; // 星期日不顯示
 
         const isAutoRest = isRestDay(dayIdx);
         const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
-        const shifts = dayRecord.shifts || [];
-        const isFullHoliday = !!dayRecord.isFullDayHoliday;
 
-        const thisIndex = visibleIndex++;
-        if (firstUnsetIndex === -1 && !isAutoRest && !isFullHoliday && shifts.length < 6) {
+        list.push({
+          iso,
+          dayIdx,
+          isRest: isAutoRest,
+          isFullHoliday: !!dayRecord.isFullDayHoliday,
+          shifts: dayRecord.shifts || []
+        });
+      }
+      return list;
+    }
+
+    function renderVisibleSchedule(resetActive = true) {
+      const container = document.getElementById('schedule-container');
+      container.innerHTML = '';
+
+      state.visibleDays = buildVisibleDaysList();
+      let firstUnsetIndex = -1;
+
+      state.visibleDays.forEach((day, thisIndex) => {
+        if (firstUnsetIndex === -1 && !day.isRest && !day.isFullHoliday && day.shifts.length < 6) {
           firstUnsetIndex = thisIndex;
         }
 
         const isActive = (thisIndex === state.activeDayIndex);
-        if (isActive) state.activeDate = iso;
+        if (isActive) state.activeDate = day.iso;
 
         const card = document.createElement('div');
         card.id = `day-card-${thisIndex}`;
@@ -450,31 +463,29 @@
         let borderClass = '';
         if (isActive) {
           borderClass = 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md';
-        } else if (isFullHoliday) {
+        } else if (day.isFullHoliday) {
           borderClass = 'bg-rose-50/80 border-rose-300';
-        } else if (isAutoRest) {
+        } else if (day.isRest) {
           borderClass = 'bg-slate-200/40 border-slate-200/60 opacity-60';
         } else {
           borderClass = 'bg-white border-slate-200/80 shadow-xs';
         }
 
         card.className = `p-3 rounded-2xl border transition-all ${borderClass}`;
-        card.onclick = () => selectActiveDay(thisIndex, iso);
+        card.onclick = () => selectActiveDay(thisIndex, day.iso);
 
         let badge = '';
-        if (isFullHoliday) {
+        if (day.isFullHoliday) {
           badge = `<span class="text-[10px] font-black px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-300">🌴 全休</span>`;
-        } else if (isAutoRest) {
-          badge = `<span class="text-[10px] font-semibold text-slate-400">週${window.APP_CONFIG.WEEK_DAYS[dayIdx]}休</span>`;
-        } else if (shifts.length === 6) {
-          badge = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">6/6 已齊</span>`;
+        } else if (day.isRest) {
+          badge = `<span class="text-[10px] font-semibold text-slate-400">週${window.APP_CONFIG.WEEK_DAYS[day.dayIdx]}休</span>`;
         }
 
         let shiftsHtml = '';
-        if (!isAutoRest && !isFullHoliday) {
+        if (!day.isRest && !day.isFullHoliday) {
           shiftsHtml = `<div class="flex flex-wrap gap-1.5 mt-2">
-            ${shifts.map((s, sIdx) => `
-              <button onclick="event.stopPropagation(); toggleShiftStatus('${iso}',${sIdx});" 
+            ${day.shifts.map((s, sIdx) => `
+              <button onclick="event.stopPropagation(); toggleShiftStatus('${day.iso}',${sIdx});" 
                 class="staff-badge ${s.status === 'ON' ? 'staff-badge-on' : 'staff-badge-off'}">
                 ${s.staff}${s.status === 'OFF' ? '休' : ''}
               </button>
@@ -487,21 +498,24 @@
             <span class="text-xs font-bold ${
               isActive 
                 ? 'text-indigo-600 font-black' 
-                : isFullHoliday 
+                : day.isFullHoliday 
                   ? 'text-rose-600 font-black' 
                   : 'text-slate-800'
             }">
-              ${iso.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[dayIdx]})
+              ${day.iso.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[day.dayIdx]})
             </span>
             ${badge}
           </div>
           ${shiftsHtml}
         `;
         container.appendChild(card);
-      }
+      });
 
       if (resetActive) {
         state.activeDayIndex = firstUnsetIndex !== -1 ? firstUnsetIndex : 0;
+        if (state.visibleDays[state.activeDayIndex]) {
+          state.activeDate = state.visibleDays[state.activeDayIndex].iso;
+        }
         const activeCard = container.children[state.activeDayIndex];
         if (activeCard) {
           activeCard.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/20');
@@ -622,17 +636,29 @@
       debounceSaveCloud();
     }
 
+    // 核心優化：填完週五，若週六不需排則直接自動跨週跳至下週一！
     function jumpNextDay() {
-      const container = document.getElementById('schedule-container');
+      let days = buildVisibleDaysList();
       let nextIndex = state.activeDayIndex + 1;
 
-      if (nextIndex >= container.children.length) {
-        state.weeksCount++;
-        renderVisibleSchedule(false);
-        showToast('已自動開啟下一週 ➔');
+      while (true) {
+        // 若超出目前可見範圍，無感自動增加一週
+        while (nextIndex >= days.length) {
+          state.weeksCount++;
+          days = buildVisibleDaysList();
+          showToast('已自動開啟下一週 ➔');
+        }
+
+        // 若該日為公休日（如週六關閉排更），直接略過繼續往下找下一個工作日（下週一）
+        if (days[nextIndex].isRest) {
+          nextIndex++;
+        } else {
+          break;
+        }
       }
 
       state.activeDayIndex = nextIndex;
+      state.activeDate = days[nextIndex].iso;
       renderVisibleSchedule(false);
       scrollToDayCard(state.activeDayIndex);
     }
@@ -644,7 +670,7 @@
       }, 50);
     }
 
-    // ================= 🗓️ 自訂視覺化月曆 (打通填齊/未填範圍邏輯) =================
+    // ================= 🗓️ 自訂視覺化月曆 (星期日為第一日) =================
     function openCalendarModal() {
       renderCalendarGrid();
       document.getElementById('calendar-modal').classList.remove('hidden');
@@ -675,15 +701,13 @@
       const lastDay = new Date(state.calYear, state.calMonth + 1, 0);
       const daysInMonth = lastDay.getDate();
 
-      let startOffset = firstDay.getDay() - 1;
-      if (startOffset === -1) startOffset = 6;
+      const startOffset = firstDay.getDay();
 
       for (let i = 0; i < startOffset; i++) {
         const empty = document.createElement('div');
         grid.appendChild(empty);
       }
 
-      // 檢查範圍：系統開始使用日 >> 本週尾
       const systemStartIso = window.APP_CONFIG.SYSTEM_START_DATE || '2000-01-01';
       const thisWeekEndIso = getThisWeekEndIso();
 
@@ -699,7 +723,6 @@
         const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
         const isCompleted = shiftCount === 6;
 
-        // 判定是否在「系統開始使用日 >> 本週尾」檢查區間內
         const isInCheckRange = (iso >= systemStartIso && iso <= thisWeekEndIso);
 
         const cell = document.createElement('button');
@@ -725,14 +748,12 @@
           bgStyle = 'bg-rose-100 border border-rose-300';
         }
 
-        // Marking 圓點標記：已填(綠) / 未填(黃，僅在檢查區間) / 週日全休(紅)
         let dot = '';
         if (isFullHoliday || isSunday) {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
         } else if (isCompleted) {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5"></span>';
         } else if (!isRest && isInCheckRange && shiftCount < 6) {
-          // 在「開始日 >> 本週尾」區間內且未排滿 6 人 (0~5人) 標記為未填
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-0.5"></span>';
         } else {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></span>';
