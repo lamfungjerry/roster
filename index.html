@@ -110,25 +110,25 @@
     </div>
   </main>
 
-  <!-- 底部固定大按鈕操作盤 (防誤觸：掃把與退格置左，全休置右，無跳過鍵) -->
+  <!-- 底部固定大按鈕操作盤 (退格置於全休右側) -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-2.5 sm:pb-5">
     <div class="max-w-md mx-auto">
       <div class="flex items-center justify-between mb-2 px-1">
-        <!-- 左側：清空 (🧹) 與 單個刪除 (⌫) -->
+        <!-- 左側：清空 (🧹) 與日期標籤 -->
         <div class="flex items-center gap-2">
-          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
+          <button onclick="clearActiveDay()" title="清空當天" class="w-11 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
             🧹
           </button>
-          <button onclick="backspaceStaff()" title="刪除最後一個" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
-            ⌫
-          </button>
-          <span id="active-day-label" class="text-sm font-black text-indigo-600 pl-1">--</span>
+          <span id="active-day-label" class="text-sm font-black text-indigo-600">--</span>
         </div>
         
-        <!-- 右側：全休 -->
-        <div class="flex items-center">
-          <button onclick="toggleActiveFullHoliday()" class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs">
+        <!-- 右側：全休 (🌴) 與 退格 (⌫) -->
+        <div class="flex items-center gap-2">
+          <button onclick="toggleActiveFullHoliday()" class="px-4 py-2 h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs flex items-center justify-center">
             🌴 全休
+          </button>
+          <button onclick="backspaceStaff()" title="退格刪除" class="w-11 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
+            ⌫
           </button>
         </div>
       </div>
@@ -138,7 +138,7 @@
     </div>
   </div>
 
-  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日，精準時區對位) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日，精準對位與全休紅色高亮) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -147,7 +147,7 @@
         <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
       </div>
 
-      <!-- 星期表頭 (週日為首，紅色高亮) -->
+      <!-- 星期表頭 (週日為首，紅色) -->
       <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
         <span class="text-rose-600 font-black">日</span>
         <span class="text-slate-600">一</span>
@@ -271,7 +271,6 @@
       visibleDays: []
     };
 
-    // 格式化本地年月日 (嚴防 UTC 時區位移 -1 天)
     function formatLocalYMD(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -306,10 +305,9 @@
       alert(errorMessage);
     }
 
-    // 取得該日所在週（以週日~週六為一行）對應的排班星期一
     function getMondayOfDate(d) {
       const date = new Date(d);
-      const day = date.getDay(); // 0 是週日
+      const day = date.getDay();
       const diff = (day === 0) ? 1 : (1 - day);
       date.setDate(date.getDate() + diff);
       return date;
@@ -365,6 +363,23 @@
       try {
         const raw = localStorage.getItem('roster_days_map');
         if (raw) state.daysMap = JSON.parse(raw);
+
+        // 兼容性匯入：檢查舊版可能殘留的陣列
+        const oldScheduleRaw = localStorage.getItem('schedule_data');
+        if (oldScheduleRaw) {
+          const oldObj = JSON.parse(oldScheduleRaw);
+          if (oldObj && oldObj.schedule) {
+            oldObj.schedule.forEach(item => {
+              if (item && item.date && item.isFullDayHoliday) {
+                if (!state.daysMap[item.date]) {
+                  state.daysMap[item.date] = { shifts: [], isFullDayHoliday: true };
+                } else {
+                  state.daysMap[item.date].isFullDayHoliday = true;
+                }
+              }
+            });
+          }
+        }
       } catch (e) {
         console.warn('本地快取讀取異常', e);
       }
@@ -445,16 +460,17 @@
         const iso = formatLocalYMD(curr);
         const dayIdx = curr.getDay();
 
-        if (dayIdx === 0) continue; // 星期日不顯示
+        if (dayIdx === 0) continue;
 
         const isAutoRest = isRestDay(dayIdx);
         const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
+        const isFullHoliday = !!(dayRecord.isFullDayHoliday || dayRecord.isFullHoliday);
 
         list.push({
           iso,
           dayIdx,
           isRest: isAutoRest,
-          isFullHoliday: !!dayRecord.isFullDayHoliday,
+          isFullHoliday: isFullHoliday,
           shifts: dayRecord.shifts || []
         });
       }
@@ -616,7 +632,7 @@
       debounceSaveCloud();
     }
 
-    // ⌫ 刪除最後輸入的一個
+    // ⌫ 退格刪除最後一個輸入
     function backspaceStaff() {
       triggerHaptic();
       const record = getActiveDateRecord();
@@ -658,7 +674,6 @@
       debounceSaveCloud();
     }
 
-    // 🧹 清空當天更表
     function clearActiveDay() {
       triggerHaptic();
       const record = getActiveDateRecord();
@@ -702,8 +717,14 @@
       }, 50);
     }
 
-    // ================= 🗓️ 自訂視覺化月曆 (星期日為第一日，精準對位) =================
+    // ================= 🗓️ 自訂視覺化月曆 =================
     function openCalendarModal() {
+      // 開啟月曆時，自動同步到當前檢視週期的月份
+      if (state.startDate) {
+        const d = parseLocalYMD(state.startDate);
+        state.calYear = d.getFullYear();
+        state.calMonth = d.getMonth();
+      }
       renderCalendarGrid();
       document.getElementById('calendar-modal').classList.remove('hidden');
     }
@@ -733,7 +754,6 @@
       const lastDay = new Date(state.calYear, state.calMonth + 1, 0, 0, 0, 0);
       const daysInMonth = lastDay.getDate();
 
-      // 星期日為第一日：0=Sun, 1=Mon ... 6=Sat
       const startOffset = firstDay.getDay();
 
       for (let i = 0; i < startOffset; i++) {
@@ -746,13 +766,14 @@
 
       for (let d = 1; d <= daysInMonth; d++) {
         const currDate = new Date(state.calYear, state.calMonth, d, 0, 0, 0, 0);
-        const iso = formatLocalYMD(currDate); // 使用本地時間轉換，絕不產生時區倒退
+        const iso = formatLocalYMD(currDate);
         const dayOfWeek = currDate.getDay();
         const isSunday = (dayOfWeek === 0);
         const isRest = isRestDay(dayOfWeek);
 
         const dayData = state.daysMap[iso];
-        const isFullHoliday = !!dayData?.isFullDayHoliday;
+        // 嚴格相容全休判定
+        const isFullHoliday = !!(dayData?.isFullDayHoliday === true || dayData?.isFullDayHoliday === 'true' || dayData?.isFullHoliday === true);
         const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
         const isCompleted = (shiftCount === 6);
 
@@ -776,15 +797,17 @@
         if (isSunday) {
           numColor = 'text-rose-600 font-black';
           bgStyle = 'bg-rose-50/70 border border-rose-200';
-        } else if (isFullHoliday) {
-          numColor = 'text-rose-600 font-black';
-          bgStyle = 'bg-rose-100 border border-rose-300';
+        }
+        
+        // 全休強制以玫瑰紅外框與背景醒目標記
+        if (isFullHoliday) {
+          numColor = 'text-rose-700 font-black';
+          bgStyle = 'bg-rose-100 border-2 border-rose-400 font-black';
         }
 
-        // 圓點標記：紅 (週日/全休) | 綠 (已填齊6人) | 黃 (未排齊，且在系統開始至本週尾範圍)
         let dot = '';
         if (isFullHoliday || isSunday) {
-          dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
+          dot = '<span class="w-2 h-2 rounded-full bg-rose-600 mt-0.5"></span>';
         } else if (isCompleted) {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5"></span>';
         } else if (!isRest && isInCheckRange && shiftCount < 6) {
@@ -1176,9 +1199,21 @@
             const val = snap.val();
             if (val.daysMap) {
               state.daysMap = { ...state.daysMap, ...val.daysMap };
-              saveLocalImmediately();
-              renderVisibleSchedule(false);
             }
+            // 兼容性讀取舊版 schedule
+            if (val.schedule && Array.isArray(val.schedule)) {
+              val.schedule.forEach(item => {
+                if (item && item.date && item.isFullDayHoliday) {
+                  if (!state.daysMap[item.date]) {
+                    state.daysMap[item.date] = { shifts: [], isFullDayHoliday: true };
+                  } else {
+                    state.daysMap[item.date].isFullDayHoliday = true;
+                  }
+                }
+              });
+            }
+            saveLocalImmediately();
+            renderVisibleSchedule(false);
           }
           document.getElementById('sync-badge').innerText = '已連線';
           document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium cursor-pointer';
