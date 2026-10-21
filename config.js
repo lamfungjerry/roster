@@ -6,6 +6,10 @@ window.APP_CONFIG = {
   // 星期名稱
   WEEK_DAYS: ['日', '一', '二', '三', '四', '五', '六'],
 
+// 星期六是否需要排班：預設為 false（不排星期六，自動視為休息日）
+  DEFAULT_INCLUDE_SATURDAY: false,
+
+
   // Firebase 專案固定參數 (請換成你專案的值，無須填寫 apiKey)
   firebaseBase: {
   authDomain: "roster-9a699.firebaseapp.com",
