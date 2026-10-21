@@ -110,7 +110,7 @@
     </div>
   </main>
 
-  <!-- 底部固定大按鈕操作盤 (退格置於全休右側) -->
+  <!-- 底部固定大按鈕操作盤 -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-2.5 sm:pb-5">
     <div class="max-w-md mx-auto">
       <div class="flex items-center justify-between mb-2 px-1">
@@ -138,7 +138,7 @@
     </div>
   </div>
 
-  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日，精準對位與全休紅色高亮) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -147,7 +147,6 @@
         <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
       </div>
 
-      <!-- 星期表頭 (週日為首，紅色) -->
       <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
         <span class="text-rose-600 font-black">日</span>
         <span class="text-slate-600">一</span>
@@ -188,13 +187,23 @@
     </div>
   </div>
 
-  <!-- 📊 統計 Modal -->
+  <!-- 📊 統計 Modal (支援年假/休假排除勾選) -->
   <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 shadow-2xl space-y-3 max-h-[88vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
         <h3 class="text-sm font-bold text-slate-900">📊 1~6 號更位分佈統計</h3>
         <button onclick="closeStatsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
+
+      <!-- 年假/休假排除開關 -->
+      <div class="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+        <label for="stats-exclude-leave" class="text-xs font-bold text-slate-700 cursor-pointer flex flex-col">
+          <span>不計年假／休假</span>
+          <span class="text-[10px] text-slate-400 font-normal">勾選後將除去所有標記為「休」的更位統計</span>
+        </label>
+        <input type="checkbox" id="stats-exclude-leave" onchange="toggleStatsExcludeLeave()" class="w-4 h-4 text-indigo-600 rounded cursor-pointer">
+      </div>
+
       <div id="stats-content"></div>
       <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">關閉</button>
     </div>
@@ -262,6 +271,7 @@
       startDate: '', 
       weeksCount: 1, 
       includeSaturday: false,
+      excludeLeaveInStats: false, // 是否在統計中扣除年假/休假
       daysMap: {},
       activeDayIndex: 0,
       activeDate: '',
@@ -357,6 +367,10 @@
         : (window.APP_CONFIG.DEFAULT_INCLUDE_SATURDAY || false);
       const satToggle = document.getElementById('include-sat-toggle');
       if (satToggle) satToggle.checked = state.includeSaturday;
+
+      // 載入統計排除年假喜好
+      const savedExclude = localStorage.getItem('shift_stats_exclude_leave');
+      state.excludeLeaveInStats = (savedExclude === 'true');
     }
 
     function loadFromLocalStorage() {
@@ -364,7 +378,6 @@
         const raw = localStorage.getItem('roster_days_map');
         if (raw) state.daysMap = JSON.parse(raw);
 
-        // 兼容性匯入：檢查舊版可能殘留的陣列
         const oldScheduleRaw = localStorage.getItem('schedule_data');
         if (oldScheduleRaw) {
           const oldObj = JSON.parse(oldScheduleRaw);
@@ -632,7 +645,6 @@
       debounceSaveCloud();
     }
 
-    // ⌫ 退格刪除最後一個輸入
     function backspaceStaff() {
       triggerHaptic();
       const record = getActiveDateRecord();
@@ -719,7 +731,6 @@
 
     // ================= 🗓️ 自訂視覺化月曆 =================
     function openCalendarModal() {
-      // 開啟月曆時，自動同步到當前檢視週期的月份
       if (state.startDate) {
         const d = parseLocalYMD(state.startDate);
         state.calYear = d.getFullYear();
@@ -772,7 +783,6 @@
         const isRest = isRestDay(dayOfWeek);
 
         const dayData = state.daysMap[iso];
-        // 嚴格相容全休判定
         const isFullHoliday = !!(dayData?.isFullDayHoliday === true || dayData?.isFullDayHoliday === 'true' || dayData?.isFullHoliday === true);
         const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
         const isCompleted = (shiftCount === 6);
@@ -799,7 +809,6 @@
           bgStyle = 'bg-rose-50/70 border border-rose-200';
         }
         
-        // 全休強制以玫瑰紅外框與背景醒目標記
         if (isFullHoliday) {
           numColor = 'text-rose-700 font-black';
           bgStyle = 'bg-rose-100 border-2 border-rose-400 font-black';
@@ -924,14 +933,17 @@
       showToast('✅ 匯入成功並已儲存');
     }
 
-    function calculatePositionStats() {
+    // 1~6 號更位分佈統計 (支援 excludeLeave 參數)
+    function calculatePositionStats(excludeLeave = false) {
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const matrix = {};
       staffList.forEach(s => {
-        matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0 };
+        matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0, offCount: 0 };
       });
 
       let validWorkingDays = 0;
+      let totalCountedShifts = 0;
+
       Object.keys(state.daysMap).forEach(iso => {
         const d = state.daysMap[iso];
         if (!d.isFullDayHoliday && d.shifts && d.shifts.length > 0) {
@@ -939,15 +951,22 @@
           d.shifts.forEach((shift, sIdx) => {
             const pos = sIdx + 1;
             if (pos <= 6 && matrix[shift.staff]) {
+              if (shift.status === 'OFF') {
+                matrix[shift.staff].offCount++;
+                // 若勾選了不計年假/休假，直接跳過該次更位累積！
+                if (excludeLeave) return;
+              }
               matrix[shift.staff][pos]++;
               matrix[shift.staff].total++;
               matrix[shift.staff].scoreSum += pos;
+              totalCountedShifts++;
             }
           });
         }
       });
 
-      const expectedPerPosition = (validWorkingDays / 6).toFixed(1);
+      // 理想期望值計算 (總納入更位數 / 6更位 / 6人)
+      const expectedPerPosition = (totalCountedShifts / 36).toFixed(1);
       const topPerPosition = {};
 
       for (let p = 1; p <= 6; p++) {
@@ -965,11 +984,25 @@
         topPerPosition[p] = { count: maxCount, leaders: leaders };
       }
 
-      return { matrix, validWorkingDays, expectedPerPosition, topPerPosition };
+      return { matrix, validWorkingDays, totalCountedShifts, expectedPerPosition, topPerPosition };
+    }
+
+    function toggleStatsExcludeLeave() {
+      const chk = document.getElementById('stats-exclude-leave');
+      state.excludeLeaveInStats = chk.checked;
+      localStorage.setItem('shift_stats_exclude_leave', state.excludeLeaveInStats);
+      renderStatsModalContent();
     }
 
     function openStatsModal() {
-      const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
+      const chk = document.getElementById('stats-exclude-leave');
+      if (chk) chk.checked = state.excludeLeaveInStats;
+      renderStatsModalContent();
+      document.getElementById('stats-modal').classList.remove('hidden');
+    }
+
+    function renderStatsModalContent() {
+      const { matrix, validWorkingDays, totalCountedShifts, expectedPerPosition, topPerPosition } = calculatePositionStats(state.excludeLeaveInStats);
       const staffList = window.APP_CONFIG.STAFF_LIST;
 
       let html = `
@@ -1054,11 +1087,10 @@
       html += `
           </div>
         </div>
-        <p class="text-[10px] text-slate-400 text-center mt-1">※ 均位接近 3.5 代表前後更位分佈均衡</p>
+        <p class="text-[10px] text-slate-400 text-center mt-1">※ 均位接近 3.5 代表更位輪替平衡 ${state.excludeLeaveInStats ? '(已扣除休更)' : ''}</p>
       `;
 
       document.getElementById('stats-content').innerHTML = html;
-      document.getElementById('stats-modal').classList.remove('hidden');
     }
 
     function closeStatsModal() {
@@ -1066,18 +1098,19 @@
     }
 
     async function copySuperPrompt() {
-      const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
+      // 依據目前勾選的「是否不計年假」生成 Prompt
+      const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats(state.excludeLeaveInStats);
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const sortedDates = Object.keys(state.daysMap).sort();
       const dateRangeStr = sortedDates.length > 0 ? `${sortedDates[0]} 至 ${sortedDates[sortedDates.length - 1]}` : '未指定';
 
-      let statText = `【更位統計總覽 (共 ${validWorkingDays} 個排班工作日，每更位理想期望: ${expectedPerPosition} 次)】\n\n`;
+      let statText = `【更位統計總覽 (共 ${validWorkingDays} 個排班日，每更位期望值: ${expectedPerPosition} 次${state.excludeLeaveInStats ? '，已排除年假/休假更位' : ''})】\n\n`;
       statText += `各員工 1~6 號更位次數矩陣：\n`;
 
       staffList.forEach(st => {
         const row = matrix[st];
         const avgPos = row.total > 0 ? (row.scoreSum / row.total).toFixed(1) : '0';
-        statText += `員工 ${st}: 1更(${row[1]}) | 2更(${row[2]}) | 3更(${row[3]}) | 4更(${row[4]}) | 5更(${row[5]}) | 6更(${row[6]}) => 平均更位: ${avgPos}\n`;
+        statText += `員工 ${st}: 1更(${row[1]}) | 2更(${row[2]}) | 3更(${row[3]}) | 4更(${row[4]}) | 5更(${row[5]}) | 6更(${row[6]}) => 平均更位: ${avgPos}${state.excludeLeaveInStats ? ` (扣除休假 ${row.offCount} 次)` : ''}\n`;
       });
 
       statText += `\n各更位最高排班者：\n`;
@@ -1089,6 +1122,7 @@
       const jsonPayload = JSON.stringify({
         period: dateRangeStr,
         totalWorkingDays: validWorkingDays,
+        excludeLeave: state.excludeLeaveInStats,
         staff: staffList,
         positionMatrix: matrix,
         daysMap: state.daysMap
@@ -1200,7 +1234,6 @@
             if (val.daysMap) {
               state.daysMap = { ...state.daysMap, ...val.daysMap };
             }
-            // 兼容性讀取舊版 schedule
             if (val.schedule && Array.isArray(val.schedule)) {
               val.schedule.forEach(item => {
                 if (item && item.date && item.isFullDayHoliday) {
