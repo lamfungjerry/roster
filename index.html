@@ -110,30 +110,35 @@
     </div>
   </main>
 
-  <!-- 底部固定大按鈕操作盤 -->
+  <!-- 底部固定大按鈕操作盤 (防誤觸：掃把與退格置左，全休置右，無跳過鍵) -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-2.5 sm:pb-5">
     <div class="max-w-md mx-auto">
       <div class="flex items-center justify-between mb-2 px-1">
-        <span id="active-day-label" class="text-sm font-black text-indigo-600">--</span>
+        <!-- 左側：清空 (🧹) 與 單個刪除 (⌫) -->
+        <div class="flex items-center gap-2">
+          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
+            🧹
+          </button>
+          <button onclick="backspaceStaff()" title="刪除最後一個" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
+            ⌫
+          </button>
+          <span id="active-day-label" class="text-sm font-black text-indigo-600 pl-1">--</span>
+        </div>
         
-        <div class="flex gap-2">
+        <!-- 右側：全休 -->
+        <div class="flex items-center">
           <button onclick="toggleActiveFullHoliday()" class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs">
             🌴 全休
-          </button>
-          <button onclick="clearActiveDay()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-xs font-black active:bg-slate-200 shadow-xs">
-            ↺ 清空
-          </button>
-          <button onclick="jumpNextDay()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black active:bg-slate-800 shadow-xs">
-            跳過 ➔
           </button>
         </div>
       </div>
 
+      <!-- 6 位員工大按鈕 -->
       <div id="keyboard-grid" class="grid grid-cols-6 gap-2"></div>
     </div>
   </div>
 
-  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日，精準時區對位) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -142,6 +147,7 @@
         <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
       </div>
 
+      <!-- 星期表頭 (週日為首，紅色高亮) -->
       <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
         <span class="text-rose-600 font-black">日</span>
         <span class="text-slate-600">一</span>
@@ -265,6 +271,19 @@
       visibleDays: []
     };
 
+    // 格式化本地年月日 (嚴防 UTC 時區位移 -1 天)
+    function formatLocalYMD(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function parseLocalYMD(str) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+
     (function loadFreshConfig() {
       const script = document.createElement('script');
       script.src = 'config.js?t=' + Date.now();
@@ -287,9 +306,10 @@
       alert(errorMessage);
     }
 
+    // 取得該日所在週（以週日~週六為一行）對應的排班星期一
     function getMondayOfDate(d) {
       const date = new Date(d);
-      const day = date.getDay();
+      const day = date.getDay(); // 0 是週日
       const diff = (day === 0) ? 1 : (1 - day);
       date.setDate(date.getDate() + diff);
       return date;
@@ -301,7 +321,7 @@
       const diffToSunday = (day === 0) ? 0 : (7 - day);
       const sun = new Date(now);
       sun.setDate(now.getDate() + diffToSunday);
-      return sun.toISOString().split('T')[0];
+      return formatLocalYMD(sun);
     }
 
     function initApp() {
@@ -311,7 +331,7 @@
       initKeyboardButtons();
 
       const todayMonday = getMondayOfDate(new Date());
-      state.startDate = todayMonday.toISOString().split('T')[0];
+      state.startDate = formatLocalYMD(todayMonday);
 
       state.calYear = todayMonday.getFullYear();
       state.calMonth = todayMonday.getMonth();
@@ -365,9 +385,9 @@
 
     function navWeek(direction) {
       if (!state.startDate) return;
-      const d = new Date(state.startDate);
+      const d = parseLocalYMD(state.startDate);
       d.setDate(d.getDate() + (direction * 7));
-      state.startDate = d.toISOString().split('T')[0];
+      state.startDate = formatLocalYMD(d);
       state.weeksCount = 1;
       renderVisibleSchedule();
       showToast(direction > 0 ? '已切換至下週 ➔' : '‹ 已切換至上週');
@@ -414,16 +434,15 @@
       }, 150);
     }
 
-    // 建立可見日期骨架列表 (僅週一至週六)
     function buildVisibleDaysList() {
       const list = [];
       const totalDays = state.weeksCount * 7;
-      const start = new Date(state.startDate);
+      const start = parseLocalYMD(state.startDate);
 
       for (let i = 0; i < totalDays; i++) {
         const curr = new Date(start);
         curr.setDate(start.getDate() + i);
-        const iso = curr.toISOString().split('T')[0];
+        const iso = formatLocalYMD(curr);
         const dayIdx = curr.getDay();
 
         if (dayIdx === 0) continue; // 星期日不顯示
@@ -528,10 +547,10 @@
 
     function updateCurrentWeekDisplay() {
       if (!state.startDate) return;
-      const start = new Date(state.startDate);
+      const start = parseLocalYMD(state.startDate);
       const end = new Date(start);
       end.setDate(start.getDate() + 5);
-      document.getElementById('current-week-display').innerText = `${state.startDate.substring(5)} ~ ${end.toISOString().split('T')[0].substring(5)}`;
+      document.getElementById('current-week-display').innerText = `${state.startDate.substring(5)} ~ ${formatLocalYMD(end).substring(5)}`;
     }
 
     function selectActiveDay(idx, iso) {
@@ -556,7 +575,7 @@
         return;
       }
 
-      const d = new Date(state.activeDate);
+      const d = parseLocalYMD(state.activeDate);
       label.innerText = `${state.activeDate.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[d.getDay()]})`;
 
       const record = getActiveDateRecord();
@@ -597,6 +616,20 @@
       debounceSaveCloud();
     }
 
+    // ⌫ 刪除最後輸入的一個
+    function backspaceStaff() {
+      triggerHaptic();
+      const record = getActiveDateRecord();
+      if (!record || record.isFullDayHoliday) return;
+      if (record.shifts && record.shifts.length > 0) {
+        record.shifts.pop();
+        saveLocalImmediately();
+        renderVisibleSchedule(false);
+        updateActiveDock();
+        debounceSaveCloud();
+      }
+    }
+
     function toggleShiftStatus(iso, shiftIdx) {
       triggerHaptic();
       if (!state.daysMap[iso] || !state.daysMap[iso].shifts[shiftIdx]) return;
@@ -625,7 +658,9 @@
       debounceSaveCloud();
     }
 
+    // 🧹 清空當天更表
     function clearActiveDay() {
+      triggerHaptic();
       const record = getActiveDateRecord();
       if (!record) return;
       record.shifts = [];
@@ -636,20 +671,17 @@
       debounceSaveCloud();
     }
 
-    // 核心優化：填完週五，若週六不需排則直接自動跨週跳至下週一！
     function jumpNextDay() {
       let days = buildVisibleDaysList();
       let nextIndex = state.activeDayIndex + 1;
 
       while (true) {
-        // 若超出目前可見範圍，無感自動增加一週
         while (nextIndex >= days.length) {
           state.weeksCount++;
           days = buildVisibleDaysList();
           showToast('已自動開啟下一週 ➔');
         }
 
-        // 若該日為公休日（如週六關閉排更），直接略過繼續往下找下一個工作日（下週一）
         if (days[nextIndex].isRest) {
           nextIndex++;
         } else {
@@ -670,7 +702,7 @@
       }, 50);
     }
 
-    // ================= 🗓️ 自訂視覺化月曆 (星期日為第一日) =================
+    // ================= 🗓️ 自訂視覺化月曆 (星期日為第一日，精準對位) =================
     function openCalendarModal() {
       renderCalendarGrid();
       document.getElementById('calendar-modal').classList.remove('hidden');
@@ -697,10 +729,11 @@
       const grid = document.getElementById('cal-days-grid');
       grid.innerHTML = '';
 
-      const firstDay = new Date(state.calYear, state.calMonth, 1);
-      const lastDay = new Date(state.calYear, state.calMonth + 1, 0);
+      const firstDay = new Date(state.calYear, state.calMonth, 1, 0, 0, 0, 0);
+      const lastDay = new Date(state.calYear, state.calMonth + 1, 0, 0, 0, 0);
       const daysInMonth = lastDay.getDate();
 
+      // 星期日為第一日：0=Sun, 1=Mon ... 6=Sat
       const startOffset = firstDay.getDay();
 
       for (let i = 0; i < startOffset; i++) {
@@ -712,8 +745,8 @@
       const thisWeekEndIso = getThisWeekEndIso();
 
       for (let d = 1; d <= daysInMonth; d++) {
-        const currDate = new Date(state.calYear, state.calMonth, d);
-        const iso = currDate.toISOString().split('T')[0];
+        const currDate = new Date(state.calYear, state.calMonth, d, 0, 0, 0, 0);
+        const iso = formatLocalYMD(currDate); // 使用本地時間轉換，絕不產生時區倒退
         const dayOfWeek = currDate.getDay();
         const isSunday = (dayOfWeek === 0);
         const isRest = isRestDay(dayOfWeek);
@@ -721,7 +754,7 @@
         const dayData = state.daysMap[iso];
         const isFullHoliday = !!dayData?.isFullDayHoliday;
         const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
-        const isCompleted = shiftCount === 6;
+        const isCompleted = (shiftCount === 6);
 
         const isInCheckRange = (iso >= systemStartIso && iso <= thisWeekEndIso);
 
@@ -730,7 +763,7 @@
         
         cell.onclick = () => {
           const monday = getMondayOfDate(currDate);
-          state.startDate = monday.toISOString().split('T')[0];
+          state.startDate = formatLocalYMD(monday);
           state.weeksCount = 1;
           renderVisibleSchedule(true);
           closeCalendarModal();
@@ -748,6 +781,7 @@
           bgStyle = 'bg-rose-100 border border-rose-300';
         }
 
+        // 圓點標記：紅 (週日/全休) | 綠 (已填齊6人) | 黃 (未排齊，且在系統開始至本週尾範圍)
         let dot = '';
         if (isFullHoliday || isSunday) {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
@@ -829,10 +863,10 @@
 
       const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       let lineIdx = 0;
-      let curr = new Date(state.startDate);
+      let curr = parseLocalYMD(state.startDate);
 
       while (lineIdx < lines.length) {
-        const iso = curr.toISOString().split('T')[0];
+        const iso = formatLocalYMD(curr);
         const dayIdx = curr.getDay();
 
         if (dayIdx !== 0 && (!isRestDay(dayIdx) || lineIdx < lines.length)) {
