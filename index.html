@@ -138,7 +138,7 @@
     </div>
   </div>
 
-  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal (週日與全休樣式統一) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -147,6 +147,7 @@
         <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
       </div>
 
+      <!-- 星期表頭 (週日為首，紅色) -->
       <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
         <span class="text-rose-600 font-black">日</span>
         <span class="text-slate-600">一</span>
@@ -187,7 +188,7 @@
     </div>
   </div>
 
-  <!-- 📊 統計 Modal (支援年假/休假排除勾選) -->
+  <!-- 📊 統計 Modal -->
   <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 shadow-2xl space-y-3 max-h-[88vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
@@ -271,7 +272,7 @@
       startDate: '', 
       weeksCount: 1, 
       includeSaturday: false,
-      excludeLeaveInStats: false, // 是否在統計中扣除年假/休假
+      excludeLeaveInStats: false,
       daysMap: {},
       activeDayIndex: 0,
       activeDate: '',
@@ -368,7 +369,6 @@
       const satToggle = document.getElementById('include-sat-toggle');
       if (satToggle) satToggle.checked = state.includeSaturday;
 
-      // 載入統計排除年假喜好
       const savedExclude = localStorage.getItem('shift_stats_exclude_leave');
       state.excludeLeaveInStats = (savedExclude === 'true');
     }
@@ -729,7 +729,7 @@
       }, 50);
     }
 
-    // ================= 🗓️ 自訂視覺化月曆 =================
+    // ================= 🗓️ 自訂視覺化月曆 (星期日與全休樣式統一) =================
     function openCalendarModal() {
       if (state.startDate) {
         const d = parseLocalYMD(state.startDate);
@@ -804,19 +804,15 @@
         let numColor = 'text-slate-700';
         let bgStyle = 'bg-slate-50 border border-slate-100';
 
-        if (isSunday) {
+        // 核心更新：全休假期 CSS 完全跟隨星期日樣式統一
+        if (isSunday || isFullHoliday) {
           numColor = 'text-rose-600 font-black';
           bgStyle = 'bg-rose-50/70 border border-rose-200';
-        }
-        
-        if (isFullHoliday) {
-          numColor = 'text-rose-700 font-black';
-          bgStyle = 'bg-rose-100 border-2 border-rose-400 font-black';
         }
 
         let dot = '';
         if (isFullHoliday || isSunday) {
-          dot = '<span class="w-2 h-2 rounded-full bg-rose-600 mt-0.5"></span>';
+          dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
         } else if (isCompleted) {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5"></span>';
         } else if (!isRest && isInCheckRange && shiftCount < 6) {
@@ -933,7 +929,6 @@
       showToast('✅ 匯入成功並已儲存');
     }
 
-    // 1~6 號更位分佈統計 (支援 excludeLeave 參數)
     function calculatePositionStats(excludeLeave = false) {
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const matrix = {};
@@ -953,7 +948,6 @@
             if (pos <= 6 && matrix[shift.staff]) {
               if (shift.status === 'OFF') {
                 matrix[shift.staff].offCount++;
-                // 若勾選了不計年假/休假，直接跳過該次更位累積！
                 if (excludeLeave) return;
               }
               matrix[shift.staff][pos]++;
@@ -965,7 +959,6 @@
         }
       });
 
-      // 理想期望值計算 (總納入更位數 / 6更位 / 6人)
       const expectedPerPosition = (totalCountedShifts / 36).toFixed(1);
       const topPerPosition = {};
 
@@ -1098,7 +1091,6 @@
     }
 
     async function copySuperPrompt() {
-      // 依據目前勾選的「是否不計年假」生成 Prompt
       const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats(state.excludeLeaveInStats);
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const sortedDates = Object.keys(state.daysMap).sort();
