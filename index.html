@@ -28,9 +28,8 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* 避開 iPhone 大尺寸底欄 */
     .safe-bottom-space {
-      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 160px);
+      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 165px);
     }
 
     /* 等寬代號標籤 (固定 48px) */
@@ -68,7 +67,7 @@
     <div class="flex items-center gap-2">
       <span class="text-base font-black text-slate-900 tracking-tight">📅 排更</span>
       <span id="sync-badge" onclick="openSettingsModal()" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-medium cursor-pointer">
-        載入中...
+        檢查連線...
       </span>
     </div>
     <div class="flex items-center gap-1.5">
@@ -89,13 +88,13 @@
 
   <main id="main-content" class="max-w-md mx-auto p-3 safe-bottom-space">
     
-    <!-- 頂部日期條：‹ 上週 | [點選打開月曆] | 下週 › -->
+    <!-- 頂部日期條：‹ 上週 | [點擊彈出日曆] | 下週 › -->
     <div class="bg-white rounded-2xl p-2 shadow-sm border border-slate-200/80 mb-3 flex items-center justify-between gap-1.5">
       <button onclick="navWeek(-1)" class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black active:bg-slate-200 flex items-center">
         ‹ 上週
       </button>
       
-      <!-- 點擊直接彈出自訂月曆 -->
+      <!-- 點擊彈出自訂月曆 -->
       <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-100">
         <span id="current-week-display">載入中...</span>
         <span class="text-indigo-600 text-[10px]">▼</span>
@@ -106,7 +105,7 @@
       </button>
     </div>
 
-    <!-- 更表卡片容器 (僅顯示週一至週六，向下滑動自動展下一週) -->
+    <!-- 更表清單：僅週一至週六，向下滑動自動展下一週 -->
     <div id="schedule-container" class="space-y-2"></div>
 
     <div id="loading-more-indicator" class="py-4 text-center text-xs font-bold text-slate-400 hidden">
@@ -114,13 +113,13 @@
     </div>
   </main>
 
-  <!-- 底部固定鍵盤 (大幅加大尺寸、移除隱藏鍵) -->
+  <!-- 底部固定大尺寸鍵盤 (無折疊鍵、按鈕大、熱區舒服) -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl p-2.5 sm:pb-5">
     <div class="max-w-md mx-auto">
       
-      <!-- 操作列 (大尺寸) -->
-      <div class="flex items-center justify-between mb-2 px-0.5">
-        <span id="active-day-label" class="text-sm font-black text-indigo-600">07-20 (一)</span>
+      <!-- 操作輔助列 -->
+      <div class="flex items-center justify-between mb-2 px-1">
+        <span id="active-day-label" class="text-sm font-black text-indigo-600">--</span>
         
         <div class="flex gap-2">
           <button onclick="toggleActiveFullHoliday()" class="px-4 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs">
@@ -135,18 +134,18 @@
         </div>
       </div>
 
-      <!-- 6 位員工大按鈕 (h-14 大尺寸) -->
+      <!-- 6 位員工大按鈕 -->
       <div id="keyboard-grid" class="grid grid-cols-6 gap-2"></div>
     </div>
   </div>
 
-  <!-- 🗓️ 自訂視覺化月曆 Modal (全休/週日紅色，Marking提示，任意點擊選當週) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal ( Marking、週日全休紅色、點選切換當週) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
-      <!-- 月曆導航 -->
+      <!-- 年月切換 -->
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
         <button onclick="changeCalMonth(-1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">‹</button>
-        <span id="cal-month-title" class="text-sm font-black text-slate-900">2026年10月</span>
+        <span id="cal-month-title" class="text-sm font-black text-slate-900">--</span>
         <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
       </div>
 
@@ -161,13 +160,13 @@
         <span class="text-rose-600 font-black">日</span>
       </div>
 
-      <!-- 日曆網格 -->
+      <!-- 月曆日期網格 -->
       <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
 
-      <!-- 圖例說明 -->
+      <!-- Marking 圖例 -->
       <div class="flex items-center justify-center gap-3 pt-2 border-t border-slate-100 text-[10px] text-slate-500">
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>已排齊</span>
-        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span>未排齊</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>已齊(6人)</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span>未齊</span>
         <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>週日/全休</span>
       </div>
 
@@ -221,7 +220,7 @@
         <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-4 h-4 text-indigo-600 rounded">
       </div>
 
-      <!-- API Key 隱私顯示 -->
+      <!-- API Key 隱私管理 -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
         <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
         
@@ -261,24 +260,27 @@
   <script>
     let db = null;
     let isAutoAppending = false;
+    let saveTimeout = null;
+
     let state = {
-      startDate: '', // 永遠錨定於星期一
-      weeksCount: 1, // 預設顯示 1 週，向下滾動自動延伸
+      startDate: '', // 永遠為星期一
+      weeksCount: 1, 
       includeSaturday: false,
-      schedule: [],
+      daysMap: {}, // 全局持久化字典：{ "2026-10-19": { shifts: [...], isFullDayHoliday: false } }
       activeDayIndex: 0,
+      activeDate: '',
       promptTemplate: '',
       calYear: 2026,
-      calMonth: 9 // 0-indexed (9 = 10月)
+      calMonth: 9
     };
 
-    // 嚴格載入 config.js
+    // 防快取載入 config.js
     (function loadFreshConfig() {
       const script = document.createElement('script');
       script.src = 'config.js?t=' + Date.now();
       script.onload = () => {
         if (!window.APP_CONFIG || !window.APP_CONFIG.STAFF_LIST) {
-          handleConfigError('config.js 內容格式不正確，缺少必要的配置參數！');
+          handleConfigError('config.js 內容格式不正確，缺少配置參數！');
           return;
         }
         initApp();
@@ -306,18 +308,18 @@
     function initApp() {
       state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT || '';
       loadLocalPreferences();
+      loadFromLocalStorage(); // 1. 先從本地快取秒讀（確保絕不遺失）
       initKeyboardButtons();
 
-      // 預設載入當天所在星期的星期一
+      // 預設載入當前週的星期一
       const todayMonday = getMondayOfDate(new Date());
       state.startDate = todayMonday.toISOString().split('T')[0];
 
-      // 設定月曆當前年月
       state.calYear = todayMonday.getFullYear();
       state.calMonth = todayMonday.getMonth();
 
-      generateScheduleSkeleton();
-      initFirebaseWithStoredKey();
+      renderVisibleSchedule();
+      initFirebaseWithStoredKey(); // 2. 背景接駁 Firebase 同步
       bindScrollInfiniteLoad();
     }
 
@@ -341,7 +343,19 @@
       if (satToggle) satToggle.checked = state.includeSaturday;
     }
 
-    // 生成加大尺寸鍵盤
+    // 本地快取讀取（Local-First）
+    function loadFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem('roster_days_map');
+        if (raw) {
+          state.daysMap = JSON.parse(raw);
+        }
+      } catch (e) {
+        console.warn('本地快取讀取異常', e);
+      }
+    }
+
+    // 大尺寸鍵盤按鈕
     function initKeyboardButtons() {
       const grid = document.getElementById('keyboard-grid');
       grid.innerHTML = '';
@@ -355,41 +369,31 @@
       });
     }
 
-    // 頂部導航：切換上週 / 下週
     function navWeek(direction) {
       if (!state.startDate) return;
       const d = new Date(state.startDate);
       d.setDate(d.getDate() + (direction * 7));
       state.startDate = d.toISOString().split('T')[0];
-      state.weeksCount = 1; // 切換時重設為以當週為主體
-      generateScheduleSkeleton(getCurrentScheduleMap());
-      debounceSave();
+      state.weeksCount = 1;
+      renderVisibleSchedule();
       showToast(direction > 0 ? '已切換至下週 ➔' : '‹ 已切換至上週');
     }
 
     function toggleSaturdaySetting() {
       state.includeSaturday = document.getElementById('include-sat-toggle').checked;
       localStorage.setItem('shift_include_saturday', state.includeSaturday);
-      generateScheduleSkeleton(getCurrentScheduleMap());
-      saveCloudData();
+      renderVisibleSchedule();
+      saveAllData();
       showToast(state.includeSaturday ? '已開啟星期六排班' : '已關閉星期六排班');
     }
 
     function isRestDay(dayIdx) {
-      if (dayIdx === 0) return true; // 週日永遠休息
-      if (dayIdx === 6 && !state.includeSaturday) return true; // 週六看設定
+      if (dayIdx === 0) return true; // 週日公休
+      if (dayIdx === 6 && !state.includeSaturday) return true; // 週六公休
       return false;
     }
 
-    function getCurrentScheduleMap() {
-      const map = {};
-      state.schedule.forEach(d => {
-        map[d.date] = { shifts: d.shifts, isFullDayHoliday: d.isFullDayHoliday };
-      });
-      return map;
-    }
-
-    // 向下滑動無感自動延伸下一週（永遠星期一在頂，排到星期六）
+    // 滾動自動載入下一週
     function bindScrollInfiniteLoad() {
       window.addEventListener('scroll', () => {
         if (isAutoAppending) return;
@@ -411,18 +415,21 @@
 
       setTimeout(() => {
         state.weeksCount++;
-        generateScheduleSkeleton(getCurrentScheduleMap(), false);
-        debounceSave();
+        renderVisibleSchedule(false);
         if (indicator) indicator.classList.add('hidden');
         isAutoAppending = false;
       }, 150);
     }
 
-    // 產生排班骨架：嚴格排除星期日顯示！
-    function generateScheduleSkeleton(existingMap = {}, resetActive = true) {
-      const list = [];
+    // 核心渲染：依據 startDate 與 weeksCount 從全局 daysMap 抓取資料
+    function renderVisibleSchedule(resetActive = true) {
+      const container = document.getElementById('schedule-container');
+      container.innerHTML = '';
+
       const totalDays = state.weeksCount * 7;
       const start = new Date(state.startDate);
+      let firstUnsetIndex = -1;
+      let visibleIndex = 0;
 
       for (let i = 0; i < totalDays; i++) {
         const curr = new Date(start);
@@ -430,84 +437,54 @@
         const iso = curr.toISOString().split('T')[0];
         const dayIdx = curr.getDay();
 
-        // 核心要求：星期日不顯示在主排更清單中！
+        // 星期日不顯示在主畫面
         if (dayIdx === 0) continue;
 
         const isAutoRest = isRestDay(dayIdx);
+        const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
+        const shifts = dayRecord.shifts || [];
+        const isFullHoliday = !!dayRecord.isFullDayHoliday;
 
-        list.push({
-          date: iso,
-          dayIdx: dayIdx,
-          dayName: window.APP_CONFIG.WEEK_DAYS[dayIdx],
-          isRest: isAutoRest,
-          isFullDayHoliday: existingMap[iso]?.isFullDayHoliday || false,
-          shifts: existingMap[iso]?.shifts || []
-        });
-      }
-      state.schedule = list;
+        const thisIndex = visibleIndex++;
+        if (firstUnsetIndex === -1 && !isAutoRest && !isFullHoliday && shifts.length < 6) {
+          firstUnsetIndex = thisIndex;
+        }
 
-      if (resetActive) {
-        const firstActive = list.findIndex(d => !d.isRest && !d.isFullDayHoliday && d.shifts.length < 6);
-        state.activeDayIndex = firstActive !== -1 ? firstActive : 0;
-      }
-      
-      updateCurrentWeekDisplay();
-      renderSchedule();
-      updateActiveDock();
-    }
+        const isActive = (thisIndex === state.activeDayIndex);
+        if (isActive) state.activeDate = iso;
 
-    function updateCurrentWeekDisplay() {
-      if (!state.startDate) return;
-      const start = new Date(state.startDate);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 5); // 週六
-      const txt = `${state.startDate.substring(5)} ~ ${end.toISOString().split('T')[0].substring(5)}`;
-      document.getElementById('current-week-display').innerText = txt;
-    }
-
-    // 渲染卡片 (僅顯示週一至週六，無星期日，無第一週標題)
-    function renderSchedule() {
-      const container = document.getElementById('schedule-container');
-      container.innerHTML = '';
-
-      state.schedule.forEach((day, idx) => {
-        const isActive = (idx === state.activeDayIndex);
         const card = document.createElement('div');
-        card.id = `day-card-${idx}`;
+        card.id = `day-card-${thisIndex}`;
 
-        const isFullHoliday = day.isFullDayHoliday;
-
-        // 樣式：全休日強制紅色
         let borderClass = '';
         if (isActive) {
           borderClass = 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md';
         } else if (isFullHoliday) {
           borderClass = 'bg-rose-50/80 border-rose-300';
-        } else if (day.isRest) {
+        } else if (isAutoRest) {
           borderClass = 'bg-slate-200/40 border-slate-200/60 opacity-60';
         } else {
           borderClass = 'bg-white border-slate-200/80 shadow-xs';
         }
 
         card.className = `p-3 rounded-2xl border transition-all ${borderClass}`;
-        card.onclick = () => selectActiveDay(idx);
+        card.onclick = () => selectActiveDay(thisIndex, iso);
 
+        // 標籤邏輯：徹底移除「未SET (0/6)」！
         let badge = '';
         if (isFullHoliday) {
           badge = `<span class="text-[10px] font-black px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-300">🌴 全休</span>`;
-        } else if (day.isRest) {
-          badge = `<span class="text-[10px] font-semibold text-slate-500">週${day.dayName}休</span>`;
-        } else if (day.shifts.length < 6) {
-          badge = `<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">未SET (${day.shifts.length}/6)</span>`;
-        } else {
-          badge = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">6/6 已齊</span>`;
-        }
+        } else if (isAutoRest) {
+          badge = `<span class="text-[10px] font-semibold text-slate-400">週${window.APP_CONFIG.WEEK_DAYS[dayIdx]}休</span>`;
+        } else if (shifts.length === 6) {
+          badge = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">6/6 已齊</span>`;
+        } // 未齊時 badge 留空，不顯示任何未SET標籤
 
         let shiftsHtml = '';
-        if (!day.isRest && !day.isFullDayHoliday) {
+        if (!isAutoRest && !isFullHoliday) {
           shiftsHtml = `<div class="flex flex-wrap gap-1.5 mt-2">
-            ${day.shifts.map((s, sIdx) => `
-              <button onclick="event.stopPropagation(); toggleShiftStatus(${idx},${sIdx});" 
+            ${shifts.map((s, sIdx) => `
+              <button onclick="event.stopPropagation(); toggleShiftStatus('${iso}',${sIdx});" 
                 class="staff-badge ${s.status === 'ON' ? 'staff-badge-on' : 'staff-badge-off'}">
                 ${s.staff}${s.status === 'OFF' ? '休' : ''}
               </button>
@@ -524,33 +501,65 @@
                   ? 'text-rose-600 font-black' 
                   : 'text-slate-800'
             }">
-              ${day.date.substring(5)} (${day.dayName})
+              ${iso.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[dayIdx]})
             </span>
             ${badge}
           </div>
           ${shiftsHtml}
         `;
         container.appendChild(card);
-      });
-    }
+      }
 
-    function selectActiveDay(idx) {
-      state.activeDayIndex = idx;
-      renderSchedule();
+      if (resetActive) {
+        state.activeDayIndex = firstUnsetIndex !== -1 ? firstUnsetIndex : 0;
+        // 重新確認 activeDate
+        const activeCard = container.children[state.activeDayIndex];
+        if (activeCard) {
+          activeCard.classList.add('border-indigo-500', 'ring-2', 'ring-indigo-500/20');
+        }
+      }
+
+      updateCurrentWeekDisplay();
       updateActiveDock();
     }
 
+    function updateCurrentWeekDisplay() {
+      if (!state.startDate) return;
+      const start = new Date(state.startDate);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 5);
+      document.getElementById('current-week-display').innerText = `${state.startDate.substring(5)} ~ ${end.toISOString().split('T')[0].substring(5)}`;
+    }
+
+    function selectActiveDay(idx, iso) {
+      state.activeDayIndex = idx;
+      state.activeDate = iso;
+      renderVisibleSchedule(false);
+      updateActiveDock();
+    }
+
+    // 取得當前選取日期的資料
+    function getActiveDateRecord() {
+      if (!state.activeDate) return null;
+      if (!state.daysMap[state.activeDate]) {
+        state.daysMap[state.activeDate] = { shifts: [], isFullDayHoliday: false };
+      }
+      return state.daysMap[state.activeDate];
+    }
+
     function updateActiveDock() {
-      const active = state.schedule[state.activeDayIndex];
       const label = document.getElementById('active-day-label');
-      if (!active) {
+      if (!state.activeDate) {
         label.innerText = '--';
         return;
       }
-      label.innerText = `${active.date.substring(5)} (${active.dayName})`;
 
-      const isLocked = active.isRest || active.isFullDayHoliday;
-      const enteredStaff = active.shifts.map(s => s.staff);
+      const d = new Date(state.activeDate);
+      label.innerText = `${state.activeDate.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[d.getDay()]})`;
+
+      const record = getActiveDateRecord();
+      const isLocked = isRestDay(d.getDay()) || record.isFullDayHoliday;
+      const enteredStaff = (record.shifts || []).map(s => s.staff);
 
       window.APP_CONFIG.STAFF_LIST.forEach(staff => {
         const btn = document.getElementById(`btn-${staff}`);
@@ -566,81 +575,78 @@
       });
     }
 
+    // 輸入代號（極速寫入 Local-First + 背景同步 Firebase）
     function inputStaff(staff) {
       triggerHaptic();
-      const current = state.schedule[state.activeDayIndex];
-      if (!current || current.isRest || current.isFullDayHoliday) return;
+      const record = getActiveDateRecord();
+      if (!record || record.isFullDayHoliday) return;
 
-      if (!current.shifts.some(s => s.staff === staff)) {
-        current.shifts.push({ staff: staff, status: 'ON' });
+      if (!record.shifts.some(s => s.staff === staff)) {
+        record.shifts.push({ staff: staff, status: 'ON' });
       }
 
-      if (current.shifts.length >= 6) {
+      saveLocalImmediately(); // 0.01s 寫入手機快取
+
+      if (record.shifts.length >= 6) {
         jumpNextDay();
       } else {
-        renderSchedule();
+        renderVisibleSchedule(false);
         updateActiveDock();
       }
-      debounceSave();
+      debounceSaveCloud();
     }
 
-    function toggleShiftStatus(dayIdx, shiftIdx) {
+    function toggleShiftStatus(iso, shiftIdx) {
       triggerHaptic();
-      const shift = state.schedule[dayIdx].shifts[shiftIdx];
+      if (!state.daysMap[iso] || !state.daysMap[iso].shifts[shiftIdx]) return;
+      const shift = state.daysMap[iso].shifts[shiftIdx];
       shift.status = (shift.status === 'ON' ? 'OFF' : 'ON');
-      renderSchedule();
-      debounceSave();
+      saveLocalImmediately();
+      renderVisibleSchedule(false);
+      debounceSaveCloud();
     }
 
     function toggleActiveFullHoliday() {
       triggerHaptic();
-      const current = state.schedule[state.activeDayIndex];
-      if (!current || current.isRest) return;
+      const record = getActiveDateRecord();
+      if (!record) return;
 
-      current.isFullDayHoliday = !current.isFullDayHoliday;
-      if (current.isFullDayHoliday) {
-        current.shifts = [];
+      record.isFullDayHoliday = !record.isFullDayHoliday;
+      if (record.isFullDayHoliday) {
+        record.shifts = [];
+        saveLocalImmediately();
         jumpNextDay();
       } else {
-        renderSchedule();
+        saveLocalImmediately();
+        renderVisibleSchedule(false);
         updateActiveDock();
       }
-      debounceSave();
+      debounceSaveCloud();
     }
 
     function clearActiveDay() {
-      const current = state.schedule[state.activeDayIndex];
-      if (!current) return;
-      current.shifts = [];
-      current.isFullDayHoliday = false;
-      renderSchedule();
+      const record = getActiveDateRecord();
+      if (!record) return;
+      record.shifts = [];
+      record.isFullDayHoliday = false;
+      saveLocalImmediately();
+      renderVisibleSchedule(false);
       updateActiveDock();
-      debounceSave();
+      debounceSaveCloud();
     }
 
     function jumpNextDay() {
-      let next = state.activeDayIndex + 1;
-      while (next < state.schedule.length && state.schedule[next].isRest) {
-        next++;
-      }
+      const container = document.getElementById('schedule-container');
+      let nextIndex = state.activeDayIndex + 1;
 
-      // 到底時自動無感延伸下一週
-      if (next >= state.schedule.length) {
+      if (nextIndex >= container.children.length) {
         state.weeksCount++;
-        generateScheduleSkeleton(getCurrentScheduleMap(), false);
-        showToast('已自動開啟下一週更表 ➔');
-        next = state.activeDayIndex + 1;
-        while (next < state.schedule.length && state.schedule[next].isRest) {
-          next++;
-        }
+        renderVisibleSchedule(false);
+        showToast('已自動開啟下一週 ➔');
       }
 
-      if (next < state.schedule.length) {
-        state.activeDayIndex = next;
-      }
-
-      renderSchedule();
-      updateActiveDock();
+      state.activeDayIndex = nextIndex;
+      renderVisibleSchedule(false);
       scrollToDayCard(state.activeDayIndex);
     }
 
@@ -651,7 +657,7 @@
       }, 50);
     }
 
-    // ================= 🗓️ 自訂視覺化月曆邏輯 =================
+    // ================= 🗓️ 自訂視覺化月曆 (打通全局 Marking) =================
     function openCalendarModal() {
       renderCalendarGrid();
       document.getElementById('calendar-modal').classList.remove('hidden');
@@ -682,7 +688,6 @@
       const lastDay = new Date(state.calYear, state.calMonth + 1, 0);
       const daysInMonth = lastDay.getDate();
 
-      // 週一為第 0 列 (0=Mon, 1=Tue... 6=Sun)
       let startOffset = firstDay.getDay() - 1;
       if (startOffset === -1) startOffset = 6;
 
@@ -691,34 +696,33 @@
         grid.appendChild(empty);
       }
 
-      const scheduleMap = getCurrentScheduleMap();
-
       for (let d = 1; d <= daysInMonth; d++) {
         const currDate = new Date(state.calYear, state.calMonth, d);
         const iso = currDate.toISOString().split('T')[0];
         const dayOfWeek = currDate.getDay();
         const isSunday = (dayOfWeek === 0);
 
-        const dayData = scheduleMap[iso];
-        const isFullHoliday = dayData?.isFullDayHoliday;
-        const isCompleted = dayData?.shifts?.length === 6;
-        const hasSomeShifts = dayData?.shifts?.length > 0 && dayData?.shifts?.length < 6;
+        // 讀取全局 daysMap 資料
+        const dayData = state.daysMap[iso];
+        const isFullHoliday = !!dayData?.isFullDayHoliday;
+        const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
+        const isCompleted = shiftCount === 6;
+        const hasSomeShifts = shiftCount > 0 && shiftCount < 6;
 
         const cell = document.createElement('button');
         cell.className = 'py-2 px-1 rounded-xl flex flex-col items-center justify-center transition-all active:scale-90 relative';
         
-        // 核心要求：點擊月曆內任意一天，自動抓取該日所在週的星期一，切換顯示整週更表！
+        // 點擊月曆任意一天，均以該日所在週的星期一載入更表！
         cell.onclick = () => {
           const monday = getMondayOfDate(currDate);
           state.startDate = monday.toISOString().split('T')[0];
           state.weeksCount = 1;
-          generateScheduleSkeleton(scheduleMap);
-          debounceSave();
+          renderVisibleSchedule(true);
           closeCalendarModal();
           showToast(`已載入該週更表 (${state.startDate})`);
         };
 
-        // 樣式判定：週日與全休日強制紅色！
+        // 樣式：星期日與全休紅色
         let numColor = 'text-slate-700';
         let bgStyle = 'bg-slate-50 border border-slate-100';
 
@@ -730,7 +734,7 @@
           bgStyle = 'bg-rose-100 border border-rose-300';
         }
 
-        // 當日標記點
+        // Marking 圓點標記
         let dot = '';
         if (isFullHoliday || isSunday) {
           dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
@@ -749,6 +753,45 @@
         `;
         grid.appendChild(cell);
       }
+    }
+
+    // ================= 持久化儲存機制 =================
+    // 1. 本地即時存 (0.01 秒完成，絕不遺失)
+    function saveLocalImmediately() {
+      try {
+        localStorage.setItem('roster_days_map', JSON.stringify(state.daysMap));
+      } catch (e) {
+        console.warn('本地快取寫入失敗', e);
+      }
+    }
+
+    // 2. 雲端防抖存儲 (Firebase)
+    function debounceSaveCloud() {
+      if (!db) return;
+      document.getElementById('sync-badge').innerText = '儲存中...';
+      document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium cursor-pointer';
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(saveAllData, 600);
+    }
+
+    function saveAllData() {
+      saveLocalImmediately();
+      if (!db) return;
+
+      const path = window.APP_CONFIG.dbPath || 'roster_data';
+      const payload = {
+        daysMap: state.daysMap,
+        updatedAt: new Date().toISOString()
+      };
+
+      db.ref(path).update(payload).then(() => {
+        document.getElementById('sync-badge').innerText = '已連線 (已同步)';
+        document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium cursor-pointer';
+      }).catch(err => {
+        console.error('Firebase 儲存失敗：', err);
+        document.getElementById('sync-badge').innerText = '已存本地 (雲端異常)';
+        document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium cursor-pointer';
+      });
     }
 
     // ================= 匯入與統計 =================
@@ -774,71 +817,59 @@
       }
 
       const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      const workingDaysPerWeek = state.includeSaturday ? 6 : 5;
-      const neededWeeks = Math.max(state.weeksCount, Math.ceil(lines.length / workingDaysPerWeek));
-      
-      if (neededWeeks > state.weeksCount) {
-        state.weeksCount = neededWeeks;
-        generateScheduleSkeleton(getCurrentScheduleMap(), false);
-      }
-
       let lineIdx = 0;
-      for (let i = 0; i < state.schedule.length; i++) {
-        const day = state.schedule[i];
-        if (day.isRest) continue;
-        if (lineIdx >= lines.length) break;
+      let curr = new Date(state.startDate);
 
-        const line = lines[lineIdx++];
-        if (line.includes('全休') || line.toUpperCase().includes('HOLIDAY')) {
-          day.isFullDayHoliday = true;
-          day.shifts = [];
-          continue;
-        }
+      while (lineIdx < lines.length) {
+        const iso = curr.toISOString().split('T')[0];
+        const dayIdx = curr.getDay();
 
-        const tokens = line.split(/[\s,]+/).filter(t => t.length > 0);
-        const parsedShifts = [];
-
-        tokens.forEach(tok => {
-          const match = tok.match(/([A-Za-z])/);
-          if (match) {
-            const staffChar = match[1].toUpperCase();
-            if (window.APP_CONFIG.STAFF_LIST.includes(staffChar)) {
-              const isOff = tok.includes('休') || tok.toUpperCase().includes('OFF');
-              parsedShifts.push({
-                staff: staffChar,
-                status: isOff ? 'OFF' : 'ON'
-              });
+        if (dayIdx !== 0 && (!isRestDay(dayIdx) || lineIdx < lines.length)) {
+          const line = lines[lineIdx++];
+          if (line.includes('全休') || line.toUpperCase().includes('HOLIDAY')) {
+            state.daysMap[iso] = { shifts: [], isFullDayHoliday: true };
+          } else {
+            const tokens = line.split(/[\s,]+/).filter(t => t.length > 0);
+            const parsedShifts = [];
+            tokens.forEach(tok => {
+              const match = tok.match(/([A-Za-z])/);
+              if (match) {
+                const staffChar = match[1].toUpperCase();
+                if (window.APP_CONFIG.STAFF_LIST.includes(staffChar)) {
+                  const isOff = tok.includes('休') || tok.toUpperCase().includes('OFF');
+                  parsedShifts.push({ staff: staffChar, status: isOff ? 'OFF' : 'ON' });
+                }
+              }
+            });
+            if (parsedShifts.length > 0) {
+              state.daysMap[iso] = { shifts: parsedShifts.slice(0, 6), isFullDayHoliday: false };
             }
           }
-        });
-
-        if (parsedShifts.length > 0) {
-          day.isFullDayHoliday = false;
-          day.shifts = parsedShifts.slice(0, 6);
         }
+        curr.setDate(curr.getDate() + 1);
       }
 
-      renderSchedule();
-      updateActiveDock();
-      saveCloudData();
+      saveLocalImmediately();
+      renderVisibleSchedule(false);
+      saveAllData();
       closeImportModal();
-      showToast('✅ 匯入成功並已同步');
+      showToast('✅ 匯入成功並已儲存');
     }
 
+    // 1~6 號更位分佈統計
     function calculatePositionStats() {
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const matrix = {};
-      
       staffList.forEach(s => {
         matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0 };
       });
 
       let validWorkingDays = 0;
-
-      state.schedule.forEach(day => {
-        if (!day.isRest && !day.isFullDayHoliday && day.shifts.length > 0) {
+      Object.keys(state.daysMap).forEach(iso => {
+        const d = state.daysMap[iso];
+        if (!d.isFullDayHoliday && d.shifts && d.shifts.length > 0) {
           validWorkingDays++;
-          day.shifts.forEach((shift, sIdx) => {
+          d.shifts.forEach((shift, sIdx) => {
             const pos = sIdx + 1;
             if (pos <= 6 && matrix[shift.staff]) {
               matrix[shift.staff][pos]++;
@@ -970,7 +1001,8 @@
     async function copySuperPrompt() {
       const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
       const staffList = window.APP_CONFIG.STAFF_LIST;
-      const dateRangeStr = `${state.schedule[0]?.date || ''} 至 ${state.schedule[state.schedule.length - 1]?.date || ''}`;
+      const sortedDates = Object.keys(state.daysMap).sort();
+      const dateRangeStr = sortedDates.length > 0 ? `${sortedDates[0]} 至 ${sortedDates[sortedDates.length - 1]}` : '未指定';
 
       let statText = `【更位統計總覽 (共 ${validWorkingDays} 個排班工作日，每更位理想期望: ${expectedPerPosition} 次)】\n\n`;
       statText += `各員工 1~6 號更位次數矩陣：\n`;
@@ -992,12 +1024,7 @@
         totalWorkingDays: validWorkingDays,
         staff: staffList,
         positionMatrix: matrix,
-        schedule: state.schedule.map(d => ({
-          date: d.date,
-          dayOfWeek: d.dayName,
-          isFullDayHoliday: d.isFullDayHoliday,
-          shifts: d.shifts
-        }))
+        daysMap: state.daysMap
       }, null, 2);
 
       let finalPrompt = state.promptTemplate
@@ -1103,43 +1130,24 @@
         db.ref(path).once('value').then(snap => {
           if (snap.exists()) {
             const val = snap.val();
-            const map = {};
-            (val.schedule || []).forEach(d => {
-              map[d.date] = { shifts: d.shifts, isFullDayHoliday: d.isFullDayHoliday };
-            });
-            generateScheduleSkeleton(map);
+            // 合併雲端與本地字典
+            if (val.daysMap) {
+              state.daysMap = { ...state.daysMap, ...val.daysMap };
+              saveLocalImmediately();
+              renderVisibleSchedule(false);
+            }
           }
-          document.getElementById('sync-badge').innerText = '已連線';
+          document.getElementById('sync-badge').innerText = '已連線 (已同步)';
           document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium cursor-pointer';
-        }).catch(() => {
-          document.getElementById('sync-badge').innerText = '連線異常';
-          document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-medium cursor-pointer';
+        }).catch(err => {
+          console.warn('雲端讀取異常：', err);
+          document.getElementById('sync-badge').innerText = '已用本地快取';
+          document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium cursor-pointer';
         });
 
       } catch (e) {
         console.error(e);
       }
-    }
-
-    let saveTimeout = null;
-    function debounceSave() {
-      if (!db) return;
-      document.getElementById('sync-badge').innerText = '儲存中...';
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(saveCloudData, 800);
-    }
-
-    function saveCloudData() {
-      if (!db) return;
-      const payload = {
-        startDate: state.startDate,
-        schedule: state.schedule,
-        updatedAt: new Date().toISOString()
-      };
-      const path = window.APP_CONFIG.dbPath || 'roster_data';
-      db.ref(path).set(payload).then(() => {
-        document.getElementById('sync-badge').innerText = '已連線';
-      });
     }
   </script>
 </body>
