@@ -2,12 +2,15 @@ let db = null;
 let state = {
   startDate: '',
   weeks: 3,
+  includeSaturday: false,
   schedule: [],
   activeDayIndex: 0,
-  promptTemplate: window.APP_CONFIG.DEFAULT_PROMPT
+  promptTemplate: window.APP_CONFIG.DEFAULT_PROMPT,
+  isKeyboardCollapsed: false
 };
 
 window.addEventListener('DOMContentLoaded', () => {
+  loadLocalPreferences();
   initKeyboardButtons();
   initDefaultDates();
   generateScheduleSkeleton();
@@ -25,18 +28,43 @@ function triggerHaptic() {
   if (navigator.vibrate) navigator.vibrate(35);
 }
 
-// 動態生成 6 個員工按鈕
+function loadLocalPreferences() {
+  // 載入週六設定 (預設 false)
+  const savedSat = localStorage.getItem('shift_include_saturday');
+  state.includeSaturday = savedSat !== null ? (savedSat === 'true') : window.APP_CONFIG.DEFAULT_INCLUDE_SATURDAY;
+  const satToggle = document.getElementById('include-sat-toggle');
+  if (satToggle) satToggle.checked = state.includeSaturday;
+}
+
 function initKeyboardButtons() {
-  const grid = document.getElementById('staff-buttons-grid');
+  const grid = document.getElementById('keyboard-grid');
   grid.innerHTML = '';
   window.APP_CONFIG.STAFF_LIST.forEach(staff => {
     const btn = document.createElement('button');
     btn.id = `btn-${staff}`;
-    btn.className = 'h-12 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow';
+    btn.className = 'h-12 rounded-xl bg-slate-900 text-white font-bold text-lg active:scale-95 transition-all shadow-sm';
     btn.innerText = staff;
     btn.onclick = () => inputStaff(staff);
     grid.appendChild(btn);
   });
+}
+
+// 展開 / 收起虛擬鍵盤
+function toggleKeyboard() {
+  state.isKeyboardCollapsed = !state.isKeyboardCollapsed;
+  const grid = document.getElementById('keyboard-grid');
+  const main = document.getElementById('main-content');
+  const icon = document.getElementById('dock-icon');
+
+  if (state.isKeyboardCollapsed) {
+    grid.classList.add('hidden');
+    icon.innerText = '▲';
+    main.className = 'max-w-md mx-auto p-3 safe-bottom-collapsed';
+  } else {
+    grid.classList.remove('hidden');
+    icon.innerText = '▼';
+    main.className = 'max-w-md mx-auto p-3 safe-bottom-expanded';
+  }
 }
 
 function initDefaultDates() {
@@ -56,6 +84,21 @@ function onDateConfigChange() {
   saveCloudData();
 }
 
+function toggleSaturdaySetting() {
+  state.includeSaturday = document.getElementById('include-sat-toggle').checked;
+  localStorage.setItem('shift_include_saturday', state.includeSaturday);
+  generateScheduleSkeleton();
+  saveCloudData();
+  showToast(state.includeSaturday ? '已開啟星期六排班' : '已關閉星期六排班');
+}
+
+// 判斷某日是否為休息日（週日固定休；週六看設定）
+function isRestDay(dayIdx) {
+  if (dayIdx === 0) return true; // 週日
+  if (dayIdx === 6 && !state.includeSaturday) return true; // 週六
+  return false;
+}
+
 function generateScheduleSkeleton(existingMap = {}) {
   const list = [];
   const totalDays = state.weeks * 7;
@@ -66,23 +109,26 @@ function generateScheduleSkeleton(existingMap = {}) {
     curr.setDate(start.getDate() + i);
     const iso = curr.toISOString().split('T')[0];
     const dayIdx = curr.getDay();
-    const isSun = (dayIdx === 0);
+    const isAutoRest = isRestDay(dayIdx);
 
     list.push({
       date: iso,
+      dayIdx: dayIdx,
       dayName: window.APP_CONFIG.WEEK_DAYS[dayIdx],
-      isSunday: isSun,
+      isRest: isAutoRest,
       isFullDayHoliday: existingMap[iso]?.isFullDayHoliday || false,
       shifts: existingMap[iso]?.shifts || []
     });
   }
   state.schedule = list;
-  const firstActive = list.findIndex(d => !d.isSunday && !d.isFullDayHoliday && d.shifts.length < 6);
+
+  const firstActive = list.findIndex(d => !d.isRest && !d.isFullDayHoliday && d.shifts.length < 6);
   state.activeDayIndex = firstActive !== -1 ? firstActive : 0;
   renderSchedule();
   updateActiveDock();
 }
 
+// 渲染卡片：等寬標籤、無刪除線
 function renderSchedule() {
   const container = document.getElementById('schedule-container');
   container.innerHTML = '';
@@ -90,33 +136,33 @@ function renderSchedule() {
   state.schedule.forEach((day, idx) => {
     const isActive = (idx === state.activeDayIndex);
     const card = document.createElement('div');
-    
+
     let borderClass = isActive 
       ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm' 
-      : day.isSunday 
+      : day.isRest 
         ? 'bg-slate-200/40 border-slate-200/60 opacity-60' 
         : day.isFullDayHoliday 
-          ? 'bg-amber-50/60 border-amber-200' 
+          ? 'bg-amber-50/70 border-amber-200' 
           : 'bg-white border-slate-200/80 shadow-xs';
 
     card.className = `p-2.5 rounded-xl border transition-all ${borderClass}`;
     card.onclick = () => selectActiveDay(idx);
 
     let badge = '';
-    if (day.isSunday) badge = `<span class="text-[10px] font-semibold text-slate-500">週日休</span>`;
-    else if (day.isFullDayHoliday) badge = `<span class="text-[10px] font-bold text-amber-700">🌴 全休</span>`;
-    else badge = `<span class="text-[10px] text-slate-400 font-medium">${day.shifts.length}/6</span>`;
+    if (day.isRest) {
+      badge = `<span class="text-[10px] font-semibold text-slate-500">週${day.dayName}休</span>`;
+    } else if (day.isFullDayHoliday) {
+      badge = `<span class="text-[10px] font-bold text-amber-700">🌴 全休</span>`;
+    } else {
+      badge = `<span class="text-[10px] text-slate-400 font-medium">${day.shifts.length}/6</span>`;
+    }
 
     let shiftsHtml = '';
-    if (!day.isSunday && !day.isFullDayHoliday) {
-      shiftsHtml = `<div class="flex flex-wrap gap-1.5 mt-1.5">
+    if (!day.isRest && !day.isFullDayHoliday) {
+      shiftsHtml = `<div class="flex flex-wrap gap-1.5 mt-2">
         ${day.shifts.map((s, sIdx) => `
           <button onclick="event.stopPropagation(); toggleShiftStatus(${idx},${sIdx});" 
-            class="px-2 py-0.5 rounded-md text-xs font-bold border ${
-              s.status === 'ON' 
-                ? 'bg-slate-900 text-white border-slate-900' 
-                : 'bg-rose-100 text-rose-700 border-rose-300 line-through'
-            }">
+            class="staff-badge ${s.status === 'ON' ? 'staff-badge-on' : 'staff-badge-off'}">
             ${s.staff}${s.status === 'OFF' ? '休' : ''}
           </button>
         `).join('')}
@@ -151,7 +197,7 @@ function updateActiveDock() {
   }
   label.innerText = `${active.date.substring(5)} (${active.dayName})`;
 
-  const isLocked = active.isSunday || active.isFullDayHoliday;
+  const isLocked = active.isRest || active.isFullDayHoliday;
   const enteredStaff = active.shifts.map(s => s.staff);
 
   window.APP_CONFIG.STAFF_LIST.forEach(staff => {
@@ -171,7 +217,7 @@ function updateActiveDock() {
 function inputStaff(staff) {
   triggerHaptic();
   const current = state.schedule[state.activeDayIndex];
-  if (!current || current.isSunday || current.isFullDayHoliday) return;
+  if (!current || current.isRest || current.isFullDayHoliday) return;
 
   if (!current.shifts.some(s => s.staff === staff)) {
     current.shifts.push({ staff: staff, status: 'ON' });
@@ -197,7 +243,7 @@ function toggleShiftStatus(dayIdx, shiftIdx) {
 function toggleActiveFullHoliday() {
   triggerHaptic();
   const current = state.schedule[state.activeDayIndex];
-  if (!current || current.isSunday) return;
+  if (!current || current.isRest) return;
 
   current.isFullDayHoliday = !current.isFullDayHoliday;
   if (current.isFullDayHoliday) {
@@ -220,9 +266,10 @@ function clearActiveDay() {
   debounceSave();
 }
 
+// 跳到下一個需要排班的工作日（自動跳過公休日）
 function jumpNextDay() {
   let next = state.activeDayIndex + 1;
-  while (next < state.schedule.length && state.schedule[next].isSunday) {
+  while (next < state.schedule.length && state.schedule[next].isRest) {
     next++;
   }
   if (next < state.schedule.length) state.activeDayIndex = next;
@@ -236,13 +283,83 @@ function jumpNextDay() {
   }, 50);
 }
 
+// 電腦批次匯入解析器
+function openImportModal() {
+  document.getElementById('import-text-input').value = '';
+  document.getElementById('import-modal').classList.remove('hidden');
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').classList.add('hidden');
+}
+
+function fillImportExample() {
+  const example = `Y I S K C V\nC V K Y I S\nV休 C Y S I K\n全休\nS K C V Y I`;
+  document.getElementById('import-text-input').value = example;
+}
+
+function executeBatchImport() {
+  const rawText = document.getElementById('import-text-input').value.trim();
+  if (!rawText) {
+    showToast('請先貼入內容');
+    return;
+  }
+
+  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  let lineIdx = 0;
+
+  for (let i = 0; i < state.schedule.length; i++) {
+    const day = state.schedule[i];
+    if (day.isRest) continue; // 自動跳過週日與週六
+
+    if (lineIdx >= lines.length) break;
+
+    const line = lines[lineIdx++];
+    if (line.includes('全休') || line.toUpperCase().includes('HOLIDAY')) {
+      day.isFullDayHoliday = true;
+      day.shifts = [];
+      continue;
+    }
+
+    // 解析該行 6 個代號 (支援空格、Tab、逗號)
+    const tokens = line.split(/[\s,]+/).filter(t => t.length > 0);
+    const parsedShifts = [];
+
+    tokens.forEach(tok => {
+      const match = tok.match(/([A-Za-z])/);
+      if (match) {
+        const staffChar = match[1].toUpperCase();
+        if (window.APP_CONFIG.STAFF_LIST.includes(staffChar)) {
+          const isOff = tok.includes('休') || tok.toUpperCase().includes('OFF');
+          parsedShifts.push({
+            staff: staffChar,
+            status: isOff ? 'OFF' : 'ON'
+          });
+        }
+      }
+    });
+
+    if (parsedShifts.length > 0) {
+      day.isFullDayHoliday = false;
+      day.shifts = parsedShifts.slice(0, 6);
+    }
+  }
+
+  renderSchedule();
+  updateActiveDock();
+  saveCloudData();
+  closeImportModal();
+  showToast('✅ 匯入成功並已同步');
+}
+
+// 統計計算
 function calculateStatistics() {
   const stats = {};
   window.APP_CONFIG.STAFF_LIST.forEach(s => stats[s] = { on: 0, off: 0 });
   let totalWorkSlots = 0;
 
   state.schedule.forEach(day => {
-    if (!day.isSunday && !day.isFullDayHoliday) {
+    if (!day.isRest && !day.isFullDayHoliday) {
       day.shifts.forEach(shift => {
         if (shift.status === 'ON') {
           stats[shift.staff].on++;
@@ -333,10 +450,28 @@ async function copySuperPrompt() {
   }
 }
 
+// 設定與 Key 隱私顯示控制
 function openSettingsModal() {
-  const savedKey = localStorage.getItem('shift_firebase_api_key') || '';
-  document.getElementById('api-key-input').value = savedKey;
+  const hasKey = !!localStorage.getItem('shift_firebase_api_key');
+  const savedBox = document.getElementById('key-saved-container');
+  const inputBox = document.getElementById('key-input-container');
+  const cancelBtn = document.getElementById('cancel-key-btn');
+  const keyInput = document.getElementById('api-key-input');
+
+  keyInput.value = ''; // 永遠清空，絕不顯示真實 Key
+
+  if (hasKey) {
+    savedBox.classList.remove('hidden');
+    inputBox.classList.add('hidden');
+    cancelBtn.classList.remove('hidden');
+  } else {
+    savedBox.classList.add('hidden');
+    inputBox.classList.remove('hidden');
+    cancelBtn.classList.add('hidden');
+  }
+
   document.getElementById('prompt-template-input').value = state.promptTemplate;
+  document.getElementById('include-sat-toggle').checked = state.includeSaturday;
   document.getElementById('settings-modal').classList.remove('hidden');
 }
 
@@ -344,14 +479,24 @@ function closeSettingsModal() {
   document.getElementById('settings-modal').classList.add('hidden');
 }
 
+function showKeyInputForm() {
+  document.getElementById('key-saved-container').classList.add('hidden');
+  document.getElementById('key-input-container').classList.remove('hidden');
+}
+
+function hideKeyInputForm() {
+  document.getElementById('key-saved-container').classList.remove('hidden');
+  document.getElementById('key-input-container').classList.add('hidden');
+}
+
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) {
-    showToast('請輸入 API Key');
+    showToast('請輸入新 Key');
     return;
   }
   localStorage.setItem('shift_firebase_api_key', key);
-  showToast('API Key 已儲存於手機');
+  showToast('Key 已安全更新');
   setTimeout(() => location.reload(), 600);
 }
 
@@ -368,7 +513,7 @@ function resetDefaultPrompt() {
   document.getElementById('prompt-template-input').value = window.APP_CONFIG.DEFAULT_PROMPT;
 }
 
-// 組合本地 Key 與 config.js 進行初始化
+// 初始化 Firebase
 function initFirebaseWithStoredKey() {
   const promptSaved = localStorage.getItem('shift_prompt_template');
   if (promptSaved) state.promptTemplate = promptSaved;
@@ -392,7 +537,7 @@ function initFirebaseWithStoredKey() {
     document.getElementById('sync-badge').innerText = '同步中...';
     document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium cursor-pointer';
 
-    const path = window.APP_CONFIG.dbPath || 'schedule_data';
+    const path = window.APP_CONFIG.dbPath || 'roster_data';
     db.ref(path).once('value').then(snap => {
       if (snap.exists()) {
         const val = snap.val();
@@ -435,7 +580,7 @@ function saveCloudData() {
     schedule: state.schedule,
     updatedAt: new Date().toISOString()
   };
-  const path = window.APP_CONFIG.dbPath || 'schedule_data';
+  const path = window.APP_CONFIG.dbPath || 'roster_data';
   db.ref(path).set(payload).then(() => {
     document.getElementById('sync-badge').innerText = '已連線';
   });
