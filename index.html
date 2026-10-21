@@ -5,12 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>排更助手</title>
   
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="style.css">
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 底部避開 iPhone 手勢橫條與鍵盤 */
+    .safe-bottom-expanded {
+      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 125px);
+    }
+
+    .safe-bottom-collapsed {
+      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 55px);
+    }
+
+    /* 等寬代號標籤 (以最寬的「V休」為準，固定 48px) */
+    .staff-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 30px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    /* 上班樣式 */
+    .staff-badge-on {
+      background-color: #0f172a;
+      color: #ffffff;
+      border: 1px solid #0f172a;
+    }
+
+    /* 放假樣式：無刪除線，柔和紅底紅字提示 */
+    .staff-badge-off {
+      background-color: #ffe4e6;
+      color: #e11d48;
+      border: 1px solid #fecdd3;
+    }
+
+    /* 捲軸微調 */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
 
@@ -38,7 +98,7 @@
     </div>
   </header>
 
-  <!-- 日期控制 -->
+  <!-- 週期選擇 -->
   <main id="main-content" class="max-w-md mx-auto p-3 safe-bottom-expanded">
     <div class="bg-white rounded-xl p-2.5 shadow-sm border border-slate-200/80 mb-3 flex items-center justify-between gap-2">
       <input type="date" id="start-date" onchange="onDateConfigChange()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none flex-1">
@@ -52,11 +112,11 @@
     <div id="schedule-container" class="space-y-2"></div>
   </main>
 
-  <!-- 底部固定虛擬鍵盤（支援展開/收起，加大操作按鈕） -->
+  <!-- 底部固定鍵盤 (可折疊、加大輔助按鈕) -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl transition-all duration-200 p-2 sm:pb-4">
     <div class="max-w-md mx-auto">
       
-      <!-- 控制按鈕列 (大尺寸設計) -->
+      <!-- 控制按鈕列 -->
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-1.5">
           <button id="toggle-dock-btn" onclick="toggleKeyboard()" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-extrabold flex items-center gap-1 active:bg-slate-200">
@@ -65,7 +125,7 @@
           <span id="active-day-label" class="text-xs font-extrabold text-indigo-600 pl-1">--</span>
         </div>
         
-        <!-- 加大功能鍵：全休、清空、跳過 -->
+        <!-- 加大快捷鍵 -->
         <div class="flex gap-1.5">
           <button onclick="toggleActiveFullHoliday()" class="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold active:bg-amber-100 shadow-xs">
             🌴 全休
@@ -79,25 +139,25 @@
         </div>
       </div>
 
-      <!-- 6 位員工鍵盤本體 -->
+      <!-- 6 位員工大按鈕 -->
       <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
   </div>
 
-  <!-- 📥 電腦批次匯入 Modal -->
+  <!-- 📥 電腦端匯入 Modal -->
   <div id="import-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-sm font-bold text-slate-900">📥 電腦端快速批次匯入</h3>
+        <h3 class="text-sm font-bold text-slate-900">📥 電腦端批次匯入</h3>
         <button onclick="closeImportModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
       <p class="text-xs text-slate-500">
-        在電腦上複製多行資料直接貼上。一行對應一個工作日，代號可用空格或逗號分開；放假寫 <code class="bg-slate-100 px-1 rounded text-rose-600">V休</code>，全日放假寫 <code class="bg-slate-100 px-1 rounded text-amber-600">全休</code>。
+        一行代表一個工作日，支援空格或逗號隔開；休假填 <code class="bg-slate-100 px-1 rounded text-rose-600">V休</code>，全日假填 <code class="bg-slate-100 px-1 rounded text-amber-600">全休</code>。
       </p>
-      <textarea id="import-text-input" rows="8" placeholder="貼上文字，例如：&#10;Y I S K C V&#10;C V K Y I S&#10;V休 C Y S I K&#10;全休" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+      <textarea id="import-text-input" rows="8" placeholder="例如：&#10;Y I S K C V&#10;C V K Y I S&#10;V休 C Y S I K&#10;全休" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
       <div class="flex gap-2">
         <button onclick="executeBatchImport()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs active:bg-indigo-700">確認匯入並同步</button>
-        <button onclick="fillImportExample()" class="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs">載入範例</button>
+        <button onclick="fillImportExample()" class="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs">範例資料</button>
       </div>
     </div>
   </div>
@@ -122,20 +182,19 @@
         <button onclick="closeSettingsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
 
-      <!-- 星期六排班設定開關 -->
+      <!-- 星期六開關 -->
       <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
         <div>
           <div class="text-xs font-bold text-slate-800">星期六需要排班</div>
-          <div class="text-[10px] text-slate-400">開啟後星期六需輸入 6 人；關閉則自動列為公休</div>
+          <div class="text-[10px] text-slate-400">開啟需輸入 6 人；關閉則自動排為週六公休</div>
         </div>
         <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-4 h-4 text-indigo-600 rounded">
       </div>
 
-      <!-- API Key 隱私顯示區塊（絕不向外展示原始 Key） -->
+      <!-- API Key 隱私管理 (絕不對外展示明文 Key) -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
         <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
         
-        <!-- 已儲存狀態卡片 -->
         <div id="key-saved-container" class="hidden flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
           <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
             <span>🔒</span> 已設置完成
@@ -145,31 +204,5 @@
           </button>
         </div>
 
-        <!-- 只有點擊變更或首次設定時才顯示的空白輸入框 -->
         <div id="key-input-container" class="hidden space-y-2 mt-2">
-          <input type="password" id="api-key-input" placeholder="貼入新 API Key (AIzaSy...)" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none">
-          <div class="flex justify-end gap-2">
-            <button onclick="hideKeyInputForm()" id="cancel-key-btn" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold hidden">取消</button>
-            <button onclick="saveApiKey()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold">儲存新 Key</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Super Prompt 模板 -->
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">📝 Super Prompt 模板：</label>
-        <textarea id="prompt-template-input" rows="5" class="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none"></textarea>
-        <div class="flex gap-2 mt-2">
-          <button onclick="savePromptTemplate()" class="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-bold text-xs">儲存 Prompt</button>
-          <button onclick="resetDefaultPrompt()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs">還原預設</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md transition-opacity duration-200 opacity-0 pointer-events-none"></div>
-
-  <script src="config.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+          <input type="password" id="api-key-input" placeholder="貼入新 API Key (AIzaSy...)" class="w-full text-xs font-mono bg-white border border-slate-2
