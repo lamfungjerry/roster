@@ -18,7 +18,7 @@ window.APP_CONFIG = {
   },
 
   // 資料庫儲存節點 (可自訂名稱以增加隱密性)
-  dbPath: 'schedule_data',
+  dbPath: 'roster_data',
 
   // 預設 Super Prompt
   DEFAULT_PROMPT: `你現在是一位營運排班評估助手。以下是未來週期（{{DATE_RANGE}}）6 位員工（Y, I, S, K, C, V）的更表數據。
