@@ -6,19 +6,18 @@ window.APP_CONFIG = {
   // 星期名稱
   WEEK_DAYS: ['日', '一', '二', '三', '四', '五', '六'],
 
-// 星期六是否需要排班：預設為 false（不排星期六，自動視為休息日）
+  // 星期六是否需要排班：預設為 false（不排星期六，自動視為休息日）
   DEFAULT_INCLUDE_SATURDAY: false,
-
 
   // Firebase 專案固定參數 (請換成你專案的值，無須填寫 apiKey)
   firebaseBase: {
-  authDomain: "roster-9a699.firebaseapp.com",
-  databaseURL: "https://roster-9a699-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "roster-9a699",
-  storageBucket: "roster-9a699.firebasestorage.app",
-  messagingSenderId: "286093798970",
-  appId: "1:286093798970:web:842750f200e1ca3f684f03",
-  measurementId: "G-DD7WDKYHCM"
+    authDomain: "roster-9a699.firebaseapp.com",
+    databaseURL: "https://roster-9a699-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "roster-9a699",
+    storageBucket: "roster-9a699.firebasestorage.app",
+    messagingSenderId: "286093798970",
+    appId: "1:286093798970:web:842750f200e1ca3f684f03",
+    measurementId: "G-DD7WDKYHCM"
   },
 
   // 資料庫儲存節點 (可自訂名稱以增加隱密性)
