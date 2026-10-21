@@ -1,5 +1,8 @@
 // 系統全域公開設定 (放置於 GitHub)
 window.APP_CONFIG = {
+  // 系統開始使用日期 (格式：YYYY-MM-DD)
+  SYSTEM_START_DATE: '2026-07-20',
+  
   // 6 位排班員工代號
   STAFF_LIST: ['Y', 'I', 'S', 'K', 'C', 'V'],
 
