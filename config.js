@@ -8,12 +8,13 @@ window.APP_CONFIG = {
 
   // Firebase 專案固定參數 (請換成你專案的值，無須填寫 apiKey)
   firebaseBase: {
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-asia-southeast1.firebasedatabase.app",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  authDomain: "roster-9a699.firebaseapp.com",
+  databaseURL: "https://roster-9a699-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "roster-9a699",
+  storageBucket: "roster-9a699.firebasestorage.app",
+  messagingSenderId: "286093798970",
+  appId: "1:286093798970:web:842750f200e1ca3f684f03",
+  measurementId: "G-DD7WDKYHCM"
   },
 
   // 資料庫儲存節點 (可自訂名稱以增加隱密性)
