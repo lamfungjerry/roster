@@ -5,31 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>排更助手</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- 自訂獨立樣式表 -->
   <link rel="stylesheet" href="style.css">
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
-  <!-- 頂部極簡導航 -->
+  <!-- 頂部導航 -->
   <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 py-2.5 flex items-center justify-between">
     <div class="flex items-center gap-2">
       <span class="text-base font-black text-slate-900 tracking-tight">📅 排更</span>
       <span id="sync-badge" onclick="openSettingsModal()" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-medium cursor-pointer">
-        未綁定 Key (點此)
+        檢查連線中...
       </span>
     </div>
     <div class="flex items-center gap-1.5">
-      <button onclick="openStatsModal()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 active:bg-slate-200">
+      <button onclick="openImportModal()" class="px-2 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-600 active:bg-indigo-100">
+        📥 匯入
+      </button>
+      <button onclick="openStatsModal()" class="px-2 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 active:bg-slate-200">
         📊 統計
       </button>
-      <button onclick="copySuperPrompt()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white shadow-sm active:bg-emerald-700">
+      <button onclick="copySuperPrompt()" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-sm active:bg-emerald-700">
         📋 Copy
       </button>
       <button onclick="openSettingsModal()" class="p-1.5 text-slate-500 rounded-lg active:bg-slate-100">
@@ -38,8 +38,8 @@
     </div>
   </header>
 
-  <!-- 週期選擇 -->
-  <main class="max-w-md mx-auto p-3 safe-bottom">
+  <!-- 日期控制 -->
+  <main id="main-content" class="max-w-md mx-auto p-3 safe-bottom-expanded">
     <div class="bg-white rounded-xl p-2.5 shadow-sm border border-slate-200/80 mb-3 flex items-center justify-between gap-2">
       <input type="date" id="start-date" onchange="onDateConfigChange()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none flex-1">
       <select id="weeks-select" onchange="onDateConfigChange()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none">
@@ -52,23 +52,57 @@
     <div id="schedule-container" class="space-y-2"></div>
   </main>
 
-  <!-- 底部固定虛擬鍵盤 (大拇指熱區) -->
-  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-2 sm:pb-4 shadow-xl">
+  <!-- 底部固定虛擬鍵盤（支援展開/收起，加大操作按鈕） -->
+  <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl transition-all duration-200 p-2 sm:pb-4">
     <div class="max-w-md mx-auto">
-      <div class="flex items-center justify-between px-1 mb-1.5">
-        <div id="active-day-label" class="text-xs font-extrabold text-indigo-600">--</div>
+      
+      <!-- 控制按鈕列 (大尺寸設計) -->
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5">
+          <button id="toggle-dock-btn" onclick="toggleKeyboard()" class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-extrabold flex items-center gap-1 active:bg-slate-200">
+            <span id="dock-icon">▼</span> 鍵盤
+          </button>
+          <span id="active-day-label" class="text-xs font-extrabold text-indigo-600 pl-1">--</span>
+        </div>
+        
+        <!-- 加大功能鍵：全休、清空、跳過 -->
         <div class="flex gap-1.5">
-          <button onclick="toggleActiveFullHoliday()" class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium active:bg-amber-100">🌴 全休</button>
-          <button onclick="clearActiveDay()" class="px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 text-xs font-medium active:bg-rose-100">↺ 清空</button>
-          <button onclick="jumpNextDay()" class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium active:bg-slate-200">跳過 ➔</button>
+          <button onclick="toggleActiveFullHoliday()" class="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold active:bg-amber-100 shadow-xs">
+            🌴 全休
+          </button>
+          <button onclick="clearActiveDay()" class="px-3.5 py-1.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold active:bg-rose-100 shadow-xs">
+            ↺ 清空
+          </button>
+          <button onclick="jumpNextDay()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold active:bg-slate-800 shadow-xs">
+            跳過 ➔
+          </button>
         </div>
       </div>
-      <!-- 6 位員工按鈕 -->
-      <div id="staff-buttons-grid" class="grid grid-cols-6 gap-1.5"></div>
+
+      <!-- 6 位員工鍵盤本體 -->
+      <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
   </div>
 
-  <!-- 統計 Modal -->
+  <!-- 📥 電腦批次匯入 Modal -->
+  <div id="import-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-2">
+        <h3 class="text-sm font-bold text-slate-900">📥 電腦端快速批次匯入</h3>
+        <button onclick="closeImportModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
+      </div>
+      <p class="text-xs text-slate-500">
+        在電腦上複製多行資料直接貼上。一行對應一個工作日，代號可用空格或逗號分開；放假寫 <code class="bg-slate-100 px-1 rounded text-rose-600">V休</code>，全日放假寫 <code class="bg-slate-100 px-1 rounded text-amber-600">全休</code>。
+      </p>
+      <textarea id="import-text-input" rows="8" placeholder="貼上文字，例如：&#10;Y I S K C V&#10;C V K Y I S&#10;V休 C Y S I K&#10;全休" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+      <div class="flex gap-2">
+        <button onclick="executeBatchImport()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs active:bg-indigo-700">確認匯入並同步</button>
+        <button onclick="fillImportExample()" class="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs">載入範例</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📊 統計 Modal -->
   <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
@@ -76,44 +110,65 @@
         <button onclick="closeStatsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
       <div id="stats-content"></div>
-      <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs">關閉</button>
+      <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">關閉</button>
     </div>
   </div>
 
-  <!-- 設定 Modal -->
+  <!-- ⚙️ 設定 Modal -->
   <div id="settings-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
         <h3 class="text-sm font-bold text-slate-900">⚙️ 系統設定</h3>
         <button onclick="closeSettingsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
-      
-      <!-- API Key 儲存 -->
+
+      <!-- 星期六排班設定開關 -->
+      <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+        <div>
+          <div class="text-xs font-bold text-slate-800">星期六需要排班</div>
+          <div class="text-[10px] text-slate-400">開啟後星期六需輸入 6 人；關閉則自動列為公休</div>
+        </div>
+        <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-4 h-4 text-indigo-600 rounded">
+      </div>
+
+      <!-- API Key 隱私顯示區塊（絕不向外展示原始 Key） -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-        <label class="block text-xs font-bold text-slate-700 mb-1">🔑 Firebase API Key (存於此手機)：</label>
-        <p class="text-[10px] text-slate-400 mb-1.5">只需輸入以 <code>AIzaSy...</code> 開頭的 Key 字串即可。</p>
-        <input type="text" id="api-key-input" placeholder="AIzaSy..." class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none">
-        <div class="flex justify-end mt-2">
-          <button onclick="saveApiKey()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">儲存 Key</button>
+        <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
+        
+        <!-- 已儲存狀態卡片 -->
+        <div id="key-saved-container" class="hidden flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+            <span>🔒</span> 已設置完成
+          </span>
+          <button onclick="showKeyInputForm()" class="text-xs text-indigo-600 font-bold px-2 py-1 rounded hover:bg-emerald-100 active:bg-emerald-200">
+            變更 / 重設
+          </button>
+        </div>
+
+        <!-- 只有點擊變更或首次設定時才顯示的空白輸入框 -->
+        <div id="key-input-container" class="hidden space-y-2 mt-2">
+          <input type="password" id="api-key-input" placeholder="貼入新 API Key (AIzaSy...)" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none">
+          <div class="flex justify-end gap-2">
+            <button onclick="hideKeyInputForm()" id="cancel-key-btn" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold hidden">取消</button>
+            <button onclick="saveApiKey()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold">儲存新 Key</button>
+          </div>
         </div>
       </div>
 
       <!-- Super Prompt 模板 -->
       <div>
         <label class="block text-xs font-bold text-slate-700 mb-1">📝 Super Prompt 模板：</label>
-        <textarea id="prompt-template-input" rows="6" class="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none"></textarea>
+        <textarea id="prompt-template-input" rows="5" class="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none"></textarea>
         <div class="flex gap-2 mt-2">
-          <button onclick="savePromptTemplate()" class="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold text-xs">儲存 Prompt</button>
-          <button onclick="resetDefaultPrompt()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 font-semibold text-xs">還原預設</button>
+          <button onclick="savePromptTemplate()" class="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-bold text-xs">儲存 Prompt</button>
+          <button onclick="resetDefaultPrompt()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs">還原預設</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Toast 提示 -->
   <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md transition-opacity duration-200 opacity-0 pointer-events-none"></div>
 
-  <!-- 依序載入設定檔與核心腳本 -->
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
