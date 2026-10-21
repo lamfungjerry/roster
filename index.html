@@ -23,7 +23,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* 底部避開 iPhone 手勢橫條與鍵盤 */
     .safe-bottom-expanded {
       padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 125px);
     }
@@ -47,21 +46,18 @@
       user-select: none;
     }
 
-    /* 上班樣式 */
     .staff-badge-on {
       background-color: #0f172a;
       color: #ffffff;
       border: 1px solid #0f172a;
     }
 
-    /* 放假樣式：無刪除線，柔和紅底紅字提示 */
     .staff-badge-off {
       background-color: #ffe4e6;
       color: #e11d48;
       border: 1px solid #fecdd3;
     }
 
-    /* 捲軸微調 */
     ::-webkit-scrollbar {
       width: 4px;
       height: 4px;
@@ -112,7 +108,7 @@
     <div id="schedule-container" class="space-y-2"></div>
   </main>
 
-  <!-- 底部固定鍵盤 (可折疊、加大輔助按鈕) -->
+  <!-- 底部固定鍵盤 -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl transition-all duration-200 p-2 sm:pb-4">
     <div class="max-w-md mx-auto">
       
@@ -162,11 +158,11 @@
     </div>
   </div>
 
-  <!-- 📊 統計 Modal -->
+  <!-- 📊 統計 Modal (聚焦 1~6 號更位分佈) -->
   <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 shadow-2xl space-y-3 max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-sm font-bold text-slate-900">📊 出勤公平性統計</h3>
+        <h3 class="text-sm font-bold text-slate-900">📊 1~6 號更位分佈統計</h3>
         <button onclick="closeStatsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
       <div id="stats-content"></div>
@@ -191,7 +187,7 @@
         <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-4 h-4 text-indigo-600 rounded">
       </div>
 
-      <!-- API Key 隱私管理 (絕不對外展示明文 Key) -->
+      <!-- API Key 隱私管理 (絕不展示明文) -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
         <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
         
@@ -215,8 +211,8 @@
 
       <!-- Super Prompt 模板設定 -->
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">📝 Super Prompt 模板：</label>
-        <textarea id="prompt-template-input" rows="5" class="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none"></textarea>
+        <label class="block text-xs font-bold text-slate-700 mb-1">📝 更位公平性 Prompt 模板：</label>
+        <textarea id="prompt-template-input" rows="6" class="w-full text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none"></textarea>
         <div class="flex gap-2 mt-2">
           <button onclick="savePromptTemplate()" class="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-bold text-xs">儲存 Prompt</button>
           <button onclick="resetDefaultPrompt()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs">還原預設</button>
@@ -228,8 +224,24 @@
   <!-- Toast 提示 -->
   <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md transition-opacity duration-200 opacity-0 pointer-events-none"></div>
 
-  <!-- ================= 應用邏輯與防快取載入 ================= -->
+  <!-- ================= 應用邏輯 ================= -->
   <script>
+    const DEFAULT_POSITION_PROMPT = `你現在是一位營運排班評估助手。以下是未來週期（{{DATE_RANGE}}）6 位員工（Y, I, S, K, C, V）的更表數據。
+每日均排滿 6 人，分別對應第 1 至第 6 號更位。
+
+【1~6 號更位分佈統計數據】
+{{STATISTICS}}
+
+【完整排班數據 (JSON)】
+\`\`\`json
+{{SCHEDULE_DATA}}
+\`\`\`
+
+請針對 6 位員工在「第 1 至第 6 號更位」的分配進行深度公平性評估：
+1. 更位分佈公平性：分析每位員工在 1~6 號位置的分配是否均勻。是否有特定員工過度集中在某些更位（例如過多排在 1 號位或 6 號位）？
+2. 極端值與偏離檢測：指出偏離平均期望值最大的更位分配情況。
+3. 對調與輪換建議：若更位分配存在顯著不均，請列出具體建議在哪些日期將哪兩位員工的更位順序對調，以達成全體更位輪替的公平。`;
+
     let db = null;
     let state = {
       startDate: '',
@@ -237,11 +249,11 @@
       includeSaturday: false,
       schedule: [],
       activeDayIndex: 0,
-      promptTemplate: '',
+      promptTemplate: DEFAULT_POSITION_PROMPT,
       isKeyboardCollapsed: false
     };
 
-    // 1. 動態加入防快取參數載入 config.js (保證每次開啟獲取最新版)
+    // 動態載入防快取 config.js
     (function loadFreshConfig() {
       const script = document.createElement('script');
       script.src = 'config.js?t=' + Date.now();
@@ -252,16 +264,16 @@
           STAFF_LIST: ['Y', 'I', 'S', 'K', 'C', 'V'],
           WEEK_DAYS: ['日', '一', '二', '三', '四', '五', '六'],
           DEFAULT_INCLUDE_SATURDAY: false,
-          dbPath: 'roster_data'
+          dbPath: 'roster_data',
+          DEFAULT_PROMPT: DEFAULT_POSITION_PROMPT
         };
         initApp();
       };
       document.head.appendChild(script);
     })();
 
-    // 2. 主應用程式啟動入口
     function initApp() {
-      state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT || '';
+      state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT || DEFAULT_POSITION_PROMPT;
       loadLocalPreferences();
       initKeyboardButtons();
       initDefaultDates();
@@ -600,61 +612,148 @@
       showToast('✅ 匯入成功並已同步');
     }
 
-    function calculateStatistics() {
-      const stats = {};
-      window.APP_CONFIG.STAFF_LIST.forEach(s => stats[s] = { on: 0, off: 0 });
-      let totalWorkSlots = 0;
+    // ================= 核心：1~6 號更位位置統計演算法 =================
+    function calculatePositionStats() {
+      const staffList = window.APP_CONFIG.STAFF_LIST;
+      const matrix = {};
+      
+      // 初始化矩陣：每人記錄 pos1 ~ pos6 的次數與總計
+      staffList.forEach(s => {
+        matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0 };
+      });
+
+      let validWorkingDays = 0;
 
       state.schedule.forEach(day => {
-        if (!day.isRest && !day.isFullDayHoliday) {
-          day.shifts.forEach(shift => {
-            if (shift.status === 'ON') {
-              stats[shift.staff].on++;
-              totalWorkSlots++;
-            } else if (shift.status === 'OFF') {
-              stats[shift.staff].off++;
+        if (!day.isRest && !day.isFullDayHoliday && day.shifts.length > 0) {
+          validWorkingDays++;
+          day.shifts.forEach((shift, sIdx) => {
+            const pos = sIdx + 1; // 1 ~ 6 號位
+            if (pos <= 6 && matrix[shift.staff]) {
+              matrix[shift.staff][pos]++;
+              matrix[shift.staff].total++;
+              matrix[shift.staff].scoreSum += pos;
             }
           });
         }
       });
-      const avgWorkDays = (totalWorkSlots / 6).toFixed(1);
-      return { stats, avgWorkDays };
+
+      // 理想期望值：在均勻分佈下，每個更位出現的理論次數
+      const expectedPerPosition = (validWorkingDays / 6).toFixed(1);
+
+      // 計算各位置排最多的人
+      const topPerPosition = {};
+      for (let p = 1; p <= 6; p++) {
+        let maxCount = -1;
+        let leaders = [];
+        staffList.forEach(s => {
+          const c = matrix[s][p];
+          if (c > maxCount) {
+            maxCount = c;
+            leaders = [s];
+          } else if (c === maxCount && c > 0) {
+            leaders.push(s);
+          }
+        });
+        topPerPosition[p] = { count: maxCount, leaders: leaders };
+      }
+
+      return { matrix, validWorkingDays, expectedPerPosition, topPerPosition };
     }
 
+    // 渲染統計面板 (精簡直觀橫向矩陣)
     function openStatsModal() {
-      const { stats, avgWorkDays } = calculateStatistics();
+      const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
+      const staffList = window.APP_CONFIG.STAFF_LIST;
+
       let html = `
-        <div class="mb-3 p-2.5 bg-indigo-50 rounded-xl text-xs text-indigo-900 flex justify-between items-center">
-          <span>6 人平均出勤：</span>
-          <span class="text-sm font-extrabold text-indigo-600">${avgWorkDays} 天</span>
+        <div class="grid grid-cols-2 gap-2 mb-2 text-xs">
+          <div class="bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100">
+            <span class="text-slate-500 block text-[10px]">有效排更天數</span>
+            <span class="text-base font-extrabold text-indigo-700">${validWorkingDays} 天</span>
+          </div>
+          <div class="bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100">
+            <span class="text-slate-500 block text-[10px]">各更位理想期望</span>
+            <span class="text-base font-extrabold text-indigo-700">${expectedPerPosition} 次</span>
+          </div>
         </div>
-        <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
-          <table class="w-full text-center">
-            <thead class="bg-slate-50 text-slate-500 border-b">
+
+        <!-- 1~6 更位分佈矩陣表 -->
+        <div class="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+          <table class="w-full text-center text-xs">
+            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 text-[11px]">
               <tr>
-                <th class="py-1.5">員工</th>
-                <th class="py-1.5">實出勤</th>
-                <th class="py-1.5">輪休</th>
-                <th class="py-1.5">落差</th>
+                <th class="py-2 px-1">員工</th>
+                <th class="py-2">1更</th>
+                <th class="py-2">2更</th>
+                <th class="py-2">3更</th>
+                <th class="py-2">4更</th>
+                <th class="py-2">5更</th>
+                <th class="py-2">6更</th>
+                <th class="py-2 px-1 bg-slate-100/80">均位</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-slate-100 font-mono">
       `;
-      window.APP_CONFIG.STAFF_LIST.forEach(staff => {
-        const s = stats[staff];
-        const diff = (s.on - avgWorkDays).toFixed(1);
-        const diffStr = diff > 0 ? `+${diff}` : diff;
-        const isImbalance = Math.abs(diff) >= 2;
+
+      staffList.forEach(staff => {
+        const row = matrix[staff];
+        const avgPos = row.total > 0 ? (row.scoreSum / row.total).toFixed(1) : '-';
+
         html += `
-          <tr>
-            <td class="py-2 font-bold text-slate-800">${staff}</td>
-            <td class="py-2 font-semibold text-slate-900">${s.on}</td>
-            <td class="py-2 text-slate-500">${s.off}</td>
-            <td class="py-2 ${isImbalance ? 'text-amber-600 font-bold' : 'text-slate-400'}">${diffStr}</td>
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="py-2 font-black font-sans text-slate-900 bg-slate-50/50">${staff}</td>
+        `;
+
+        for (let p = 1; p <= 6; p++) {
+          const val = row[p];
+          // 若偏離期望值達 2 次以上，標記提醒色
+          const isHigh = validWorkingDays > 0 && (val - expectedPerPosition) >= 2;
+          const isZero = validWorkingDays >= 6 && val === 0;
+
+          const cellClass = isHigh 
+            ? 'text-amber-600 font-extrabold bg-amber-50/50' 
+            : isZero 
+              ? 'text-slate-300' 
+              : 'text-slate-700';
+
+          html += `<td class="py-2 ${cellClass}">${val}</td>`;
+        }
+
+        html += `
+            <td class="py-2 font-bold text-indigo-600 bg-slate-50/80">${avgPos}</td>
           </tr>
         `;
       });
-      html += `</tbody></table></div>`;
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 各更位冠軍速覽卡片 -->
+        <div class="mt-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">各更位排最多人選：</div>
+          <div class="grid grid-cols-2 gap-1.5 text-xs">
+      `;
+
+      for (let p = 1; p <= 6; p++) {
+        const top = topPerPosition[p];
+        const leadersText = top.leaders.length > 0 ? `${top.leaders.join(', ')} (${top.count}次)` : '-';
+        html += `
+          <div class="flex items-center justify-between px-2 py-1 bg-white rounded-lg border border-slate-200/60">
+            <span class="text-slate-500 font-medium">${p} 號更：</span>
+            <span class="font-bold text-slate-800">${leadersText}</span>
+          </div>
+        `;
+      }
+
+      html += `
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400 text-center mt-1">※ 均位接近 3.5 代表前後更位分佈均衡</p>
+      `;
+
       document.getElementById('stats-content').innerHTML = html;
       document.getElementById('stats-modal').classList.remove('hidden');
     }
@@ -663,19 +762,32 @@
       document.getElementById('stats-modal').classList.add('hidden');
     }
 
+    // 複製 Prompt (注入更位分佈統計數據)
     async function copySuperPrompt() {
-      const { stats, avgWorkDays } = calculateStatistics();
+      const { matrix, validWorkingDays, expectedPerPosition, topPerPosition } = calculatePositionStats();
+      const staffList = window.APP_CONFIG.STAFF_LIST;
       const dateRangeStr = `${state.schedule[0]?.date || ''} 至 ${state.schedule[state.schedule.length - 1]?.date || ''}`;
 
-      let statText = `【週期出勤統計 (平均：${avgWorkDays} 天)】\n`;
-      window.APP_CONFIG.STAFF_LIST.forEach(st => {
-        const diff = (stats[st].on - avgWorkDays).toFixed(1);
-        statText += `員工 ${st}：出勤 ${stats[st].on} 天 | 輪休 ${stats[st].off} 天 | 落差 ${diff > 0 ? '+' : ''}${diff}\n`;
+      let statText = `【更位統計總覽 (共 ${validWorkingDays} 個排班工作日，每更位理想期望: ${expectedPerPosition} 次)】\n\n`;
+      statText += `各員工 1~6 號更位次數矩陣：\n`;
+
+      staffList.forEach(st => {
+        const row = matrix[st];
+        const avgPos = row.total > 0 ? (row.scoreSum / row.total).toFixed(1) : '0';
+        statText += `員工 ${st}: 1更(${row[1]}) | 2更(${row[2]}) | 3更(${row[3]}) | 4更(${row[4]}) | 5更(${row[5]}) | 6更(${row[6]}) => 平均更位: ${avgPos}\n`;
       });
+
+      statText += `\n各更位最高排班者：\n`;
+      for (let p = 1; p <= 6; p++) {
+        const top = topPerPosition[p];
+        statText += `第 ${p} 更最多: ${top.leaders.join(', ')} (共 ${top.count} 次)\n`;
+      }
 
       const jsonPayload = JSON.stringify({
         period: dateRangeStr,
-        staff: window.APP_CONFIG.STAFF_LIST,
+        totalWorkingDays: validWorkingDays,
+        staff: staffList,
+        positionMatrix: matrix,
         schedule: state.schedule.map(d => ({
           date: d.date,
           dayOfWeek: d.dayName,
@@ -691,7 +803,7 @@
 
       try {
         await navigator.clipboard.writeText(finalPrompt);
-        showToast('✅ 已複製！可前往貼上');
+        showToast('✅ 已複製更位統計 Prompt！前往貼上即可');
       } catch (err) {
         showToast('請手動選取複製');
       }
@@ -756,7 +868,7 @@
     }
 
     function resetDefaultPrompt() {
-      document.getElementById('prompt-template-input').value = window.APP_CONFIG.DEFAULT_PROMPT;
+      document.getElementById('prompt-template-input').value = DEFAULT_POSITION_PROMPT;
     }
 
     function initFirebaseWithStoredKey() {
