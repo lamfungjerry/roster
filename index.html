@@ -21,33 +21,40 @@
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      -webkit-font-smoothing: antialiased; background-color: #f8fafc; margin: 0; padding: 0; overflow: hidden;
+      -webkit-font-smoothing: antialiased; background-color: #f1f5f9; margin: 0; padding: 0; overflow: hidden;
     }
     #app-container { display: flex; flex-direction: column; height: 100dvh; width: 100%; }
 
-    /* 內容區域 */
-    #main-content {
-      flex: 1; overflow-y: auto; padding: 12px 12px 180px 12px; -webkit-overflow-scrolling: touch;
+    /* 順滑吸附滾動區域 (Snap Scrolling) */
+    #scroll-area {
+      flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+      padding-bottom: 160px; /* 預留底部解鎖與鍵盤空間 */
     }
-    #main-content::-webkit-scrollbar { display: none; }
-    #main-content { -ms-overflow-style: none; scrollbar-width: none; }
+    .week-section { scroll-snap-align: start; scroll-snap-stop: always; padding: 12px 12px 0 12px; }
 
-    /* 隱藏底部鍵盤的平滑動畫 */
-    #bottom-dock { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
-    .dock-hidden { transform: translateY(120%); opacity: 0; pointer-events: none; }
-    
-    /* 當鎖定時主內容區域可看更多 */
-    .content-locked { padding-bottom: 30px !important; }
+    #scroll-area::-webkit-scrollbar { display: none; }
+    #scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
 
-    .staff-badge-on { background-color: #0f172a; color: #ffffff; border: 1px solid #0f172a; }
-    .staff-badge-off { background-color: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+    /* 滑動解鎖文字閃爍動畫 */
+    .shimmer-text {
+      background: linear-gradient(90deg, #64748b 0%, #f8fafc 50%, #64748b 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      animation: shimmer 2s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: 200% center; } }
+
+    /* 狀態切換動畫 */
+    .fade-switch { transition: opacity 0.25s, transform 0.25s; }
+    .hidden-dock { opacity: 0; pointer-events: none; position: absolute; bottom: -100%; }
   </style>
 </head>
 <body>
 
 <div id="app-container">
 
-  <!-- 頂部導航 -->
+  <!-- 雙層頂部固定 Header -->
   <header class="flex-shrink-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 flex flex-col shadow-sm">
     <div class="px-3 py-1.5 flex items-center justify-between">
       <div class="flex items-center gap-2">
@@ -64,61 +71,59 @@
       </div>
     </div>
 
-    <!-- 週次切換與鎖定操作列 -->
-    <div class="px-2.5 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center gap-1.5">
-      <button onclick="navWeek(-1)" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs">
+    <!-- 隨滾動連動的週次切換列 -->
+    <div class="px-2.5 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+      <button onclick="scrollWeek(-1)" class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs flex items-center">
         ‹ 上週
       </button>
       
-      <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-1 rounded-lg bg-white border border-slate-200 text-xs font-extrabold text-slate-800 text-center flex items-center justify-center gap-1 active:bg-slate-50 shadow-xs">
+      <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-[13px] font-black text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs">
         <span id="header-week-range">載入中...</span>
         <span class="text-indigo-600 text-[9px]">▼</span>
       </button>
 
-      <button onclick="navWeek(1)" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs">
+      <button onclick="scrollWeek(1)" class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs flex items-center">
         下週 ›
-      </button>
-
-      <button id="lock-btn" onclick="toggleLock()" class="ml-0.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-black active:bg-emerald-100 shadow-xs flex items-center gap-1 w-[76px] justify-center transition-colors">
-        🔓 編輯
       </button>
     </div>
   </header>
 
-  <!-- 主區塊 (單週顯示) -->
-  <main id="main-content">
-    <div id="schedule-container" class="w-full max-w-md mx-auto bg-white rounded-[20px] shadow-sm border border-slate-200 overflow-hidden pb-1">
-      <!-- 表頭 -->
-      <div class="flex items-center bg-slate-50 border-b border-slate-200/80 px-1 py-1 text-[10px] font-black text-slate-400">
-        <div class="w-12 text-center tracking-widest">日期</div>
-        <div class="flex-1 flex px-1 items-center">
-          <div class="flex-1 text-center">1更</div><div class="flex-1 text-center">2更</div>
-          <div class="w-[1px] h-3 bg-slate-300 mx-0.5 rounded"></div>
-          <div class="flex-1 text-center">3更</div><div class="flex-1 text-center">4更</div>
-          <div class="w-[1px] h-3 bg-slate-300 mx-0.5 rounded"></div>
-          <div class="flex-1 text-center">5更</div><div class="flex-1 text-center">6更</div>
-        </div>
-      </div>
-      <!-- 星期一至星期六 -->
-      <div class="divide-y divide-slate-100 flex flex-col" id="week-days-container"></div>
-    </div>
+  <!-- 主滾動區塊 (Snap Scrolling) -->
+  <main id="scroll-area">
+    <div id="schedule-container" class="w-full max-w-md mx-auto"></div>
   </main>
 
-  <!-- 底部操作盤 -->
-  <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] p-2 sm:pb-4">
-    <div class="max-w-md mx-auto">
-      <div class="flex items-center justify-between mb-1.5 px-1">
-        <div class="flex items-center gap-2">
-          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-9 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">🧹</button>
-          <span id="active-day-label" class="text-sm font-black text-indigo-600">--</span>
+  <!-- 底部固定容器 -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] p-2.5 pb-[calc(env(safe-area-inset-bottom,20px)+10px)] relative overflow-hidden min-h-[90px]">
+    
+    <!-- 狀態 1：鎖定狀態 (滑動解鎖) -->
+    <div id="dock-locked" class="fade-switch w-full max-w-md mx-auto flex items-center justify-center py-2 relative">
+      <div id="unlock-slider-container" class="relative w-full max-w-[340px] h-14 bg-slate-800 rounded-full flex items-center justify-center border-[3px] border-slate-900 shadow-inner">
+        <span class="text-sm font-black tracking-widest shimmer-text select-none pl-6">slide to unlock &gt;&gt;</span>
+        <div id="unlock-thumb" class="absolute left-1 top-1 bottom-1 w-14 bg-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform touch-none cursor-pointer">
+          <span class="text-slate-800 font-black text-xl">❯</span>
         </div>
+      </div>
+    </div>
+
+    <!-- 狀態 2：解鎖狀態 (編輯鍵盤) -->
+    <div id="dock-unlocked" class="fade-switch hidden-dock w-full max-w-md mx-auto">
+      <div class="flex items-center justify-between mb-2.5 px-0.5">
+        <!-- 左側：清空、鎖定、日期 -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="lockAction()" title="鎖定" class="w-10 h-10 rounded-xl bg-slate-800 text-white font-black flex items-center justify-center text-sm shadow-md active:scale-95 transition-transform">🔒</button>
+          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">🧹</button>
+          <span id="active-day-label" class="text-sm font-black text-indigo-700 pl-1 tracking-tight">--</span>
+        </div>
+        <!-- 右側：全休、退格 -->
         <div class="flex items-center gap-2">
-          <button onclick="toggleActiveFullHoliday()" class="px-3.5 h-9 rounded-lg bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs flex items-center justify-center">🌴 全休</button>
-          <button onclick="backspaceStaff()" title="退格刪除" class="w-10 h-9 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">⌫</button>
+          <button onclick="toggleActiveFullHoliday()" class="px-4 py-2 h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs active:scale-95 transition-transform">🌴 全休</button>
+          <button onclick="backspaceStaff()" title="退格刪除" class="w-11 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">⌫</button>
         </div>
       </div>
       <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
+
   </div>
 
 </div> <!-- /#app-container -->
@@ -202,7 +207,7 @@
         </div>
       </div>
 
-      <!-- Prompt 只讀顯示區 (防止 HTML 修改，交由 Config) -->
+      <!-- Prompt 只讀顯示區 -->
       <div>
         <label class="block text-xs font-bold text-slate-700 mb-1">📝 系統 Prompt (唯讀，請於 config.js 修改)：</label>
         <textarea id="prompt-template-input" rows="8" readonly class="w-full text-[10px] font-mono bg-slate-100 border border-slate-200 rounded-lg p-2 outline-none leading-tight text-slate-500 cursor-not-allowed"></textarea>
@@ -215,17 +220,23 @@
   <!-- ================= 核心邏輯 ================= -->
   <script>
     let db = null;
+    let observer = null;
     let saveTimeout = null;
+
+    // 系統預載：前4週(過去) + 未來8週 = 13週
+    const PAST_WEEKS = 4;
+    const FUTURE_WEEKS = 8;
 
     let state = {
       anchorMonday: '', 
       excludeLeaveInStats: false,
-      isLocked: false, // 鎖定狀態
+      isLocked: true, // 預設鎖定，防止誤觸
       daysMap: {},
       activeDate: '',
       promptTemplate: '',
       calYear: 2026,
-      calMonth: 9
+      calMonth: 9,
+      currentVisibleWeekStart: ''
     };
 
     function formatLocalYMD(d) {
@@ -243,7 +254,7 @@
     function getMondayOfDate(d) {
       const date = new Date(d);
       const day = date.getDay();
-      const diff = (day === 0) ? 1 : (1 - day);
+      const diff = (day === 0) ? -6 : 1 - day; // 確保週日算作上週的尾巴
       date.setDate(date.getDate() + diff);
       return date;
     }
@@ -266,7 +277,7 @@
         }
         initApp();
       };
-      script.onerror = () => handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在。');
+      script.onerror = () => handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在於同層目錄。');
       document.head.appendChild(script);
     })();
 
@@ -285,16 +296,24 @@
       const today = new Date();
       const todayMonday = getMondayOfDate(today);
       state.anchorMonday = formatLocalYMD(todayMonday);
+      state.currentVisibleWeekStart = state.anchorMonday;
       
       state.activeDate = formatLocalYMD(today);
-      if (today.getDay() === 0) { // 週日不排班，跳回週一
-         state.activeDate = state.anchorMonday; 
-      }
+      if (today.getDay() === 0) state.activeDate = state.anchorMonday; 
 
       state.calYear = todayMonday.getFullYear();
       state.calMonth = todayMonday.getMonth();
 
+      renderAllWeeks();
+      setupIntersectionObserver();
       updateLockUI();
+      initSlider(); // 初始化滑動解鎖
+      
+      setTimeout(() => {
+        const weekEl = document.getElementById('week-' + state.anchorMonday);
+        if (weekEl) document.getElementById('scroll-area').scrollTo({ top: weekEl.offsetTop, behavior: 'auto' });
+      }, 50);
+
       initFirebaseWithStoredKey();
     }
 
@@ -311,7 +330,7 @@
       const savedExclude = localStorage.getItem('shift_stats_exclude_leave');
       state.excludeLeaveInStats = (savedExclude === 'true');
       const savedLock = localStorage.getItem('schedule_locked');
-      state.isLocked = (savedLock === 'true');
+      state.isLocked = savedLock !== null ? (savedLock === 'true') : true; // 預設安全鎖定
     }
 
     function loadFromLocalStorage() {
@@ -327,77 +346,187 @@
       window.APP_CONFIG.STAFF_LIST.forEach(staff => {
         const btn = document.createElement('button');
         btn.id = `btn-${staff}`;
-        btn.className = 'h-12 rounded-xl bg-slate-900 text-white font-black text-lg active:scale-95 transition-all shadow-sm';
+        btn.className = 'h-[44px] rounded-xl bg-slate-900 text-white font-black text-xl active:scale-95 transition-transform shadow-md';
         btn.innerText = staff;
         btn.onclick = () => inputStaff(staff);
         grid.appendChild(btn);
       });
     }
 
-    // ================= 鎖定機制 =================
-    function toggleLock() {
+    // ================= 滑動解鎖 (Slide to Unlock) =================
+    function initSlider() {
+      const thumb = document.getElementById('unlock-thumb');
+      const track = document.getElementById('unlock-slider-container');
+      if (!thumb || !track) return;
+
+      let isDragging = false;
+      let startX = 0;
+      let currentX = 0;
+      let maxDrag = 0;
+
+      thumb.addEventListener('touchstart', e => {
+        isDragging = true;
+        maxDrag = track.clientWidth - thumb.clientWidth - 8; // 扣除 padding
+        startX = e.touches[0].clientX - currentX;
+        thumb.style.transition = 'none';
+      }, { passive: false });
+
+      thumb.addEventListener('touchmove', e => {
+        if (!isDragging) return;
+        e.preventDefault();
+        let x = e.touches[0].clientX - startX;
+        if (x < 0) x = 0;
+        if (x > maxDrag) x = maxDrag;
+        currentX = x;
+        thumb.style.transform = `translateX(${x}px)`;
+      }, { passive: false });
+
+      thumb.addEventListener('touchend', e => {
+        if (!isDragging) return;
+        isDragging = false;
+        thumb.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        if (currentX > maxDrag * 0.75) {
+          thumb.style.transform = `translateX(${maxDrag}px)`;
+          setTimeout(() => unlockAction(), 150); // 稍微延遲讓動畫走完
+        } else {
+          currentX = 0;
+          thumb.style.transform = `translateX(0px)`;
+        }
+      });
+    }
+
+    function unlockAction() {
       triggerHaptic();
-      state.isLocked = !state.isLocked;
-      localStorage.setItem('schedule_locked', state.isLocked);
+      state.isLocked = false;
+      localStorage.setItem('schedule_locked', 'false');
       updateLockUI();
-      showToast(state.isLocked ? '🔒 排更已鎖定，防誤觸' : '🔓 已解除鎖定，可編輯');
+      
+      // 復原滑塊位置供下次使用
+      setTimeout(() => {
+        const thumb = document.getElementById('unlock-thumb');
+        if(thumb) {
+          thumb.style.transition = 'none';
+          thumb.style.transform = `translateX(0px)`;
+        }
+      }, 300);
+    }
+
+    function lockAction() {
+      triggerHaptic();
+      state.isLocked = true;
+      localStorage.setItem('schedule_locked', 'true');
+      updateLockUI();
+      showToast('🔒 已上鎖，防誤觸');
     }
 
     function updateLockUI() {
-      const btn = document.getElementById('lock-btn');
-      const dock = document.getElementById('bottom-dock');
-      const mainContent = document.getElementById('main-content');
+      const dockLocked = document.getElementById('dock-locked');
+      const dockUnlocked = document.getElementById('dock-unlocked');
 
       if (state.isLocked) {
-        btn.innerHTML = '🔒 鎖定';
-        btn.className = 'ml-0.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 text-xs font-black shadow-xs flex items-center gap-1 w-[76px] justify-center transition-colors';
-        dock.classList.add('dock-hidden');
-        mainContent.classList.add('content-locked');
+        dockLocked.classList.remove('hidden-dock');
+        dockUnlocked.classList.add('hidden-dock');
       } else {
-        btn.innerHTML = '🔓 編輯';
-        btn.className = 'ml-0.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-black active:bg-emerald-100 shadow-xs flex items-center gap-1 w-[76px] justify-center transition-colors';
-        dock.classList.remove('dock-hidden');
-        mainContent.classList.remove('content-locked');
-      }
-      renderSingleWeek();
-    }
-
-    // ================= 單週顯示邏輯 =================
-    function navWeek(direction) {
-      if (!state.anchorMonday) return;
-      const d = parseLocalYMD(state.anchorMonday);
-      d.setDate(d.getDate() + (direction * 7));
-      state.anchorMonday = formatLocalYMD(d);
-      
-      // 切換週次時自動選中該週的星期一
-      if (!state.isLocked) {
-        state.activeDate = state.anchorMonday;
+        dockLocked.classList.add('hidden-dock');
+        dockUnlocked.classList.remove('hidden-dock');
       }
       
-      renderSingleWeek();
+      // 刷新當前畫面上的卡片以反映鎖定狀態的點擊效果
+      renderAllWeeks();
     }
 
-    function renderSingleWeek() {
-      const container = document.getElementById('week-days-container');
+    // ================= 🔄 Snap Scrolling 與 預載渲染 =================
+    
+    function renderAllWeeks() {
+      const container = document.getElementById('schedule-container');
       container.innerHTML = '';
+      if (observer) observer.disconnect();
 
       const baseDate = parseLocalYMD(state.anchorMonday);
-      const end = new Date(baseDate);
-      end.setDate(baseDate.getDate() + 5);
-      
-      document.getElementById('header-week-range').innerHTML = 
-        `${formatLocalYMD(baseDate).substring(5).replace('-','/')} ~ ${formatLocalYMD(end).substring(5).replace('-','/')}`;
+      baseDate.setDate(baseDate.getDate() - (PAST_WEEKS * 7));
+      const totalWeeks = PAST_WEEKS + FUTURE_WEEKS + 1;
 
-      // 只渲染週一至週六
-      for (let d = 0; d < 6; d++) {
-        const curr = new Date(baseDate);
-        curr.setDate(baseDate.getDate() + d);
-        container.appendChild(createDayRow(formatLocalYMD(curr), curr.getDay()));
+      for (let w = 0; w < totalWeeks; w++) {
+        const weekStartIso = formatLocalYMD(baseDate);
+        const weekEnd = new Date(baseDate);
+        weekEnd.setDate(baseDate.getDate() + 5);
+        const weekEndIso = formatLocalYMD(weekEnd);
+
+        const weekCard = document.createElement('div');
+        weekCard.id = 'week-' + weekStartIso;
+        weekCard.className = 'week-section';
+        weekCard.dataset.start = weekStartIso;
+        weekCard.dataset.end = weekEndIso;
+
+        const cardInner = document.createElement('div');
+        cardInner.className = 'bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden pb-1';
+
+        // 緊湊的表頭 (1更 2更 | 3更 4更 | 5更 6更)
+        cardInner.innerHTML = `
+          <div class="flex items-center bg-slate-50 border-b border-slate-200/80 px-1 py-1.5 text-[10px] font-black text-slate-400">
+            <div class="w-14 text-center tracking-widest">日期</div>
+            <div class="flex-1 flex px-1 items-center">
+              <div class="flex-1 text-center">1更</div><div class="flex-1 text-center">2更</div>
+              <div class="w-px h-3 bg-slate-300 mx-1 rounded"></div>
+              <div class="flex-1 text-center">3更</div><div class="flex-1 text-center">4更</div>
+              <div class="w-px h-3 bg-slate-300 mx-1 rounded"></div>
+              <div class="flex-1 text-center">5更</div><div class="flex-1 text-center">6更</div>
+            </div>
+          </div>
+          <div class="divide-y divide-slate-100 flex flex-col" id="week-days-${weekStartIso}"></div>
+        `;
+
+        const daysContainer = cardInner.querySelector(`#week-days-${weekStartIso}`);
+
+        for (let d = 0; d < 6; d++) {
+          const curr = new Date(baseDate);
+          curr.setDate(baseDate.getDate() + d);
+          daysContainer.appendChild(createDayRow(formatLocalYMD(curr), curr.getDay()));
+        }
+
+        weekCard.appendChild(cardInner);
+        container.appendChild(weekCard);
+        baseDate.setDate(baseDate.getDate() + 7);
       }
 
       updateActiveDock();
     }
 
+    function setupIntersectionObserver() {
+      const options = { root: document.getElementById('scroll-area'), threshold: 0.5 };
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const startIso = entry.target.dataset.start;
+            const endIso = entry.target.dataset.end;
+            state.currentVisibleWeekStart = startIso;
+            document.getElementById('header-week-range').innerHTML = `${startIso.substring(5).replace('-','/')} ~ ${endIso.substring(5).replace('-','/')}`;
+          }
+        });
+      }, options);
+      document.querySelectorAll('.week-section').forEach(sec => observer.observe(sec));
+    }
+
+    function scrollWeek(direction) {
+      if (!state.currentVisibleWeekStart) return;
+      const curr = parseLocalYMD(state.currentVisibleWeekStart);
+      curr.setDate(curr.getDate() + (direction * 7));
+      const targetId = 'week-' + formatLocalYMD(curr);
+      const targetEl = document.getElementById(targetId);
+      const scrollArea = document.getElementById('scroll-area');
+      
+      if (targetEl) {
+        scrollArea.scrollTo({ top: targetEl.offsetTop, behavior: 'smooth' });
+      } else {
+        // 若超出範圍，直接重設並重繪
+        state.anchorMonday = formatLocalYMD(curr);
+        renderAllWeeks();
+        setupIntersectionObserver();
+        document.getElementById(targetId).scrollIntoView();
+      }
+    }
+
+    // ================= 🃏 放大空間的單行更位資料 =================
     function createDayRow(iso, dayIdx) {
       const row = document.createElement('div');
       row.id = `day-row-${iso}`;
@@ -406,47 +535,46 @@
       const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
       const isFullHoliday = !!(dayRecord.isFullDayHoliday || dayRecord.isFullHoliday);
 
-      let bgClass = isActive ? 'bg-indigo-50/60 ring-1 ring-inset ring-indigo-500/30 z-10' : 'bg-white';
+      let bgClass = isActive ? 'bg-indigo-50/60 ring-1 ring-inset ring-indigo-500/30 z-10' : 'bg-white hover:bg-slate-50/50';
       if (!isActive && isFullHoliday) bgClass = 'bg-rose-50/40';
 
-      const pointerClass = state.isLocked ? '' : 'cursor-pointer hover:bg-slate-50/50';
-      row.className = `relative flex items-stretch px-1 py-1 transition-all ${bgClass} ${pointerClass}`;
+      const pointerClass = state.isLocked ? '' : 'cursor-pointer';
+      row.className = `relative flex items-stretch px-1 py-1.5 transition-all ${bgClass} ${pointerClass}`;
       
-      if (!state.isLocked) {
-        row.onclick = () => selectActiveDay(iso);
-      }
+      if (!state.isLocked) row.onclick = () => selectActiveDay(iso);
 
       const dateStr = iso.substring(5).replace('-', '/');
       const dayName = window.APP_CONFIG.WEEK_DAYS[dayIdx];
-      const todayBadge = isToday ? `<span class="bg-indigo-500 text-white text-[8px] px-1 rounded-[4px] mb-0.5 font-bold shadow-sm">今日</span>` : '';
+      const todayBadge = isToday ? `<span class="bg-indigo-500 text-white text-[9px] px-1.5 rounded mb-0.5 font-bold shadow-sm">今日</span>` : '';
 
       const dateColHtml = `
-        <div class="w-12 flex-shrink-0 flex flex-col items-center justify-center">
+        <div class="w-14 flex-shrink-0 flex flex-col items-center justify-center pt-0.5">
           ${todayBadge}
-          <span class="text-[11px] font-black leading-none ${isActive ? 'text-indigo-700' : 'text-slate-800'}">${dateStr}</span>
-          <span class="text-[9px] font-bold mt-0.5 ${isActive ? 'text-indigo-500' : 'text-slate-400'}">${dayName}</span>
+          <span class="text-[13px] font-black leading-none ${isActive ? 'text-indigo-700' : 'text-slate-800'}">${dateStr}</span>
+          <span class="text-[10px] font-bold mt-1 ${isActive ? 'text-indigo-500' : 'text-slate-400'}">(${dayName})</span>
         </div>
       `;
 
       let shiftsHtml = '';
       if (isFullHoliday) {
-        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-[11px] font-black text-rose-600 bg-rose-100 px-3 py-1 rounded-md border border-rose-200">🌴 全休</span></div>`;
+        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-sm font-black text-rose-600 bg-rose-100 px-4 py-1.5 rounded-lg border border-rose-200">🌴 全日休假</span></div>`;
       } else {
-        shiftsHtml = `<div class="flex-1 flex px-1 items-center">`;
+        shiftsHtml = `<div class="flex-1 flex items-center pl-1 pr-1.5">`;
+        
+        // 2-2-2 分組
         for(let sIdx = 0; sIdx < 6; sIdx++) {
           const shift = dayRecord.shifts[sIdx];
           
           if (shift) {
             const isOff = shift.status === 'OFF';
-            const btnBg = isOff ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-300 text-slate-800 shadow-sm';
-            const offBadge = isOff ? `<span class="absolute -top-1 -right-1 bg-rose-500 text-white text-[7px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white shadow-sm">休</span>` : '';
-            
+            const btnBg = isOff ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-300 text-slate-900 shadow-sm';
+            const offBadge = isOff ? `<span class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-bold w-[18px] h-[18px] rounded-full flex items-center justify-center border border-white shadow-sm">休</span>` : '';
             const clickAttr = state.isLocked ? '' : `onclick="event.stopPropagation(); toggleShiftStatus('${iso}', ${sIdx});"`;
             const scaleClass = state.isLocked ? '' : 'active:scale-90';
 
             shiftsHtml += `
-              <div class="flex-1 px-0.5">
-                <button ${clickAttr} class="w-full relative h-8 rounded-md border flex items-center justify-center text-[13px] font-black transition-transform ${scaleClass} ${btnBg}">
+              <div class="flex-1 flex justify-center">
+                <button ${clickAttr} class="w-[95%] relative h-[44px] rounded-[10px] border flex items-center justify-center text-[16px] font-black transition-transform ${scaleClass} ${btnBg}">
                   ${shift.staff}
                   ${offBadge}
                 </button>
@@ -454,14 +582,14 @@
             `;
           } else {
             shiftsHtml += `
-              <div class="flex-1 px-0.5">
-                <div class="w-full h-8 rounded-md border border-dashed border-slate-300 bg-slate-50/50"></div>
+              <div class="flex-1 flex justify-center">
+                <div class="w-[95%] h-[44px] rounded-[10px] border border-dashed border-slate-300 bg-slate-50/50"></div>
               </div>
             `;
           }
           
           if (sIdx === 1 || sIdx === 3) {
-            shiftsHtml += `<div class="w-[1px] h-5 bg-slate-200 mx-0.5 rounded"></div>`;
+            shiftsHtml += `<div class="w-[1.5px] h-6 bg-slate-200 mx-1 rounded-full shadow-xs"></div>`;
           }
         }
         shiftsHtml += `</div>`;
@@ -597,24 +725,41 @@
     function jumpNextDay() {
       const oldIso = state.activeDate;
       let curr = parseLocalYMD(state.activeDate);
-      curr.setDate(curr.getDate() + 1);
       
-      if (curr.getDay() === 0 || curr.getDay() === 6) {
-         // 若到週末，自動切換至下週一
-         navWeek(1);
-      } else {
-         const newIso = formatLocalYMD(curr);
-         state.activeDate = newIso;
-         updateDayCardDOM(oldIso);
-         updateDayCardDOM(newIso);
-         updateActiveDock();
+      // 自動跨週 (僅一至六)
+      while (true) {
+        curr.setDate(curr.getDate() + 1);
+        if (curr.getDay() !== 0) break; // 跳過週日
       }
+      
+      const newIso = formatLocalYMD(curr);
+      
+      if (!document.getElementById(`day-row-${newIso}`)) {
+        state.anchorMonday = formatLocalYMD(getMondayOfDate(curr));
+        renderAllWeeks();
+        setupIntersectionObserver();
+      }
+      
+      state.activeDate = newIso;
+      updateDayCardDOM(oldIso);
+      updateDayCardDOM(newIso);
+      updateActiveDock();
+      
+      // 確保目標在可視範圍內
+      setTimeout(() => {
+        const el = document.getElementById(`day-row-${newIso}`);
+        if (el) {
+           const scrollArea = document.getElementById('scroll-area');
+           const y = el.getBoundingClientRect().top + scrollArea.scrollTop - 130;
+           scrollArea.scrollTo({top: y, behavior: 'smooth'});
+        }
+      }, 50);
     }
 
     // ================= 🗓️ 自訂視覺化月曆 =================
     function openCalendarModal() {
-      if (state.anchorMonday) {
-        const d = parseLocalYMD(state.anchorMonday);
+      if (state.currentVisibleWeekStart) {
+        const d = parseLocalYMD(state.currentVisibleWeekStart);
         state.calYear = d.getFullYear();
         state.calMonth = d.getMonth();
       }
@@ -651,10 +796,9 @@
         const iso = formatLocalYMD(currDate);
         const dayOfWeek = currDate.getDay();
         const isSunday = (dayOfWeek === 0);
-        const isSaturday = (dayOfWeek === 6);
 
         const dayData = state.daysMap[iso];
-        const isFullHoliday = !!(dayData?.isFullDayHoliday || dayData?.isFullHoliday);
+        const isFullHoliday = !!(dayData?.isFullDayHoliday === true || dayData?.isFullDayHoliday === 'true' || dayData?.isFullHoliday === true);
         const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
         const isCompleted = (shiftCount === 6);
         const isInCheckRange = (iso >= systemStartIso && iso <= thisWeekEndIso);
@@ -663,13 +807,26 @@
         cell.className = 'py-2 px-1 rounded-xl flex flex-col items-center justify-center transition-all active:scale-90 relative';
         
         cell.onclick = () => {
-          state.anchorMonday = formatLocalYMD(getMondayOfDate(currDate));
-          if (!state.isLocked && !isSunday && !isSaturday) state.activeDate = iso;
-          else state.activeDate = state.anchorMonday;
-          
-          renderSingleWeek();
+          const targetMonday = formatLocalYMD(getMondayOfDate(currDate));
           closeCalendarModal();
-          showToast(`已載入該週更表`);
+          
+          if (!state.isLocked && !isSunday) {
+            state.activeDate = iso;
+          } else {
+            state.activeDate = targetMonday;
+          }
+
+          const targetWeekEl = document.getElementById('week-' + targetMonday);
+          if (targetWeekEl) {
+            document.getElementById('scroll-area').scrollTo({ top: targetWeekEl.offsetTop, behavior: 'smooth' });
+            if (!state.isLocked) updateDayCardDOM(iso);
+          } else {
+            state.anchorMonday = targetMonday;
+            renderAllWeeks();
+            setupIntersectionObserver();
+            document.getElementById('scroll-area').scrollTo({ top: document.getElementById('week-' + targetMonday).offsetTop, behavior: 'auto' });
+          }
+          updateActiveDock();
         };
 
         let numColor = 'text-slate-700'; let bgStyle = 'bg-slate-50 border border-slate-100';
@@ -680,7 +837,6 @@
 
         let dot = '';
         if (isFullHoliday || isSunday) dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
-        else if (isSaturday) dot = '<span class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></span>';
         else if (isCompleted) dot = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5"></span>';
         else if (isInCheckRange && shiftCount < 6) dot = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-0.5"></span>';
         else dot = '<span class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></span>';
@@ -691,7 +847,7 @@
       }
     }
 
-    // ================= 儲存與連線 =================
+    // ================= 儲存與同步 =================
     function saveLocalImmediately() {
       try { localStorage.setItem('roster_days_map', JSON.stringify(state.daysMap)); } 
       catch (e) { console.warn('本地快取寫入失敗', e); }
@@ -735,7 +891,6 @@
         if (!firebase.apps.length) firebase.initializeApp({ ...window.APP_CONFIG.firebaseBase, apiKey: apiKey });
         db = firebase.database();
         
-        // 設定超時偵測，防止永遠卡在檢查連線
         let isConnected = false;
         const connTimeout = setTimeout(() => {
            if(!isConnected) {
@@ -752,7 +907,7 @@
             if (val.daysMap) {
               state.daysMap = { ...state.daysMap, ...val.daysMap };
               saveLocalImmediately();
-              renderSingleWeek();
+              renderAllWeeks();
             }
           }
           badge.innerText = '已連線';
@@ -760,14 +915,13 @@
         }).catch(err => {
           isConnected = true;
           clearTimeout(connTimeout);
-          console.warn('雲端讀取異常', err);
           badge.innerText = '連線失敗(請查Key)';
           badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
         });
       } catch (e) { console.error(e); }
     }
 
-    // ================= 匯入與統計 (不變) =================
+    // ================= 匯入與統計 =================
     function openImportModal() { document.getElementById('import-text-input').value = ''; document.getElementById('import-modal').classList.remove('hidden'); }
     function closeImportModal() { document.getElementById('import-modal').classList.add('hidden'); }
     function fillImportExample() { document.getElementById('import-text-input').value = `Y I S K C V\nC V K Y I S\nV休 C Y S I K\n全休\nS K C V Y I`; }
@@ -778,13 +932,13 @@
 
       const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       let lineIdx = 0;
-      let curr = parseLocalYMD(state.anchorMonday);
+      let curr = parseLocalYMD(state.currentVisibleWeekStart || state.anchorMonday);
 
       while (lineIdx < lines.length) {
         const iso = formatLocalYMD(curr);
         const dayIdx = curr.getDay();
 
-        if (dayIdx !== 0 && dayIdx !== 6) {
+        if (dayIdx !== 0 && dayIdx !== 6) { 
           const line = lines[lineIdx++];
           if (line.includes('全休') || line.toUpperCase().includes('HOLIDAY')) {
             state.daysMap[iso] = { shifts: [], isFullDayHoliday: true };
@@ -808,7 +962,7 @@
       }
 
       saveLocalImmediately();
-      renderSingleWeek();
+      renderAllWeeks();
       saveAllData();
       closeImportModal();
       showToast('✅ 匯入成功並已儲存');
@@ -817,17 +971,13 @@
     function calculatePositionStats(excludeLeave = false) {
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const matrix = {};
-      staffList.forEach(s => {
-        matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0, offCount: 0 };
-      });
+      staffList.forEach(s => { matrix[s] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, total: 0, scoreSum: 0, offCount: 0 }; });
 
-      let validWorkingDays = 0;
-      let totalCountedShifts = 0;
-      let totalPositionScore = 0;
+      let validWorkingDays = 0, totalCountedShifts = 0, totalPositionScore = 0;
 
       Object.keys(state.daysMap).forEach(iso => {
         const dDate = parseLocalYMD(iso);
-        if (dDate.getDay() === 0 || dDate.getDay() === 6) return;
+        if (dDate.getDay() === 0 || dDate.getDay() === 6) return; // 統計忽略六日
 
         const d = state.daysMap[iso];
         if (!d.isFullDayHoliday && d.shifts && d.shifts.length > 0) {
