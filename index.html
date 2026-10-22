@@ -26,10 +26,10 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
-      margin: 0; 
-      padding: 0;
-      overflow: hidden; /* 防止整個網頁滾動，交由專屬容器處理 */
       background-color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* 防止原生頁面彈跳 */
     }
 
     #app-container {
@@ -39,25 +39,30 @@
       width: 100%;
     }
 
-    /* 順滑吸附滾動容器 */
+    /* 順滑吸附滾動區域 (Snap Scrolling) */
     #scroll-area {
       flex: 1;
       overflow-y: auto;
       scroll-snap-type: y mandatory;
       scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
     }
 
     .week-section {
       scroll-snap-align: start;
       scroll-snap-stop: always;
-      min-height: 100%;
-      padding: 12px 12px 170px 12px; /* 底部留白避開鍵盤 */
+      padding-top: 12px;
+      padding-bottom: 4px;
     }
 
-    /* 隱藏原生滾動條以求美觀 */
+    /* 底部避開鍵盤留白 */
+    #schedule-container {
+      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 165px);
+    }
+
+    /* 隱藏滾動條求極簡美觀 */
     #scroll-area::-webkit-scrollbar { display: none; }
     #scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
-
   </style>
 </head>
 <body>
@@ -66,7 +71,6 @@
 
   <!-- 雙層頂部固定 Header -->
   <header class="flex-shrink-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 flex flex-col shadow-sm">
-    <!-- 第一層：工具與標題 -->
     <div class="px-3 py-2 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="text-base font-black text-slate-900 tracking-tight">📅 排更</span>
@@ -82,13 +86,13 @@
       </div>
     </div>
 
-    <!-- 第二層：即時週次切換列 -->
+    <!-- 隨滾動連動的週次切換列 -->
     <div class="px-2.5 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
       <button onclick="scrollWeek(-1)" class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs flex items-center">
         ‹ 上週
       </button>
       
-      <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-[11px] font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs">
+      <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-xs font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs">
         <span id="header-week-range">載入中...</span>
         <span class="text-indigo-600 text-[9px]">▼</span>
       </button>
@@ -99,16 +103,16 @@
     </div>
   </header>
 
-  <!-- 主滾動區塊 (Snap Scrolling) -->
+  <!-- 主滾動區塊 -->
   <main id="scroll-area">
-    <div id="schedule-container" class="w-full max-w-md mx-auto"></div>
+    <div id="schedule-container" class="w-full max-w-md mx-auto px-3"></div>
   </main>
 
   <!-- 底部固定大按鈕操作盤 -->
   <div id="bottom-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] p-2.5 sm:pb-5">
     <div class="max-w-md mx-auto">
       <div class="flex items-center justify-between mb-2 px-1">
-        <!-- 左側：清空與日期 -->
+        <!-- 左側：清空與日期標籤 -->
         <div class="flex items-center gap-2">
           <button onclick="clearActiveDay()" title="清空當天" class="w-11 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs">
             🧹
@@ -134,7 +138,7 @@
 
 </div> <!-- /#app-container -->
 
-  <!-- 🗓️ 視覺化自訂月曆 Modal (星期日為第一日) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
     <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -142,25 +146,17 @@
         <span id="cal-month-title" class="text-sm font-black text-slate-900">--</span>
         <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
       </div>
-
       <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
         <span class="text-rose-600 font-black">日</span>
-        <span class="text-slate-600">一</span>
-        <span class="text-slate-600">二</span>
-        <span class="text-slate-600">三</span>
-        <span class="text-slate-600">四</span>
-        <span class="text-slate-600">五</span>
-        <span class="text-slate-600">六</span>
+        <span class="text-slate-600">一</span><span class="text-slate-600">二</span><span class="text-slate-600">三</span>
+        <span class="text-slate-600">四</span><span class="text-slate-600">五</span><span class="text-slate-600">六</span>
       </div>
-
       <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
-
       <div class="flex items-center justify-center gap-4 pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-bold">
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>已填</span>
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>未填</span>
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span>週日/休</span>
       </div>
-
       <button onclick="closeCalendarModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs mt-1">關閉</button>
     </div>
   </div>
@@ -172,9 +168,7 @@
         <h3 class="text-sm font-bold text-slate-900">📥 電腦端批次匯入</h3>
         <button onclick="closeImportModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
-      <p class="text-xs text-slate-500">
-        一行代表一個工作日；休假填 <code class="bg-slate-100 px-1 rounded text-rose-600">V休</code>，全休填 <code class="bg-rose-50 px-1 rounded text-rose-600 font-bold">全休</code>。
-      </p>
+      <p class="text-xs text-slate-500">一行代表一個工作日；休假填 <code class="bg-slate-100 px-1 rounded text-rose-600">V休</code>，全休填 <code class="bg-rose-50 px-1 rounded text-rose-600 font-bold">全休</code>。</p>
       <textarea id="import-text-input" rows="8" placeholder="例如：&#10;Y I S K C V&#10;C V K Y I S&#10;V休 C Y S I K&#10;全休" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
       <div class="flex gap-2">
         <button onclick="executeBatchImport()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs active:bg-indigo-700">確認匯入並同步</button>
@@ -190,7 +184,6 @@
         <h3 class="text-sm font-bold text-slate-900">📊 1~6 號更位分佈統計</h3>
         <button onclick="closeStatsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
-
       <div class="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
         <label for="stats-exclude-leave" class="text-xs font-bold text-slate-700 cursor-pointer flex flex-col">
           <span>不計年假／休假</span>
@@ -198,7 +191,6 @@
         </label>
         <input type="checkbox" id="stats-exclude-leave" onchange="toggleStatsExcludeLeave()" class="w-4 h-4 text-indigo-600 rounded cursor-pointer">
       </div>
-
       <div id="stats-content"></div>
       <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">關閉</button>
     </div>
@@ -211,7 +203,6 @@
         <h3 class="text-sm font-bold text-slate-900">⚙️ 系統設定</h3>
         <button onclick="closeSettingsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
       </div>
-
       <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
         <div>
           <div class="text-xs font-bold text-slate-800">星期六需要排班</div>
@@ -219,20 +210,12 @@
         </div>
         <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-4 h-4 text-indigo-600 rounded">
       </div>
-
-      <!-- API Key 隱私顯示 -->
       <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
         <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
-        
         <div id="key-saved-container" class="hidden flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-          <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-            <span>🔒</span> 已設置完成
-          </span>
-          <button onclick="showKeyInputForm()" class="text-xs text-indigo-600 font-bold px-2 py-1 rounded hover:bg-emerald-100 active:bg-emerald-200">
-            變更 / 重設
-          </button>
+          <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5"><span>🔒</span> 已設置完成</span>
+          <button onclick="showKeyInputForm()" class="text-xs text-indigo-600 font-bold px-2 py-1 rounded hover:bg-emerald-100 active:bg-emerald-200">變更 / 重設</button>
         </div>
-
         <div id="key-input-container" class="hidden space-y-2 mt-2">
           <input type="password" id="api-key-input" placeholder="貼入新 API Key (AIzaSy...)" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none">
           <div class="flex justify-end gap-2">
@@ -241,8 +224,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Prompt 模板 -->
       <div>
         <label class="block text-xs font-bold text-slate-700 mb-1">📝 更位公平性 Prompt 模板：</label>
         <textarea id="prompt-template-input" rows="7" class="w-full text-[10px] font-mono bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 outline-none leading-tight"></textarea>
@@ -262,7 +243,7 @@
     let saveTimeout = null;
     let observer = null;
 
-    // 系統預設載入 16 週的範圍 (過去 4 週 ~ 未來 12 週)
+    // 預載 17 週 (過往 4 週 + 本週 + 未來 12 週)
     const PAST_WEEKS = 4;
     const FUTURE_WEEKS = 12;
 
@@ -307,7 +288,7 @@
       return formatLocalYMD(sun);
     }
 
-    // 更新系統預設 Prompt 模板 (加入更位越小越好的邏輯)
+    // 預設 Prompt (內建均位越小越好的邏輯)
     const SYSTEM_DEFAULT_PROMPT = `你現在是一位營運排班評估助手。以下是未來週期（{{DATE_RANGE}}）6 位員工（Y, I, S, K, C, V）的更表數據。
 每日排更共 6 個位置。
 
@@ -332,14 +313,11 @@
       script.src = 'config.js?t=' + Date.now();
       script.onload = () => {
         if (!window.APP_CONFIG || !window.APP_CONFIG.STAFF_LIST) {
-          handleConfigError('config.js 內容格式不正確，缺少配置參數！');
-          return;
+          handleConfigError('config.js 內容格式不正確，缺少配置參數！'); return;
         }
         initApp();
       };
-      script.onerror = () => {
-        handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在於同層目錄。');
-      };
+      script.onerror = () => handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在於同層目錄。');
       document.head.appendChild(script);
     })();
 
@@ -355,11 +333,14 @@
       loadFromLocalStorage();
       initKeyboardButtons();
 
-      const todayMonday = getMondayOfDate(new Date());
+      const today = new Date();
+      const todayMonday = getMondayOfDate(today);
       state.anchorMonday = formatLocalYMD(todayMonday);
-      state.activeDate = formatLocalYMD(new Date()); 
-      if (isRestDay(new Date().getDay())) {
-         state.activeDate = state.anchorMonday; // 若今日放假，選回週一
+      state.currentVisibleWeekStart = state.anchorMonday;
+      
+      state.activeDate = formatLocalYMD(today);
+      if (isRestDay(today.getDay())) {
+         state.activeDate = state.anchorMonday; 
       }
 
       state.calYear = todayMonday.getFullYear();
@@ -368,11 +349,11 @@
       renderAllWeeks();
       setupIntersectionObserver();
       
-      // 畫面初始跳轉到當週
+      // 自動跳轉到當前週
       setTimeout(() => {
         const weekEl = document.getElementById('week-' + state.anchorMonday);
         if (weekEl) weekEl.scrollIntoView();
-      }, 100);
+      }, 50);
 
       initFirebaseWithStoredKey();
     }
@@ -384,9 +365,7 @@
       setTimeout(() => toast.classList.add('opacity-0'), 2200);
     }
 
-    function triggerHaptic() {
-      if (navigator.vibrate) navigator.vibrate(35);
-    }
+    function triggerHaptic() { if (navigator.vibrate) navigator.vibrate(35); }
 
     function loadLocalPreferences() {
       const savedSat = localStorage.getItem('shift_include_saturday');
@@ -402,9 +381,7 @@
       try {
         const raw = localStorage.getItem('roster_days_map');
         if (raw) state.daysMap = JSON.parse(raw);
-      } catch (e) {
-        console.warn('本地快取讀取異常', e);
-      }
+      } catch (e) { console.warn('本地快取讀取異常', e); }
     }
 
     function initKeyboardButtons() {
@@ -420,176 +397,6 @@
       });
     }
 
-    // ================= 🔄 順滑吸附滾動與渲染 (Snap Scrolling) =================
-    
-    // 一次性渲染過去4週與未來12週，利用原生CSS Snap達成完美順滑
-    function renderAllWeeks() {
-      const container = document.getElementById('schedule-container');
-      container.innerHTML = '';
-      if (observer) observer.disconnect();
-
-      const baseDate = parseLocalYMD(state.anchorMonday);
-      baseDate.setDate(baseDate.getDate() - (PAST_WEEKS * 7));
-      
-      const totalWeeks = PAST_WEEKS + FUTURE_WEEKS + 1;
-
-      for (let w = 0; w < totalWeeks; w++) {
-        const weekStartIso = formatLocalYMD(baseDate);
-        const weekEnd = new Date(baseDate);
-        weekEnd.setDate(baseDate.getDate() + 5); // 至週六
-        const weekEndIso = formatLocalYMD(weekEnd);
-
-        const weekSection = document.createElement('div');
-        weekSection.id = 'week-' + weekStartIso;
-        weekSection.className = 'week-section flex flex-col gap-2.5';
-        weekSection.dataset.start = weekStartIso;
-        weekSection.dataset.end = weekEndIso;
-
-        // 渲染該週 6 天
-        for (let d = 0; d < 6; d++) {
-          const curr = new Date(baseDate);
-          curr.setDate(baseDate.getDate() + d);
-          const iso = formatLocalYMD(curr);
-          weekSection.appendChild(createDayCard(iso, curr.getDay()));
-        }
-
-        container.appendChild(weekSection);
-        baseDate.setDate(baseDate.getDate() + 7);
-      }
-
-      updateActiveDock();
-    }
-
-    // Intersection Observer 偵測當前滾動到哪一週，即時更新頂部 Header
-    function setupIntersectionObserver() {
-      const options = { root: document.getElementById('scroll-area'), threshold: 0.5 };
-      observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const startIso = entry.target.dataset.start;
-            const endIso = entry.target.dataset.end;
-            state.currentVisibleWeekStart = startIso;
-            document.getElementById('header-week-range').innerHTML = `${startIso.substring(5)} ~ ${endIso.substring(5)}`;
-          }
-        });
-      }, options);
-
-      document.querySelectorAll('.week-section').forEach(sec => observer.observe(sec));
-    }
-
-    // 點擊上週/下週，自動順滑滾動到目標週次
-    function scrollWeek(direction) {
-      if (!state.currentVisibleWeekStart) return;
-      const curr = parseLocalYMD(state.currentVisibleWeekStart);
-      curr.setDate(curr.getDate() + (direction * 7));
-      const targetId = 'week-' + formatLocalYMD(curr);
-      const targetEl = document.getElementById(targetId);
-      
-      if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        // 若超出預先渲染的範圍，重置錨點並重繪
-        state.anchorMonday = formatLocalYMD(curr);
-        renderAllWeeks();
-        setupIntersectionObserver();
-        document.getElementById(targetId).scrollIntoView();
-      }
-    }
-
-    // ================= 🃏 建立單日排更卡片 (6槽介面) =================
-    function createDayCard(iso, dayIdx) {
-      const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
-      const isAutoRest = isRestDay(dayIdx);
-      const isFullHoliday = !!(dayRecord.isFullDayHoliday || dayRecord.isFullHoliday);
-      const isActive = (state.activeDate === iso);
-      const isToday = (iso === formatLocalYMD(new Date()));
-
-      const card = document.createElement('div');
-      card.id = `day-card-${iso}`;
-      
-      let borderClass = 'bg-white border-slate-200/80 shadow-xs';
-      if (isActive) borderClass = 'bg-white border-indigo-500 ring-2 ring-indigo-500/20 shadow-md';
-      else if (isFullHoliday) borderClass = 'bg-rose-50/80 border-rose-300';
-      else if (isAutoRest) borderClass = 'bg-slate-200/40 border-slate-200/60 opacity-60';
-
-      card.className = `p-3 rounded-2xl border transition-all ${borderClass}`;
-      card.onclick = () => selectActiveDay(iso);
-
-      let badge = '';
-      if (isFullHoliday) badge = `<span class="text-[10px] font-black px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-300">🌴 全休</span>`;
-      else if (isAutoRest) badge = `<span class="text-[10px] font-semibold text-slate-400">週${window.APP_CONFIG.WEEK_DAYS[dayIdx]}休</span>`;
-
-      const todayBadge = isToday ? `<span class="text-[10px] font-black bg-indigo-500 text-white px-1.5 py-0.5 rounded mr-1.5 shadow-sm">今日</span>` : '';
-
-      // 構建極致清晰的 6 槽網格 (2-2-2分組)
-      let shiftsHtml = '';
-      if (!isAutoRest && !isFullHoliday) {
-        shiftsHtml = `<div class="flex w-full gap-1.5 mt-2.5">`;
-        
-        for (let pair = 0; pair < 3; pair++) {
-          shiftsHtml += `<div class="flex flex-1 gap-1">`;
-          
-          for (let item = 0; item < 2; item++) {
-            const sIdx = pair * 2 + item;
-            const shift = dayRecord.shifts[sIdx];
-            
-            if (shift) {
-              const isOff = shift.status === 'OFF';
-              const bg = isOff ? 'bg-rose-50 border-rose-200' : 'bg-slate-100 border-slate-300';
-              const textCol = isOff ? 'text-rose-600' : 'text-slate-800';
-              const labelCol = isOff ? 'text-rose-300' : 'text-slate-400';
-              const offMark = isOff ? `<span class="text-[8px] absolute -right-1 -top-1 bg-rose-500 text-white rounded px-0.5 shadow-sm">休</span>` : '';
-
-              shiftsHtml += `
-                <div onclick="event.stopPropagation(); toggleShiftStatus('${iso}', ${sIdx});" 
-                     class="relative flex-1 flex flex-col items-center justify-center rounded-lg py-1 border shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all active:scale-90 cursor-pointer ${bg}">
-                  <span class="text-[8px] font-black mb-0.5 ${labelCol}">${sIdx + 1}更</span>
-                  <span class="text-sm font-black ${textCol}">${shift.staff}</span>
-                  ${offMark}
-                </div>
-              `;
-            } else {
-              // 空槽顯示虛線
-              shiftsHtml += `
-                <div class="flex-1 flex flex-col items-center justify-center rounded-lg py-1 border border-dashed border-slate-300 bg-white/50">
-                  <span class="text-[8px] font-black text-slate-300 mb-0.5">${sIdx + 1}更</span>
-                  <span class="text-sm font-bold text-slate-200">-</span>
-                </div>
-              `;
-            }
-          }
-          
-          shiftsHtml += `</div>`;
-          // 加上垂直分隔線
-          if (pair < 2) {
-            shiftsHtml += `<div class="w-px bg-slate-200 my-1 shadow-xs"></div>`;
-          }
-        }
-        shiftsHtml += `</div>`;
-      }
-
-      card.innerHTML = `
-        <div class="flex items-center justify-between px-0.5">
-          <span class="text-xs font-bold flex items-center ${isActive ? 'text-indigo-600 font-black' : isFullHoliday ? 'text-rose-600 font-black' : 'text-slate-800'}">
-            ${todayBadge}${iso.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[dayIdx]})
-          </span>
-          ${badge}
-        </div>
-        ${shiftsHtml}
-      `;
-      
-      return card;
-    }
-
-    // 局部更新指定日期的 DOM，避免整頁重繪破壞滾動
-    function updateDayCardDOM(iso) {
-      const oldCard = document.getElementById(`day-card-${iso}`);
-      if (!oldCard) return;
-      const d = parseLocalYMD(iso);
-      const newCard = createDayCard(iso, d.getDay());
-      oldCard.replaceWith(newCard);
-    }
-
     function toggleSaturdaySetting() {
       state.includeSaturday = document.getElementById('include-sat-toggle').checked;
       localStorage.setItem('shift_include_saturday', state.includeSaturday);
@@ -603,6 +410,179 @@
       if (dayIdx === 0) return true;
       if (dayIdx === 6 && !state.includeSaturday) return true;
       return false;
+    }
+
+    // ================= 🔄 順滑吸附滾動與渲染 (Snap Scrolling) =================
+    
+    function renderAllWeeks() {
+      const container = document.getElementById('schedule-container');
+      container.innerHTML = '';
+      if (observer) observer.disconnect();
+
+      const baseDate = parseLocalYMD(state.anchorMonday);
+      baseDate.setDate(baseDate.getDate() - (PAST_WEEKS * 7));
+      const totalWeeks = PAST_WEEKS + FUTURE_WEEKS + 1;
+
+      for (let w = 0; w < totalWeeks; w++) {
+        const weekStartIso = formatLocalYMD(baseDate);
+        const weekEnd = new Date(baseDate);
+        weekEnd.setDate(baseDate.getDate() + 5);
+        const weekEndIso = formatLocalYMD(weekEnd);
+
+        const weekCard = document.createElement('div');
+        weekCard.id = 'week-' + weekStartIso;
+        weekCard.className = 'week-section';
+        weekCard.dataset.start = weekStartIso;
+        weekCard.dataset.end = weekEndIso;
+
+        const cardInner = document.createElement('div');
+        cardInner.className = 'bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden pb-1';
+
+        // 獨立精緻表頭
+        cardInner.innerHTML = `
+          <div class="flex items-center bg-slate-50 border-b border-slate-200/80 px-1 py-2 text-[10px] font-black text-slate-400">
+            <div class="w-14 text-center tracking-widest">日期</div>
+            <div class="flex-1 flex px-1 items-center">
+              <div class="flex-1 text-center">1更</div>
+              <div class="flex-1 text-center">2更</div>
+              <div class="w-[1px] h-3 bg-slate-300 mx-0.5 rounded"></div>
+              <div class="flex-1 text-center">3更</div>
+              <div class="flex-1 text-center">4更</div>
+              <div class="w-[1px] h-3 bg-slate-300 mx-0.5 rounded"></div>
+              <div class="flex-1 text-center">5更</div>
+              <div class="flex-1 text-center">6更</div>
+            </div>
+          </div>
+          <div class="divide-y divide-slate-100 flex flex-col" id="week-days-${weekStartIso}"></div>
+        `;
+
+        const daysContainer = cardInner.querySelector(`#week-days-${weekStartIso}`);
+
+        for (let d = 0; d < 6; d++) {
+          const curr = new Date(baseDate);
+          curr.setDate(baseDate.getDate() + d);
+          daysContainer.appendChild(createDayRow(formatLocalYMD(curr), curr.getDay()));
+        }
+
+        weekCard.appendChild(cardInner);
+        container.appendChild(weekCard);
+        baseDate.setDate(baseDate.getDate() + 7);
+      }
+
+      updateActiveDock();
+    }
+
+    function setupIntersectionObserver() {
+      const options = { root: document.getElementById('scroll-area'), threshold: 0.5 };
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const startIso = entry.target.dataset.start;
+            const endIso = entry.target.dataset.end;
+            state.currentVisibleWeekStart = startIso;
+            document.getElementById('header-week-range').innerHTML = `${startIso.substring(5).replace('-','/')} ~ ${endIso.substring(5).replace('-','/')}`;
+          }
+        });
+      }, options);
+
+      document.querySelectorAll('.week-section').forEach(sec => observer.observe(sec));
+    }
+
+    function scrollWeek(direction) {
+      if (!state.currentVisibleWeekStart) return;
+      const curr = parseLocalYMD(state.currentVisibleWeekStart);
+      curr.setDate(curr.getDate() + (direction * 7));
+      const targetId = 'week-' + formatLocalYMD(curr);
+      const targetEl = document.getElementById(targetId);
+      
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        state.anchorMonday = formatLocalYMD(curr);
+        renderAllWeeks();
+        setupIntersectionObserver();
+        document.getElementById(targetId).scrollIntoView();
+      }
+    }
+
+    // ================= 🃏 建立單行排更資料 =================
+    function createDayRow(iso, dayIdx) {
+      const row = document.createElement('div');
+      row.id = `day-row-${iso}`;
+      const isActive = (state.activeDate === iso);
+      const isToday = (iso === formatLocalYMD(new Date()));
+      const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
+      const isFullHoliday = !!(dayRecord.isFullDayHoliday || dayRecord.isFullHoliday);
+      const isAutoRest = isRestDay(dayIdx);
+
+      let bgClass = isActive ? 'bg-indigo-50/60 ring-1 ring-inset ring-indigo-500/30 z-10' : 'bg-white hover:bg-slate-50/50';
+      if (!isActive && isFullHoliday) bgClass = 'bg-rose-50/40';
+      if (!isActive && isAutoRest) bgClass = 'bg-slate-50 opacity-60';
+
+      row.className = `relative flex items-stretch px-1 py-1.5 transition-all cursor-pointer ${bgClass}`;
+      row.onclick = () => selectActiveDay(iso);
+
+      const dateStr = iso.substring(5).replace('-', '/');
+      const dayName = window.APP_CONFIG.WEEK_DAYS[dayIdx];
+      const todayBadge = isToday ? `<span class="bg-indigo-500 text-white text-[8px] px-1 rounded-[4px] mb-0.5 font-bold shadow-sm">今日</span>` : '';
+
+      const dateColHtml = `
+        <div class="w-14 flex-shrink-0 flex flex-col items-center justify-center pt-0.5">
+          ${todayBadge}
+          <span class="text-[12px] font-black leading-none ${isActive ? 'text-indigo-700' : 'text-slate-800'}">${dateStr}</span>
+          <span class="text-[10px] font-bold mt-0.5 ${isActive ? 'text-indigo-500' : 'text-slate-400'}">(${dayName})</span>
+        </div>
+      `;
+
+      let shiftsHtml = '';
+      if (isFullHoliday) {
+        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-xs font-black text-rose-600 bg-rose-100 px-3 py-1 rounded-lg border border-rose-200">🌴 全休</span></div>`;
+      } else if (isAutoRest) {
+        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-xs font-bold text-slate-400">週${dayName}休</span></div>`;
+      } else {
+        shiftsHtml = `<div class="flex-1 flex px-1 items-center">`;
+        for(let sIdx = 0; sIdx < 6; sIdx++) {
+          const shift = dayRecord.shifts[sIdx];
+          
+          if (shift) {
+            const isOff = shift.status === 'OFF';
+            const btnBg = isOff ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-300 text-slate-800 shadow-sm';
+            const offBadge = isOff ? `<span class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">休</span>` : '';
+            
+            shiftsHtml += `
+              <div class="flex-1 px-0.5">
+                <button onclick="event.stopPropagation(); toggleShiftStatus('${iso}', ${sIdx});" 
+                        class="w-full relative h-9 rounded-md border flex items-center justify-center text-sm font-black active:scale-90 transition-transform ${btnBg}">
+                  ${shift.staff}
+                  ${offBadge}
+                </button>
+              </div>
+            `;
+          } else {
+            shiftsHtml += `
+              <div class="flex-1 px-0.5">
+                <div class="w-full h-9 rounded-md border border-dashed border-slate-300 bg-slate-50/50 flex items-center justify-center"></div>
+              </div>
+            `;
+          }
+          
+          if (sIdx === 1 || sIdx === 3) {
+            shiftsHtml += `<div class="w-[1px] h-6 bg-slate-200 mx-0.5 rounded"></div>`;
+          }
+        }
+        shiftsHtml += `</div>`;
+      }
+
+      row.innerHTML = dateColHtml + shiftsHtml;
+      return row;
+    }
+
+    function updateDayCardDOM(iso) {
+      const oldRow = document.getElementById(`day-row-${iso}`);
+      if (!oldRow) return;
+      const d = parseLocalYMD(iso);
+      const newRow = createDayRow(iso, d.getDay());
+      oldRow.replaceWith(newRow);
     }
 
     function selectActiveDay(iso) {
@@ -629,7 +609,7 @@
       }
 
       const d = parseLocalYMD(state.activeDate);
-      label.innerText = `${state.activeDate.substring(5)} (${window.APP_CONFIG.WEEK_DAYS[d.getDay()]})`;
+      label.innerText = `${state.activeDate.substring(5).replace('-','/')} (${window.APP_CONFIG.WEEK_DAYS[d.getDay()]})`;
 
       const record = getActiveDateRecord();
       const isLocked = isRestDay(d.getDay()) || record.isFullDayHoliday;
@@ -648,8 +628,6 @@
         }
       });
     }
-
-    // ================= 操作與跳日邏輯 =================
 
     function inputStaff(staff) {
       triggerHaptic();
@@ -726,7 +704,7 @@
       debounceSaveCloud();
     }
 
-    // 智能跨週尋找下一個工作日
+    // 智能跨週尋找下一個工作日，若超出渲染範圍則重製視圖
     function jumpNextDay() {
       const oldIso = state.activeDate;
       let curr = parseLocalYMD(state.activeDate);
@@ -738,8 +716,7 @@
       
       const newIso = formatLocalYMD(curr);
       
-      // 若找出的下個工作日不在 DOM 裡，就重置錨點
-      if (!document.getElementById(`day-card-${newIso}`)) {
+      if (!document.getElementById(`day-row-${newIso}`)) {
         state.anchorMonday = formatLocalYMD(getMondayOfDate(curr));
         renderAllWeeks();
         setupIntersectionObserver();
@@ -751,9 +728,9 @@
       updateActiveDock();
       
       setTimeout(() => {
-        const el = document.getElementById(`day-card-${newIso}`);
+        const el = document.getElementById(`day-row-${newIso}`);
         if (el) {
-           const y = el.getBoundingClientRect().top + window.scrollY - 150;
+           const y = el.getBoundingClientRect().top + document.getElementById('scroll-area').scrollTop - 130;
            document.getElementById('scroll-area').scrollTo({top: y, behavior: 'smooth'});
         }
       }, 50);
@@ -796,6 +773,7 @@
       const daysInMonth = lastDay.getDate();
 
       const startOffset = firstDay.getDay();
+
       for (let i = 0; i < startOffset; i++) {
         const empty = document.createElement('div');
         grid.appendChild(empty);
@@ -815,6 +793,7 @@
         const isFullHoliday = !!(dayData?.isFullDayHoliday === true || dayData?.isFullDayHoliday === 'true' || dayData?.isFullHoliday === true);
         const shiftCount = dayData?.shifts ? dayData.shifts.length : 0;
         const isCompleted = (shiftCount === 6);
+
         const isInCheckRange = (iso >= systemStartIso && iso <= thisWeekEndIso);
 
         const cell = document.createElement('button');
@@ -855,7 +834,10 @@
         }
 
         cell.className += ` ${bgStyle}`;
-        cell.innerHTML = `<span class="text-xs ${numColor}">${d}</span>${dot}`;
+        cell.innerHTML = `
+          <span class="text-xs ${numColor}">${d}</span>
+          ${dot}
+        `;
         grid.appendChild(cell);
       }
     }
@@ -864,9 +846,7 @@
     function saveLocalImmediately() {
       try {
         localStorage.setItem('roster_days_map', JSON.stringify(state.daysMap));
-      } catch (e) {
-        console.warn('本地快取寫入失敗', e);
-      }
+      } catch (e) { console.warn('本地快取寫入失敗', e); }
     }
 
     function debounceSaveCloud() {
@@ -880,7 +860,6 @@
     function saveAllData() {
       saveLocalImmediately();
       if (!db) return;
-
       const path = window.APP_CONFIG.dbPath || 'roster_data';
       db.ref(path).update({ daysMap: state.daysMap, updatedAt: new Date().toISOString() })
       .then(() => {
@@ -972,7 +951,7 @@
 
           if (excludeLeave) {
             const N = onStaff.length;
-            const startIndex = 6 - N + 1; // 順延邏輯
+            const startIndex = 6 - N + 1;
             onStaff.forEach((shift, i) => {
               const pos = startIndex + i;
               if (pos >= 1 && pos <= 6 && matrix[shift.staff]) {
@@ -1199,9 +1178,7 @@
       closeSettingsModal();
     }
 
-    function resetDefaultPrompt() {
-      document.getElementById('prompt-template-input').value = SYSTEM_DEFAULT_PROMPT;
-    }
+    function resetDefaultPrompt() { document.getElementById('prompt-template-input').value = SYSTEM_DEFAULT_PROMPT; }
 
     function initFirebaseWithStoredKey() {
       const promptSaved = localStorage.getItem('shift_prompt_template');
@@ -1225,7 +1202,6 @@
             if (val.daysMap) {
               state.daysMap = { ...state.daysMap, ...val.daysMap };
               saveLocalImmediately();
-              // 更新DOM
               renderAllWeeks();
               setupIntersectionObserver();
             }
