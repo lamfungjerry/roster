@@ -215,6 +215,7 @@
     let observer = null;
     let saveTimeout = null;
 
+    // 預載：前4週 + 後4週 + 當前 = 9週
     const PAST_WEEKS = 4;
     const FUTURE_WEEKS = 4;
 
@@ -267,6 +268,7 @@
       document.getElementById('header-week-range').innerHTML = `${startIso.substring(5).replace('-','/')} ~ ${formatLocalYMD(end).substring(5).replace('-','/')}`;
     }
 
+    // Modal 安全顯示機制 (修復設定點擊無反應問題)
     function openModal(id) {
       const el = document.getElementById(id);
       if(el) { el.style.display = 'flex'; }
@@ -296,6 +298,7 @@
       alert(errorMessage);
     }
 
+    // ================= 啟動系統 (確保精準對位與零卡頓) =================
     function initApp() {
       state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT;
       loadLocalPreferences();
@@ -315,16 +318,33 @@
       state.calYear = todayMonday.getFullYear();
       state.calMonth = todayMonday.getMonth();
 
+      // 極速渲染
       renderAllWeeks();
-      evaluateAutoLockOnScroll();
       
-      setTimeout(() => {
-        const weekEl = document.getElementById('week-' + state.anchorMonday);
-        if (weekEl) document.getElementById('scroll-area').scrollTo({ top: weekEl.offsetTop, behavior: 'auto' });
-      }, 50);
+      // 確保一載入就將畫面精準推到當週，並鎖死滾動行為避免干擾
+      const scrollArea = document.getElementById('scroll-area');
+      const weekEl = document.getElementById('week-' + state.anchorMonday);
+      if (weekEl) {
+        scrollArea.style.scrollSnapType = 'none';
+        scrollArea.scrollTop = weekEl.offsetTop;
+      }
+      
+      // 等待 DOM 重繪穩定後，再開啟滾動偵測與自動鎖定判斷
+      requestAnimationFrame(() => {
+        if (weekEl) scrollArea.scrollTop = weekEl.offsetTop;
+        setTimeout(() => { 
+          scrollArea.style.scrollSnapType = 'y mandatory'; 
+          evaluateAutoLockOnScroll();
+          
+          // 延遲綁定滾動偵測，避免 Safari 在跳轉途中誤判週次
+          setTimeout(() => {
+            scrollArea.addEventListener('scroll', handleScroll);
+          }, 300);
+        }, 50);
+      });
 
+      // 背景載入 Firebase，絕不阻塞畫面
       setTimeout(initFirebaseWithStoredKey, 100);
-      document.getElementById('scroll-area').addEventListener('scroll', handleScroll);
     }
 
     function showToast(msg) {
@@ -420,6 +440,7 @@
         dockUnlocked.classList.remove('fade-out'); dockUnlocked.classList.add('fade-in');
       }
       
+      // 重新渲染畫面以切換游標指標，並確保滾動不跳位
       const scrollArea = document.getElementById('scroll-area');
       const currentScroll = scrollArea.scrollTop;
       
@@ -754,7 +775,6 @@
       
       if (!document.getElementById(`day-row-${newIso}`)) {
         state.anchorMonday = formatLocalYMD(getMondayOfDate(curr));
-        
         const scrollArea = document.getElementById('scroll-area');
         scrollArea.style.scrollSnapType = 'none';
         renderAllWeeks();
@@ -866,7 +886,7 @@
       }
     }
 
-    // ================= 儲存與同步 =================
+    // ================= 儲存與同步 (加入詳盡錯誤提示) =================
     function saveLocalImmediately() {
       try { localStorage.setItem('roster_days_map', JSON.stringify(state.daysMap)); } 
       catch (e) { console.warn('本地快取寫入失敗', e); }
@@ -896,10 +916,16 @@
         const badge = document.getElementById('sync-badge');
         badge.innerText = '已連線';
         badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer transition-colors';
+        badge.onclick = openSettingsModal; // 恢復正常點擊
       }).catch(err => {
         const badge = document.getElementById('sync-badge');
-        badge.innerText = '已存本地';
+        badge.innerText = '儲存失敗(點擊查看)';
         badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer transition-colors';
+        badge.onclick = () => {
+           alert("Firebase 儲存錯誤:\n" + err.message);
+           openSettingsModal();
+        };
+        showToast('儲存失敗: ' + err.message);
       });
     }
 
@@ -908,6 +934,9 @@
       const badge = document.getElementById('sync-badge');
       const statusLabel = document.getElementById('api-status-label');
       
+      // 確保 Badge 點擊預設是打開設定
+      badge.onclick = openSettingsModal;
+
       if (!apiKey) {
         if(statusLabel) {
            statusLabel.innerText = '🔴 未設定';
@@ -953,6 +982,7 @@
               const scrollArea = document.getElementById('scroll-area');
               const currentScroll = scrollArea.scrollTop;
               
+              // 靜默更新畫面與鎖定狀態，保證滾動條絕對不亂跳
               scrollArea.style.scrollSnapType = 'none';
               renderAllWeeks();
               scrollArea.scrollTop = currentScroll;
@@ -966,10 +996,24 @@
         }).catch(err => {
           isConnected = true;
           clearTimeout(connTimeout);
-          badge.innerText = '連線被拒(查Key)';
+          badge.innerText = '連線失敗(點擊查看)';
           badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
+          badge.onclick = () => {
+             alert("Firebase 連線錯誤:\n" + err.message);
+             openSettingsModal();
+          };
+          showToast('連線失敗: ' + err.message);
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error(e); 
+        badge.innerText = '初始化錯誤(點擊查看)';
+        badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
+        badge.onclick = () => {
+           alert("Firebase 系統錯誤:\n" + e.message);
+           openSettingsModal();
+        };
+        showToast('初始化錯誤: ' + e.message);
+      }
     }
 
     // ================= 統計 Modal =================
