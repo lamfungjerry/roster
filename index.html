@@ -19,23 +19,38 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body {
+    html, body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      -webkit-font-smoothing: antialiased; background-color: #f1f5f9; margin: 0; padding: 0; overflow: hidden;
+      -webkit-font-smoothing: antialiased; background-color: #f1f5f9; margin: 0; padding: 0; 
+      height: 100%; height: 100dvh; overflow: hidden; /* 鎖死原生滾動，交由內部處理 */
     }
-    #app-container { display: flex; flex-direction: column; height: 100dvh; width: 100%; }
 
-    /* 順滑吸附滾動區域 (Snap Scrolling) */
+    /* 頂部 Header 佔位高度約 120px，底部 Dock 約 180px */
     #scroll-area {
-      flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
-      padding-bottom: 160px; /* 預留底部解鎖與鍵盤空間 */
+      height: 100%;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
     }
-    .week-section { scroll-snap-align: start; scroll-snap-stop: always; padding: 12px 12px 0 12px; }
+
+    /* 每一週剛好佔滿整個可視高度 */
+    .week-section {
+      height: 100%;
+      height: 100dvh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      padding-top: 130px; /* 避開頂部 Header */
+      padding-bottom: 200px; /* 避開底部 Dock */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
 
     #scroll-area::-webkit-scrollbar { display: none; }
     #scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* 滑動解鎖文字閃爍動畫 */
+    /* 滑動解鎖文字動畫 */
     .shimmer-text {
       background: linear-gradient(90deg, #64748b 0%, #f8fafc 50%, #64748b 100%);
       background-size: 200% auto;
@@ -45,44 +60,42 @@
     }
     @keyframes shimmer { to { background-position: 200% center; } }
 
-    /* 狀態切換動畫 */
-    .fade-switch { transition: opacity 0.25s, transform 0.25s; }
-    .hidden-dock { opacity: 0; pointer-events: none; position: absolute; bottom: -100%; }
+    /* 鎖定與解鎖的平滑過渡 */
+    .dock-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s; }
+    .dock-hidden { transform: translateY(120%); opacity: 0; pointer-events: none; position: absolute; }
   </style>
 </head>
 <body>
 
-<div id="app-container">
-
-  <!-- 雙層頂部固定 Header -->
-  <header class="flex-shrink-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 flex flex-col shadow-sm">
-    <div class="px-3 py-1.5 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-base font-black text-slate-900 tracking-tight">📅 排更</span>
-        <span id="sync-badge" onclick="openSettingsModal()" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold cursor-pointer transition-colors">
+  <!-- 固定在頂部的雙層 Header -->
+  <header class="fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-sm">
+    <!-- 第一層：標題與工具 -->
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-xl font-black text-slate-900 tracking-tight">📅 排更</span>
+        <span id="sync-badge" onclick="openSettingsModal()" class="text-xs px-2.5 py-1 rounded-full bg-slate-200 text-slate-600 font-bold cursor-pointer transition-colors">
           檢查連線...
         </span>
       </div>
-      <div class="flex items-center gap-1.5">
-        <button onclick="openImportModal()" class="px-2 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-600 active:bg-indigo-100">📥 匯入</button>
-        <button onclick="openStatsModal()" class="px-2 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 active:bg-slate-200">📊 統計</button>
-        <button onclick="copySuperPrompt()" class="px-2 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-xs active:bg-emerald-700">📋 Copy</button>
-        <button onclick="openSettingsModal()" class="p-1 text-slate-500 rounded-lg active:bg-slate-100">⚙️</button>
+      <div class="flex items-center gap-2">
+        <button onclick="openStatsModal()" class="px-3 py-1.5 text-sm font-bold rounded-xl bg-slate-100 text-slate-700 active:bg-slate-200">📊 統計</button>
+        <button onclick="copySuperPrompt()" class="px-3 py-1.5 text-sm font-bold rounded-xl bg-emerald-600 text-white shadow-xs active:bg-emerald-700">📋 Copy</button>
+        <button onclick="openSettingsModal()" class="p-1.5 text-lg text-slate-500 rounded-xl active:bg-slate-100">⚙️</button>
       </div>
     </div>
 
-    <!-- 隨滾動連動的週次切換列 -->
-    <div class="px-2.5 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
-      <button onclick="scrollWeek(-1)" class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs flex items-center">
+    <!-- 第二層：加大版週次切換列 -->
+    <div class="px-3 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+      <button onclick="scrollWeek(-1)" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-black active:bg-slate-100 shadow-xs flex items-center">
         ‹ 上週
       </button>
       
-      <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-[13px] font-black text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs">
+      <button onclick="openCalendarModal()" class="flex-1 py-2 px-2 rounded-xl bg-white border border-slate-200 text-[15px] font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs tracking-wide">
         <span id="header-week-range">載入中...</span>
-        <span class="text-indigo-600 text-[9px]">▼</span>
+        <span class="text-indigo-600 text-[10px]">▼</span>
       </button>
 
-      <button onclick="scrollWeek(1)" class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black active:bg-slate-100 shadow-xs flex items-center">
+      <button onclick="scrollWeek(1)" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-black active:bg-slate-100 shadow-xs flex items-center">
         下週 ›
       </button>
     </div>
@@ -90,132 +103,118 @@
 
   <!-- 主滾動區塊 (Snap Scrolling) -->
   <main id="scroll-area">
-    <div id="schedule-container" class="w-full max-w-md mx-auto"></div>
+    <div id="schedule-container" class="w-full max-w-md mx-auto px-2"></div>
   </main>
 
-  <!-- 底部固定容器 -->
-  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] p-2.5 pb-[calc(env(safe-area-inset-bottom,20px)+10px)] relative overflow-hidden min-h-[90px]">
+  <!-- 底部固定容器 (完美覆蓋：包含解鎖列與編輯鍵盤) -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] px-3 pb-[calc(env(safe-area-inset-bottom,20px)+12px)] pt-3 min-h-[140px] flex items-center justify-center">
     
-    <!-- 狀態 1：鎖定狀態 (滑動解鎖) -->
-    <div id="dock-locked" class="fade-switch w-full max-w-md mx-auto flex items-center justify-center py-2 relative">
-      <div id="unlock-slider-container" class="relative w-full max-w-[340px] h-14 bg-slate-800 rounded-full flex items-center justify-center border-[3px] border-slate-900 shadow-inner">
-        <span class="text-sm font-black tracking-widest shimmer-text select-none pl-6">slide to unlock &gt;&gt;</span>
-        <div id="unlock-thumb" class="absolute left-1 top-1 bottom-1 w-14 bg-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform touch-none cursor-pointer">
-          <span class="text-slate-800 font-black text-xl">❯</span>
+    <!-- 狀態 1：鎖定狀態 (原生範圍滑塊完美模擬 Slide to Unlock) -->
+    <div id="dock-locked" class="dock-transition w-full max-w-[360px] mx-auto relative flex items-center justify-center">
+      <div class="relative w-full h-[64px] bg-slate-800 rounded-2xl flex items-center shadow-inner overflow-hidden border-[3px] border-slate-900">
+        <!-- 背景閃爍文字 -->
+        <span class="absolute inset-0 flex items-center justify-center text-[16px] font-black tracking-widest pointer-events-none select-none shimmer-text pl-6">
+          slide to unlock &gt;&gt;
+        </span>
+        <!-- 原生透明 Range 負責接收所有觸控 -->
+        <input type="range" id="unlock-slider" min="0" max="100" value="0" style="touch-action: none;" class="w-full h-full opacity-0 z-20 cursor-pointer absolute inset-0">
+        <!-- 視覺滑塊 (跟隨 Range 數值移動) -->
+        <div id="unlock-thumb-visual" class="absolute left-1.5 top-1.5 bottom-1.5 w-[64px] bg-white rounded-xl flex items-center justify-center shadow-lg pointer-events-none transition-transform duration-75 z-10">
+           <span class="text-slate-800 font-black text-2xl">❯</span>
         </div>
       </div>
     </div>
 
-    <!-- 狀態 2：解鎖狀態 (編輯鍵盤) -->
-    <div id="dock-unlocked" class="fade-switch hidden-dock w-full max-w-md mx-auto">
+    <!-- 狀態 2：解鎖狀態 (編輯工具與加大鍵盤) -->
+    <div id="dock-unlocked" class="dock-transition dock-hidden w-full max-w-md mx-auto">
       <div class="flex items-center justify-between mb-2.5 px-0.5">
-        <!-- 左側：清空、鎖定、日期 -->
         <div class="flex items-center gap-1.5">
-          <button onclick="lockAction()" title="鎖定" class="w-10 h-10 rounded-xl bg-slate-800 text-white font-black flex items-center justify-center text-sm shadow-md active:scale-95 transition-transform">🔒</button>
-          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">🧹</button>
-          <span id="active-day-label" class="text-sm font-black text-indigo-700 pl-1 tracking-tight">--</span>
+          <button onclick="lockAction()" title="重新鎖定" class="w-12 h-11 rounded-xl bg-slate-800 text-white font-black flex items-center justify-center text-lg shadow-md active:scale-95 transition-transform">🔒</button>
+          <button onclick="clearActiveDay()" title="清空當天" class="w-12 h-11 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-xl active:bg-slate-200 shadow-xs active:scale-95 transition-transform">🧹</button>
+          <span id="active-day-label" class="text-base font-black text-indigo-700 pl-1.5 tracking-tight">--</span>
         </div>
-        <!-- 右側：全休、退格 -->
         <div class="flex items-center gap-2">
-          <button onclick="toggleActiveFullHoliday()" class="px-4 py-2 h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs active:scale-95 transition-transform">🌴 全休</button>
-          <button onclick="backspaceStaff()" title="退格刪除" class="w-11 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">⌫</button>
+          <button onclick="toggleActiveFullHoliday()" class="px-5 py-2 h-11 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-sm font-black active:bg-rose-100 shadow-xs active:scale-95 transition-transform">🌴 全休</button>
+          <button onclick="backspaceStaff()" title="退格刪除" class="w-12 h-11 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-xl active:bg-slate-200 shadow-xs active:scale-95 transition-transform">⌫</button>
         </div>
       </div>
-      <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
+      <!-- 6 位員工超大按鈕 -->
+      <div id="keyboard-grid" class="grid grid-cols-6 gap-2"></div>
     </div>
 
   </div>
 
-</div> <!-- /#app-container -->
-
-  <!-- 🗓️ 視覺化自訂月曆 Modal -->
-  <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-3">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-4 shadow-2xl space-y-3">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-        <button onclick="changeCalMonth(-1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">‹</button>
-        <span id="cal-month-title" class="text-sm font-black text-slate-900">--</span>
-        <button onclick="changeCalMonth(1)" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 active:bg-slate-200">›</button>
+  <!-- 🗓️ 視覺化月曆 Modal (週日為首) -->
+  <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-[32px] p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <button onclick="changeCalMonth(-1)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-xl text-slate-700 active:bg-slate-200">‹</button>
+        <span id="cal-month-title" class="text-lg font-black text-slate-900">--</span>
+        <button onclick="changeCalMonth(1)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-xl text-slate-700 active:bg-slate-200">›</button>
       </div>
-      <div class="grid grid-cols-7 text-center text-xs font-bold py-1">
-        <span class="text-rose-600 font-black">日</span>
+      <div class="grid grid-cols-7 text-center text-sm font-black py-1">
+        <span class="text-rose-600">日</span>
         <span class="text-slate-600">一</span><span class="text-slate-600">二</span><span class="text-slate-600">三</span>
         <span class="text-slate-600">四</span><span class="text-slate-600">五</span><span class="text-slate-600">六</span>
       </div>
-      <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
-      <div class="flex items-center justify-center gap-4 pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-bold">
-        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>已填</span>
-        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>未填</span>
-        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span>週日/休</span>
+      <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center text-sm font-bold"></div>
+      <div class="flex items-center justify-center gap-5 pt-3 border-t border-slate-100 text-[11px] text-slate-500 font-bold">
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>已填</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>未填</span>
+        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>休假</span>
       </div>
-      <button onclick="closeCalendarModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs mt-1">關閉</button>
-    </div>
-  </div>
-
-  <!-- 📥 匯入 Modal -->
-  <div id="import-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-sm font-bold text-slate-900">📥 電腦端批次匯入</h3>
-        <button onclick="closeImportModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
-      </div>
-      <p class="text-xs text-slate-500">一行代表一個工作日；休假填 <code class="bg-slate-100 px-1 rounded text-rose-600">V休</code>，全休填 <code class="bg-rose-50 px-1 rounded text-rose-600 font-bold">全休</code>。</p>
-      <textarea id="import-text-input" rows="8" class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
-      <button onclick="executeBatchImport()" class="w-full py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs active:bg-indigo-700">確認匯入並同步</button>
+      <button onclick="closeCalendarModal()" class="w-full py-3 rounded-2xl bg-slate-100 text-slate-800 font-black text-sm mt-2 active:bg-slate-200">關閉</button>
     </div>
   </div>
 
   <!-- 📊 統計 Modal -->
-  <div id="stats-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 shadow-2xl space-y-3 max-h-[88vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-sm font-bold text-slate-900">📊 1~6 號更位分佈統計</h3>
-        <button onclick="closeStatsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
+  <div id="stats-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md hidden flex items-end justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-black text-slate-900">📊 1~6 號更位分佈統計</h3>
+        <button onclick="closeStatsModal()" class="text-slate-400 text-2xl font-bold px-2 py-1">✕</button>
       </div>
-      <div class="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
-        <label for="stats-exclude-leave" class="text-xs font-bold text-slate-700 cursor-pointer flex flex-col">
+      <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl">
+        <label for="stats-exclude-leave" class="text-sm font-black text-slate-700 cursor-pointer flex flex-col">
           <span>不計年假／休假</span>
-          <span class="text-[10px] text-slate-400 font-normal">勾選後排除「休」，當值人員順延，且不計週六</span>
+          <span class="text-[11px] text-slate-400 font-bold mt-0.5">勾選後排除「休」，當值人員順延，不計週六</span>
         </label>
-        <input type="checkbox" id="stats-exclude-leave" onchange="toggleStatsExcludeLeave()" class="w-4 h-4 text-indigo-600 rounded cursor-pointer">
+        <input type="checkbox" id="stats-exclude-leave" onchange="toggleStatsExcludeLeave()" class="w-5 h-5 text-indigo-600 rounded cursor-pointer">
       </div>
       <div id="stats-content"></div>
-      <button onclick="closeStatsModal()" class="w-full py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">關閉</button>
+      <button onclick="closeStatsModal()" class="w-full py-3.5 rounded-2xl bg-slate-100 text-slate-800 font-black text-sm active:bg-slate-200">關閉</button>
     </div>
   </div>
 
-  <!-- ⚙️ 設定 Modal -->
-  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-end justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-sm font-bold text-slate-900">⚙️ 系統設定</h3>
-        <button onclick="closeSettingsModal()" class="text-slate-400 text-lg font-bold p-1">✕</button>
+  <!-- ⚙️ 設定 Modal (含 API Key 狀態與超大 Prompt 顯示) -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md hidden flex items-end justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-[32px] sm:rounded-3xl p-5 shadow-2xl space-y-5 max-h-[95vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-black text-slate-900">⚙️ 系統設定</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 text-2xl font-bold px-2 py-1">✕</button>
       </div>
       
-      <!-- API Key -->
-      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-        <label class="block text-xs font-bold text-slate-700 mb-1.5">🔑 Firebase API Key：</label>
-        <div id="key-saved-container" class="hidden flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-          <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5"><span>🔒</span> 已設置完成</span>
-          <button onclick="showKeyInputForm()" class="text-xs text-indigo-600 font-bold px-2 py-1 rounded hover:bg-emerald-100 active:bg-emerald-200">變更 / 重設</button>
+      <!-- API Key 設定 -->
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <label class="block text-sm font-black text-slate-800">🔑 Firebase API Key</label>
+          <span id="api-status-label" class="text-[11px] font-black px-2 py-1 rounded-md bg-rose-100 text-rose-700">🔴 未設定</span>
         </div>
-        <div id="key-input-container" class="hidden space-y-2 mt-2">
-          <input type="password" id="api-key-input" placeholder="貼入新 API Key" class="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg p-2 outline-none">
-          <div class="flex justify-end gap-2">
-            <button onclick="hideKeyInputForm()" id="cancel-key-btn" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-bold hidden">取消</button>
-            <button onclick="saveApiKey()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold">儲存新 Key</button>
-          </div>
+        <div id="key-input-container">
+          <input type="password" id="api-key-input" placeholder="貼入 API Key (AIzaSy...)" class="w-full text-sm font-mono bg-white border border-slate-300 rounded-xl p-3 outline-none focus:border-indigo-500 mb-3 transition-colors shadow-sm">
+          <button onclick="saveApiKey()" class="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-black active:scale-95 transition-transform shadow-md">儲存並重連</button>
         </div>
       </div>
 
-      <!-- Prompt 只讀顯示區 -->
+      <!-- Prompt 唯讀顯示區 (加大版) -->
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">📝 系統 Prompt (唯讀，請於 config.js 修改)：</label>
-        <textarea id="prompt-template-input" rows="8" readonly class="w-full text-[10px] font-mono bg-slate-100 border border-slate-200 rounded-lg p-2 outline-none leading-tight text-slate-500 cursor-not-allowed"></textarea>
+        <label class="block text-sm font-black text-slate-700 mb-2">📝 系統 Prompt (唯讀，於 config.js 修改)</label>
+        <textarea id="prompt-template-input" rows="12" readonly class="w-full text-[11px] font-mono bg-slate-100 border border-slate-200 rounded-xl p-3 outline-none leading-relaxed text-slate-500 cursor-not-allowed shadow-inner"></textarea>
       </div>
     </div>
   </div>
 
-  <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-3.5 py-1.5 rounded-full text-xs font-medium shadow-md transition-opacity duration-200 opacity-0 pointer-events-none"></div>
+  <div id="toast" class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[60] bg-slate-900/95 text-white px-5 py-2.5 rounded-full text-sm font-black shadow-xl transition-opacity duration-200 opacity-0 pointer-events-none"></div>
 
   <!-- ================= 核心邏輯 ================= -->
   <script>
@@ -223,14 +222,14 @@
     let observer = null;
     let saveTimeout = null;
 
-    // 系統預載：前4週(過去) + 未來8週 = 13週
+    // 設定前後預載週數：前4週 + 後4週 + 當前 = 9週
     const PAST_WEEKS = 4;
-    const FUTURE_WEEKS = 8;
+    const FUTURE_WEEKS = 4;
 
     let state = {
       anchorMonday: '', 
       excludeLeaveInStats: false,
-      isLocked: true, // 預設鎖定，防止誤觸
+      isLocked: true,
       daysMap: {},
       activeDate: '',
       promptTemplate: '',
@@ -254,7 +253,7 @@
     function getMondayOfDate(d) {
       const date = new Date(d);
       const day = date.getDay();
-      const diff = (day === 0) ? -6 : 1 - day; // 確保週日算作上週的尾巴
+      const diff = (day === 0) ? -6 : 1 - day; 
       date.setDate(date.getDate() + diff);
       return date;
     }
@@ -273,17 +272,17 @@
       script.src = 'config.js?t=' + Date.now();
       script.onload = () => {
         if (!window.APP_CONFIG || !window.APP_CONFIG.DEFAULT_PROMPT) {
-          handleConfigError('config.js 缺少 DEFAULT_PROMPT 或格式不正確！'); return;
+          handleConfigError('config.js 缺少 DEFAULT_PROMPT！'); return;
         }
         initApp();
       };
-      script.onerror = () => handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在於同層目錄。');
+      script.onerror = () => handleConfigError('無法載入 config.js！\n請檢查該檔案是否存在。');
       document.head.appendChild(script);
     })();
 
     function handleConfigError(errorMessage) {
       document.getElementById('sync-badge').innerText = '配置錯誤';
-      document.getElementById('sync-badge').className = 'text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold';
+      document.getElementById('sync-badge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold';
       alert(errorMessage);
     }
 
@@ -307,12 +306,13 @@
       renderAllWeeks();
       setupIntersectionObserver();
       updateLockUI();
-      initSlider(); // 初始化滑動解鎖
+      initSlider(); 
       
+      // 等待 DOM 繪製完成後精準滾動
       setTimeout(() => {
         const weekEl = document.getElementById('week-' + state.anchorMonday);
         if (weekEl) document.getElementById('scroll-area').scrollTo({ top: weekEl.offsetTop, behavior: 'auto' });
-      }, 50);
+      }, 100);
 
       initFirebaseWithStoredKey();
     }
@@ -330,7 +330,7 @@
       const savedExclude = localStorage.getItem('shift_stats_exclude_leave');
       state.excludeLeaveInStats = (savedExclude === 'true');
       const savedLock = localStorage.getItem('schedule_locked');
-      state.isLocked = savedLock !== null ? (savedLock === 'true') : true; // 預設安全鎖定
+      state.isLocked = savedLock !== null ? (savedLock === 'true') : true; 
     }
 
     function loadFromLocalStorage() {
@@ -346,53 +346,41 @@
       window.APP_CONFIG.STAFF_LIST.forEach(staff => {
         const btn = document.createElement('button');
         btn.id = `btn-${staff}`;
-        btn.className = 'h-[44px] rounded-xl bg-slate-900 text-white font-black text-xl active:scale-95 transition-transform shadow-md';
+        btn.className = 'h-[56px] rounded-[14px] bg-slate-900 text-white font-black text-2xl active:scale-95 transition-transform shadow-md';
         btn.innerText = staff;
         btn.onclick = () => inputStaff(staff);
         grid.appendChild(btn);
       });
     }
 
-    // ================= 滑動解鎖 (Slide to Unlock) =================
+    // ================= 原生滑塊解鎖 (100% 絕對可靠) =================
     function initSlider() {
-      const thumb = document.getElementById('unlock-thumb');
-      const track = document.getElementById('unlock-slider-container');
-      if (!thumb || !track) return;
+      const slider = document.getElementById('unlock-slider');
+      const thumb = document.getElementById('unlock-thumb-visual');
+      if (!slider || !thumb) return;
 
-      let isDragging = false;
-      let startX = 0;
-      let currentX = 0;
-      let maxDrag = 0;
+      slider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        const maxTx = slider.clientWidth - thumb.clientWidth - 12; // 邊距計算
+        thumb.style.transform = `translateX(${(val / 100) * maxTx}px)`;
+      });
 
-      thumb.addEventListener('touchstart', e => {
-        isDragging = true;
-        maxDrag = track.clientWidth - thumb.clientWidth - 8; // 扣除 padding
-        startX = e.touches[0].clientX - currentX;
-        thumb.style.transition = 'none';
-      }, { passive: false });
-
-      thumb.addEventListener('touchmove', e => {
-        if (!isDragging) return;
-        e.preventDefault();
-        let x = e.touches[0].clientX - startX;
-        if (x < 0) x = 0;
-        if (x > maxDrag) x = maxDrag;
-        currentX = x;
-        thumb.style.transform = `translateX(${x}px)`;
-      }, { passive: false });
-
-      thumb.addEventListener('touchend', e => {
-        if (!isDragging) return;
-        isDragging = false;
-        thumb.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        if (currentX > maxDrag * 0.75) {
-          thumb.style.transform = `translateX(${maxDrag}px)`;
-          setTimeout(() => unlockAction(), 150); // 稍微延遲讓動畫走完
+      const resetSlider = () => {
+        if (slider.value < 90) { // 沒拉到底就彈回
+          slider.value = 0;
+          thumb.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          thumb.style.transform = `translateX(0px)`;
+          setTimeout(() => { thumb.style.transition = 'none'; }, 300);
         } else {
-          currentX = 0;
+          unlockAction();
+          slider.value = 0;
           thumb.style.transform = `translateX(0px)`;
         }
-      });
+      };
+
+      slider.addEventListener('change', resetSlider);
+      slider.addEventListener('touchend', resetSlider);
+      slider.addEventListener('mouseup', resetSlider);
     }
 
     function unlockAction() {
@@ -400,15 +388,6 @@
       state.isLocked = false;
       localStorage.setItem('schedule_locked', 'false');
       updateLockUI();
-      
-      // 復原滑塊位置供下次使用
-      setTimeout(() => {
-        const thumb = document.getElementById('unlock-thumb');
-        if(thumb) {
-          thumb.style.transition = 'none';
-          thumb.style.transform = `translateX(0px)`;
-        }
-      }, 300);
     }
 
     function lockAction() {
@@ -424,18 +403,20 @@
       const dockUnlocked = document.getElementById('dock-unlocked');
 
       if (state.isLocked) {
-        dockLocked.classList.remove('hidden-dock');
-        dockUnlocked.classList.add('hidden-dock');
+        dockLocked.classList.remove('dock-hidden');
+        dockUnlocked.classList.add('dock-hidden');
       } else {
-        dockLocked.classList.add('hidden-dock');
-        dockUnlocked.classList.remove('hidden-dock');
+        dockLocked.classList.add('dock-hidden');
+        dockUnlocked.classList.remove('dock-hidden');
       }
       
-      // 刷新當前畫面上的卡片以反映鎖定狀態的點擊效果
+      // 重新渲染畫面移除/加入點擊指標
+      const currentScroll = document.getElementById('scroll-area').scrollTop;
       renderAllWeeks();
+      document.getElementById('scroll-area').scrollTo({ top: currentScroll, behavior: 'auto' });
     }
 
-    // ================= 🔄 Snap Scrolling 與 預載渲染 =================
+    // ================= 🔄 Snap Scrolling 渲染 =================
     
     function renderAllWeeks() {
       const container = document.getElementById('schedule-container');
@@ -459,21 +440,22 @@
         weekCard.dataset.end = weekEndIso;
 
         const cardInner = document.createElement('div');
-        cardInner.className = 'bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden pb-1';
+        // 加大卡片佔位
+        cardInner.className = 'bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden w-full';
 
-        // 緊湊的表頭 (1更 2更 | 3更 4更 | 5更 6更)
+        // 放大表頭
         cardInner.innerHTML = `
-          <div class="flex items-center bg-slate-50 border-b border-slate-200/80 px-1 py-1.5 text-[10px] font-black text-slate-400">
+          <div class="flex items-center bg-slate-50 border-b border-slate-200/80 px-2 py-2 text-[12px] font-black text-slate-400">
             <div class="w-14 text-center tracking-widest">日期</div>
             <div class="flex-1 flex px-1 items-center">
-              <div class="flex-1 text-center">1更</div><div class="flex-1 text-center">2更</div>
-              <div class="w-px h-3 bg-slate-300 mx-1 rounded"></div>
-              <div class="flex-1 text-center">3更</div><div class="flex-1 text-center">4更</div>
-              <div class="w-px h-3 bg-slate-300 mx-1 rounded"></div>
-              <div class="flex-1 text-center">5更</div><div class="flex-1 text-center">6更</div>
+              <div class="flex-1 text-center text-slate-500">1更</div><div class="flex-1 text-center text-slate-500">2更</div>
+              <div class="w-[2px] h-4 bg-slate-200 mx-1.5 rounded-full"></div>
+              <div class="flex-1 text-center text-slate-500">3更</div><div class="flex-1 text-center text-slate-500">4更</div>
+              <div class="w-[2px] h-4 bg-slate-200 mx-1.5 rounded-full"></div>
+              <div class="flex-1 text-center text-slate-500">5更</div><div class="flex-1 text-center text-slate-500">6更</div>
             </div>
           </div>
-          <div class="divide-y divide-slate-100 flex flex-col" id="week-days-${weekStartIso}"></div>
+          <div class="divide-y divide-slate-100 flex flex-col bg-white" id="week-days-${weekStartIso}"></div>
         `;
 
         const daysContainer = cardInner.querySelector(`#week-days-${weekStartIso}`);
@@ -493,7 +475,8 @@
     }
 
     function setupIntersectionObserver() {
-      const options = { root: document.getElementById('scroll-area'), threshold: 0.5 };
+      const scrollArea = document.getElementById('scroll-area');
+      const options = { root: scrollArea, threshold: 0.5 };
       observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
@@ -518,15 +501,15 @@
       if (targetEl) {
         scrollArea.scrollTo({ top: targetEl.offsetTop, behavior: 'smooth' });
       } else {
-        // 若超出範圍，直接重設並重繪
         state.anchorMonday = formatLocalYMD(curr);
         renderAllWeeks();
         setupIntersectionObserver();
-        document.getElementById(targetId).scrollIntoView();
+        const newTarget = document.getElementById(targetId);
+        if(newTarget) scrollArea.scrollTo({ top: newTarget.offsetTop, behavior: 'auto' });
       }
     }
 
-    // ================= 🃏 放大空間的單行更位資料 =================
+    // ================= 🃏 放大排更資料列 =================
     function createDayRow(iso, dayIdx) {
       const row = document.createElement('div');
       row.id = `day-row-${iso}`;
@@ -535,46 +518,46 @@
       const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
       const isFullHoliday = !!(dayRecord.isFullDayHoliday || dayRecord.isFullHoliday);
 
-      let bgClass = isActive ? 'bg-indigo-50/60 ring-1 ring-inset ring-indigo-500/30 z-10' : 'bg-white hover:bg-slate-50/50';
+      // 加大 Padding 以適應高螢幕
+      let bgClass = isActive ? 'bg-indigo-50/60 ring-2 ring-inset ring-indigo-500/40 z-10' : 'bg-white hover:bg-slate-50/50';
       if (!isActive && isFullHoliday) bgClass = 'bg-rose-50/40';
 
       const pointerClass = state.isLocked ? '' : 'cursor-pointer';
-      row.className = `relative flex items-stretch px-1 py-1.5 transition-all ${bgClass} ${pointerClass}`;
+      row.className = `relative flex items-stretch px-2 py-2.5 transition-all ${bgClass} ${pointerClass}`;
       
       if (!state.isLocked) row.onclick = () => selectActiveDay(iso);
 
       const dateStr = iso.substring(5).replace('-', '/');
       const dayName = window.APP_CONFIG.WEEK_DAYS[dayIdx];
-      const todayBadge = isToday ? `<span class="bg-indigo-500 text-white text-[9px] px-1.5 rounded mb-0.5 font-bold shadow-sm">今日</span>` : '';
+      const todayBadge = isToday ? `<span class="bg-indigo-500 text-white text-[10px] px-1.5 py-0.5 rounded-[5px] mb-1 font-black shadow-sm">今日</span>` : '';
 
       const dateColHtml = `
         <div class="w-14 flex-shrink-0 flex flex-col items-center justify-center pt-0.5">
           ${todayBadge}
-          <span class="text-[13px] font-black leading-none ${isActive ? 'text-indigo-700' : 'text-slate-800'}">${dateStr}</span>
-          <span class="text-[10px] font-bold mt-1 ${isActive ? 'text-indigo-500' : 'text-slate-400'}">(${dayName})</span>
+          <span class="text-[15px] font-black leading-none tracking-tight ${isActive ? 'text-indigo-700' : 'text-slate-800'}">${dateStr}</span>
+          <span class="text-[11px] font-black mt-1 ${isActive ? 'text-indigo-500' : 'text-slate-400'}">${dayName}</span>
         </div>
       `;
 
       let shiftsHtml = '';
       if (isFullHoliday) {
-        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-sm font-black text-rose-600 bg-rose-100 px-4 py-1.5 rounded-lg border border-rose-200">🌴 全日休假</span></div>`;
+        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-base font-black text-rose-600 bg-rose-100 px-5 py-2 rounded-xl border border-rose-200">🌴 全日休假</span></div>`;
       } else {
-        shiftsHtml = `<div class="flex-1 flex items-center pl-1 pr-1.5">`;
+        shiftsHtml = `<div class="flex-1 flex items-center px-1">`;
         
-        // 2-2-2 分組
         for(let sIdx = 0; sIdx < 6; sIdx++) {
           const shift = dayRecord.shifts[sIdx];
           
           if (shift) {
             const isOff = shift.status === 'OFF';
             const btnBg = isOff ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-300 text-slate-900 shadow-sm';
-            const offBadge = isOff ? `<span class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-bold w-[18px] h-[18px] rounded-full flex items-center justify-center border border-white shadow-sm">休</span>` : '';
+            const offBadge = isOff ? `<span class="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-black w-[20px] h-[20px] rounded-full flex items-center justify-center border-2 border-white shadow-sm">休</span>` : '';
             const clickAttr = state.isLocked ? '' : `onclick="event.stopPropagation(); toggleShiftStatus('${iso}', ${sIdx});"`;
             const scaleClass = state.isLocked ? '' : 'active:scale-90';
 
             shiftsHtml += `
-              <div class="flex-1 flex justify-center">
-                <button ${clickAttr} class="w-[95%] relative h-[44px] rounded-[10px] border flex items-center justify-center text-[16px] font-black transition-transform ${scaleClass} ${btnBg}">
+              <div class="flex-1 flex justify-center px-0.5">
+                <button ${clickAttr} class="w-full relative h-[52px] rounded-[12px] border-[1.5px] flex items-center justify-center text-[18px] font-black transition-transform ${scaleClass} ${btnBg}">
                   ${shift.staff}
                   ${offBadge}
                 </button>
@@ -582,14 +565,15 @@
             `;
           } else {
             shiftsHtml += `
-              <div class="flex-1 flex justify-center">
-                <div class="w-[95%] h-[44px] rounded-[10px] border border-dashed border-slate-300 bg-slate-50/50"></div>
+              <div class="flex-1 flex justify-center px-0.5">
+                <div class="w-full h-[52px] rounded-[12px] border-[1.5px] border-dashed border-slate-300 bg-slate-50/50"></div>
               </div>
             `;
           }
           
+          // 垂直分隔線
           if (sIdx === 1 || sIdx === 3) {
-            shiftsHtml += `<div class="w-[1.5px] h-6 bg-slate-200 mx-1 rounded-full shadow-xs"></div>`;
+            shiftsHtml += `<div class="w-[2px] h-8 bg-slate-200 mx-1.5 rounded-full shadow-xs"></div>`;
           }
         }
         shiftsHtml += `</div>`;
@@ -726,10 +710,9 @@
       const oldIso = state.activeDate;
       let curr = parseLocalYMD(state.activeDate);
       
-      // 自動跨週 (僅一至六)
       while (true) {
         curr.setDate(curr.getDate() + 1);
-        if (curr.getDay() !== 0) break; // 跳過週日
+        if (curr.getDay() !== 0 && curr.getDay() !== 6) break; // 忽略六日
       }
       
       const newIso = formatLocalYMD(curr);
@@ -745,12 +728,11 @@
       updateDayCardDOM(newIso);
       updateActiveDock();
       
-      // 確保目標在可視範圍內
       setTimeout(() => {
         const el = document.getElementById(`day-row-${newIso}`);
         if (el) {
            const scrollArea = document.getElementById('scroll-area');
-           const y = el.getBoundingClientRect().top + scrollArea.scrollTop - 130;
+           const y = el.getBoundingClientRect().top + scrollArea.scrollTop - 160;
            scrollArea.scrollTo({top: y, behavior: 'smooth'});
         }
       }, 50);
@@ -796,6 +778,7 @@
         const iso = formatLocalYMD(currDate);
         const dayOfWeek = currDate.getDay();
         const isSunday = (dayOfWeek === 0);
+        const isSaturday = (dayOfWeek === 6);
 
         const dayData = state.daysMap[iso];
         const isFullHoliday = !!(dayData?.isFullDayHoliday === true || dayData?.isFullDayHoliday === 'true' || dayData?.isFullHoliday === true);
@@ -804,13 +787,13 @@
         const isInCheckRange = (iso >= systemStartIso && iso <= thisWeekEndIso);
 
         const cell = document.createElement('button');
-        cell.className = 'py-2 px-1 rounded-xl flex flex-col items-center justify-center transition-all active:scale-90 relative';
+        cell.className = 'py-3 px-1 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-90 relative';
         
         cell.onclick = () => {
           const targetMonday = formatLocalYMD(getMondayOfDate(currDate));
           closeCalendarModal();
           
-          if (!state.isLocked && !isSunday) {
+          if (!state.isLocked && !isSunday && !isSaturday) {
             state.activeDate = iso;
           } else {
             state.activeDate = targetMonday;
@@ -836,13 +819,14 @@
         }
 
         let dot = '';
-        if (isFullHoliday || isSunday) dot = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-0.5"></span>';
-        else if (isCompleted) dot = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5"></span>';
-        else if (isInCheckRange && shiftCount < 6) dot = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-0.5"></span>';
-        else dot = '<span class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></span>';
+        if (isFullHoliday || isSunday) dot = '<span class="w-2 h-2 rounded-full bg-rose-500 mt-1"></span>';
+        else if (isSaturday) dot = '<span class="w-2 h-2 rounded-full bg-transparent mt-1"></span>';
+        else if (isCompleted) dot = '<span class="w-2 h-2 rounded-full bg-emerald-500 mt-1"></span>';
+        else if (isInCheckRange && shiftCount < 6) dot = '<span class="w-2 h-2 rounded-full bg-amber-400 mt-1"></span>';
+        else dot = '<span class="w-2 h-2 rounded-full bg-transparent mt-1"></span>';
 
         cell.className += ` ${bgStyle}`;
-        cell.innerHTML = `<span class="text-xs ${numColor}">${d}</span>${dot}`;
+        cell.innerHTML = `<span class="text-sm ${numColor}">${d}</span>${dot}`;
         grid.appendChild(cell);
       }
     }
@@ -857,7 +841,7 @@
       if (!db) return;
       const badge = document.getElementById('sync-badge');
       badge.innerText = '儲存中...';
-      badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold cursor-pointer';
+      badge.className = 'text-xs px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 font-bold cursor-pointer';
       clearTimeout(saveTimeout);
       saveTimeout = setTimeout(saveAllData, 600);
     }
@@ -865,15 +849,16 @@
     function saveAllData() {
       saveLocalImmediately();
       if (!db) return;
-      db.ref(window.APP_CONFIG.dbPath || 'roster_data').update({ daysMap: state.daysMap, updatedAt: new Date().toISOString() })
+      const path = window.APP_CONFIG.dbPath || 'roster_data';
+      db.ref(path).update({ daysMap: state.daysMap, updatedAt: new Date().toISOString() })
       .then(() => {
         const badge = document.getElementById('sync-badge');
         badge.innerText = '已連線';
-        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer transition-colors';
+        badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer transition-colors';
       }).catch(err => {
         const badge = document.getElementById('sync-badge');
         badge.innerText = '已存本地';
-        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer transition-colors';
+        badge.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer transition-colors';
       });
     }
 
@@ -882,10 +867,15 @@
       const badge = document.getElementById('sync-badge');
       
       if (!apiKey) {
+        document.getElementById('api-status-label').innerText = '🔴 未設定';
+        document.getElementById('api-status-label').className = 'text-[12px] font-black px-3 py-1 rounded-lg bg-rose-100 text-rose-700';
         badge.innerText = '未綁定 Key';
-        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
+        badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
         return;
       }
+
+      document.getElementById('api-status-label').innerText = '🟢 已綁定';
+      document.getElementById('api-status-label').className = 'text-[12px] font-black px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700';
 
       try {
         if (!firebase.apps.length) firebase.initializeApp({ ...window.APP_CONFIG.firebaseBase, apiKey: apiKey });
@@ -894,10 +884,10 @@
         let isConnected = false;
         const connTimeout = setTimeout(() => {
            if(!isConnected) {
-              badge.innerText = '連線超時(離線模式)';
-              badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer';
+              badge.innerText = '連線超時(離線)';
+              badge.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer';
            }
-        }, 5000);
+        }, 4000);
 
         db.ref(window.APP_CONFIG.dbPath || 'roster_data').once('value').then(snap => {
           isConnected = true;
@@ -911,63 +901,17 @@
             }
           }
           badge.innerText = '已連線';
-          badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer';
+          badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer';
         }).catch(err => {
           isConnected = true;
           clearTimeout(connTimeout);
-          badge.innerText = '連線失敗(請查Key)';
-          badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
+          badge.innerText = '連線被拒(查Key)';
+          badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
         });
       } catch (e) { console.error(e); }
     }
 
-    // ================= 匯入與統計 =================
-    function openImportModal() { document.getElementById('import-text-input').value = ''; document.getElementById('import-modal').classList.remove('hidden'); }
-    function closeImportModal() { document.getElementById('import-modal').classList.add('hidden'); }
-    function fillImportExample() { document.getElementById('import-text-input').value = `Y I S K C V\nC V K Y I S\nV休 C Y S I K\n全休\nS K C V Y I`; }
-
-    function executeBatchImport() {
-      const rawText = document.getElementById('import-text-input').value.trim();
-      if (!rawText) return showToast('請先貼入內容');
-
-      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      let lineIdx = 0;
-      let curr = parseLocalYMD(state.currentVisibleWeekStart || state.anchorMonday);
-
-      while (lineIdx < lines.length) {
-        const iso = formatLocalYMD(curr);
-        const dayIdx = curr.getDay();
-
-        if (dayIdx !== 0 && dayIdx !== 6) { 
-          const line = lines[lineIdx++];
-          if (line.includes('全休') || line.toUpperCase().includes('HOLIDAY')) {
-            state.daysMap[iso] = { shifts: [], isFullDayHoliday: true };
-          } else {
-            const tokens = line.split(/[\s,]+/).filter(t => t.length > 0);
-            const parsedShifts = [];
-            tokens.forEach(tok => {
-              const match = tok.match(/([A-Za-z])/);
-              if (match) {
-                const staffChar = match[1].toUpperCase();
-                if (window.APP_CONFIG.STAFF_LIST.includes(staffChar)) {
-                  const isOff = tok.includes('休') || tok.toUpperCase().includes('OFF');
-                  parsedShifts.push({ staff: staffChar, status: isOff ? 'OFF' : 'ON' });
-                }
-              }
-            });
-            if (parsedShifts.length > 0) state.daysMap[iso] = { shifts: parsedShifts.slice(0, 6), isFullDayHoliday: false };
-          }
-        }
-        curr.setDate(curr.getDate() + 1);
-      }
-
-      saveLocalImmediately();
-      renderAllWeeks();
-      saveAllData();
-      closeImportModal();
-      showToast('✅ 匯入成功並已儲存');
-    }
-
+    // ================= 統計功能 =================
     function calculatePositionStats(excludeLeave = false) {
       const staffList = window.APP_CONFIG.STAFF_LIST;
       const matrix = {};
@@ -977,7 +921,7 @@
 
       Object.keys(state.daysMap).forEach(iso => {
         const dDate = parseLocalYMD(iso);
-        if (dDate.getDay() === 0 || dDate.getDay() === 6) return; // 統計忽略六日
+        if (dDate.getDay() === 0 || dDate.getDay() === 6) return;
 
         const d = state.daysMap[iso];
         if (!d.isFullDayHoliday && d.shifts && d.shifts.length > 0) {
@@ -1044,20 +988,20 @@
       const staffList = window.APP_CONFIG.STAFF_LIST;
 
       let html = `
-        <div class="grid grid-cols-2 gap-2 mb-2 text-xs">
-          <div class="bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 flex flex-col items-center">
-            <span class="text-slate-500 block text-[10px]">有效排更 (一至五)</span>
-            <span class="text-lg font-black text-indigo-700">${validWorkingDays} <span class="text-xs font-medium text-indigo-600">天</span></span>
+        <div class="grid grid-cols-2 gap-3 mb-3 text-xs">
+          <div class="bg-indigo-50/80 p-3 rounded-2xl border border-indigo-100 flex flex-col items-center">
+            <span class="text-slate-500 block text-xs font-bold mb-1">有效排更 (一至五)</span>
+            <span class="text-xl font-black text-indigo-700">${validWorkingDays} <span class="text-sm font-medium text-indigo-600">天</span></span>
           </div>
-          <div class="bg-indigo-50/80 p-2.5 rounded-xl border border-indigo-100 flex flex-col items-center">
-            <span class="text-slate-500 block text-[10px]">基準均位 (理想值)</span>
-            <span class="text-lg font-black text-indigo-700">${baselineAveragePos}</span>
+          <div class="bg-indigo-50/80 p-3 rounded-2xl border border-indigo-100 flex flex-col items-center">
+            <span class="text-slate-500 block text-xs font-bold mb-1">基準均位 (理想值)</span>
+            <span class="text-xl font-black text-indigo-700">${baselineAveragePos}</span>
           </div>
         </div>
-        <div class="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-          <table class="w-full text-center text-xs">
-            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 text-[11px]">
-              <tr><th class="py-2 px-1">員工</th><th class="py-2">1更</th><th class="py-2">2更</th><th class="py-2">3更</th><th class="py-2">4更</th><th class="py-2">5更</th><th class="py-2">6更</th><th class="py-2 px-1 bg-slate-100/80">均位</th></tr>
+        <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+          <table class="w-full text-center text-sm">
+            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 text-xs">
+              <tr><th class="py-3 px-1">員工</th><th class="py-3">1更</th><th class="py-3">2更</th><th class="py-3">3更</th><th class="py-3">4更</th><th class="py-3">5更</th><th class="py-3">6更</th><th class="py-3 px-1 bg-slate-100/80">均位</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-mono">
       `;
@@ -1067,10 +1011,10 @@
         const avgPos = row.total > 0 ? (row.scoreSum / row.total).toFixed(2) : '-';
         html += `
           <tr class="hover:bg-slate-50/80 transition-colors">
-            <td class="py-2 font-black font-sans text-slate-900 bg-slate-50/50">${staff}</td>
-            <td class="py-2 text-slate-700">${row[1]}</td><td class="py-2 text-slate-700">${row[2]}</td><td class="py-2 text-slate-700">${row[3]}</td>
-            <td class="py-2 text-slate-700">${row[4]}</td><td class="py-2 text-slate-700">${row[5]}</td><td class="py-2 text-slate-700">${row[6]}</td>
-            <td class="py-2 font-bold text-indigo-600 bg-slate-50/80">${avgPos}</td>
+            <td class="py-3 font-black font-sans text-slate-900 bg-slate-50/50">${staff}</td>
+            <td class="py-3 text-slate-700 font-bold">${row[1]}</td><td class="py-3 text-slate-700 font-bold">${row[2]}</td><td class="py-3 text-slate-700 font-bold">${row[3]}</td>
+            <td class="py-3 text-slate-700 font-bold">${row[4]}</td><td class="py-3 text-slate-700 font-bold">${row[5]}</td><td class="py-3 text-slate-700 font-bold">${row[6]}</td>
+            <td class="py-3 font-black text-indigo-600 bg-slate-50/80">${avgPos}</td>
           </tr>
         `;
       });
@@ -1102,19 +1046,18 @@
       catch (err) { showToast('請手動選取複製'); }
     }
 
+    // ================= 設定面板 =================
     function openSettingsModal() {
       document.getElementById('prompt-template-input').value = state.promptTemplate;
       document.getElementById('settings-modal').classList.remove('hidden');
     }
     function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
-    function showKeyInputForm() { document.getElementById('key-saved-container').classList.add('hidden'); document.getElementById('key-input-container').classList.remove('hidden'); }
-    function hideKeyInputForm() { document.getElementById('key-saved-container').classList.remove('hidden'); document.getElementById('key-input-container').classList.add('hidden'); }
 
     function saveApiKey() {
       const key = document.getElementById('api-key-input').value.trim();
       if (!key) return showToast('請輸入新 Key');
       localStorage.setItem('shift_firebase_api_key', key);
-      showToast('Key 已安全更新');
+      showToast('Key 已儲存');
       setTimeout(() => location.reload(), 600);
     }
   </script>
