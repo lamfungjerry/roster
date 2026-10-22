@@ -46,7 +46,6 @@
 <body>
 
 <div id="app">
-  <!-- 頁首 -->
   <header class="bg-white shadow-sm z-20 h-[var(--header-height)] flex justify-between items-center px-2 shrink-0">
     <button id="prev-week" class="text-blue-600 font-bold p-2 active:scale-95 transition-transform text-lg">&lt; 上週</button>
     <div class="flex flex-col items-center">
@@ -61,10 +60,8 @@
     <button id="next-week" class="text-blue-600 font-bold p-2 active:scale-95 transition-transform text-lg">下週 &gt;</button>
   </header>
 
-  <!-- 主畫面：滑動週曆 -->
   <main id="weeks-container"></main>
 
-  <!-- 底部操作區 -->
   <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 pb-1">
     <div id="lock-overlay" class="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 hidden flex-col justify-center items-center">
       <div class="bg-gray-800 text-white px-5 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 mb-2">
@@ -90,15 +87,13 @@
   </footer>
 </div>
 
-<!-- 浮動按鈕：設定與統計面板 -->
+<!-- 浮動按鈕面板 -->
 <div class="fixed bottom-[calc(var(--safe-bottom)+140px)] right-3 flex flex-col gap-3 z-30">
   <button id="btn-stats" class="bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform text-xl">📊</button>
   <button id="btn-settings" class="bg-gray-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform text-xl">⚙️</button>
 </div>
 
-<!-- =========================================
-     [新增] 系統設定 Modal
-     ========================================= -->
+<!-- 系統設定 Modal -->
 <div id="modal-settings" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
     <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -122,9 +117,7 @@
   </div>
 </div>
 
-<!-- =========================================
-     [新增] 統計與 AI 評估 Modal
-     ========================================= -->
+<!-- 統計與 AI 評估 Modal -->
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
     <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-blue-50">
@@ -132,58 +125,37 @@
       <button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none">&times;</button>
     </div>
     <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
-      
-      <!-- 統計開關 -->
       <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
         <div>
           <div class="text-sm font-bold text-gray-800">剔除休假 (向後順延)</div>
-          <div class="text-xs text-gray-500 mt-0.5">例如: 5人當值佔 2~6 更 (最著數的1更空出)</div>
+          <div class="text-xs text-gray-500 mt-0.5">例如: 5人當值佔 2~6 更</div>
         </div>
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" id="toggle-slide" class="sr-only peer" checked>
           <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
         </label>
       </div>
-
-      <!-- 統計數據網格 -->
       <div class="bg-white border border-gray-200 rounded-lg p-3">
         <div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-3 pb-2 border-b border-gray-100">
           基準均位: --
         </div>
-        <div id="stats-grid" class="grid grid-cols-3 gap-y-3 gap-x-2 text-center">
-          <!-- JS 動態生成 -->
-        </div>
+        <div id="stats-grid" class="grid grid-cols-3 gap-y-3 gap-x-2 text-center"></div>
       </div>
-
-      <!-- 生成 Prompt -->
       <div class="mt-2">
         <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-lg">
           📋 複製 AI Prompt
         </button>
         <p class="text-xs text-gray-400 text-center mt-2 font-medium">將自動擷取過去 60 天有效數據生成評估指令</p>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- =========================================
-     核心邏輯腳本 (ES Module)
-     ========================================= -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
   import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const STATE = {
-    todayStr: '2026-10-22', 
-    daysMap: {},            
-    renderedWeeks: new Set(), 
-    focusedWeekStart: null,   
-    isLocked: false,        
-    apiKey: localStorage.getItem('roster_api_key') || '',
-    db: null
-  };
 
   const Utils = {
     formatDate: (d) => {
@@ -195,7 +167,23 @@
     },
     addDays: (dateStr, days) => {
       const d = new Date(dateStr); d.setDate(d.getDate() + days); return Utils.formatDate(d);
+    },
+    // 【修復核心】強制將 Firebase 任何奇形怪狀的 shifts 轉為純淨陣列
+    normalizeShifts: (rawShifts) => {
+      if (!rawShifts) return [];
+      if (Array.isArray(rawShifts)) return rawShifts.filter(Boolean); // 過濾掉 Firebase 可能產生的 null
+      return Object.values(rawShifts).filter(Boolean);
     }
+  };
+
+  const STATE = {
+    todayStr: Utils.formatDate(new Date()), // 動態獲取真正今日
+    daysMap: {},            
+    renderedWeeks: new Set(), 
+    focusedWeekStart: null,   
+    isLocked: false,        
+    apiKey: localStorage.getItem('roster_api_key') || '',
+    db: null
   };
 
   const UI = {
@@ -211,7 +199,7 @@
       const todayBadge = isToday ? `<span class="absolute -left-1 -top-2 bg-purple-600 text-white text-[10px] px-1 rounded shadow-sm z-10 scale-90">今日</span>` : '';
       
       const dayData = STATE.daysMap[dateStr] || { isFullDayHoliday: false, shifts: [] };
-      const shifts = dayData.shifts || [];
+      const shifts = Utils.normalizeShifts(dayData.shifts); // 確保是陣列
 
       if (dayIndex === 0) {
         return `<div class="flex items-center h-[36px] shrink-0 bg-red-50 rounded-lg p-1 relative" data-date="${dateStr}">
@@ -307,7 +295,8 @@
       for (let i = 1; i <= 5; i++) {
         const dStr = Utils.addDays(STATE.focusedWeekStart, i);
         const dayData = STATE.daysMap[dStr] || {};
-        if (!dayData.isFullDayHoliday && (dayData.shifts || []).length < 6) { isFull = false; break; }
+        const shifts = Utils.normalizeShifts(dayData.shifts);
+        if (!dayData.isFullDayHoliday && shifts.length < 6) { isFull = false; break; }
       }
       STATE.isLocked = isFull;
       if (STATE.isLocked) {
@@ -329,7 +318,7 @@
         const dStr = Utils.addDays(STATE.focusedWeekStart, i);
         const dayData = STATE.daysMap[dStr] || {};
         if (dayData.isFullDayHoliday) continue;
-        const shifts = dayData.shifts || [];
+        const shifts = Utils.normalizeShifts(dayData.shifts);
         if (i === 6 && !dayData.unlocked && shifts.length === 0) continue;
         if (shifts.length < 6) return dStr;
       }
@@ -340,8 +329,10 @@
       const targetDate = Engine.findNextAvailableDay();
       if (targetDate) {
         if (!STATE.daysMap[targetDate]) STATE.daysMap[targetDate] = { shifts: [] };
-        if (!STATE.daysMap[targetDate].shifts) STATE.daysMap[targetDate].shifts = [];
+        
+        STATE.daysMap[targetDate].shifts = Utils.normalizeShifts(STATE.daysMap[targetDate].shifts);
         STATE.daysMap[targetDate].shifts.push({ staff: staffCode, status: 'ON' });
+        
         UI.silentRefreshDay(targetDate); FirebaseSync.pushUpdate(targetDate);
         if (STATE.daysMap[targetDate].shifts.length === 6) {
           Engine.evaluateAutoLock();
@@ -358,8 +349,12 @@
       for (let i = 6; i >= 1; i--) {
         const dStr = Utils.addDays(STATE.focusedWeekStart, i);
         const dayData = STATE.daysMap[dStr];
-        if (dayData && dayData.shifts && dayData.shifts.length > 0) {
-          dayData.shifts.pop(); UI.silentRefreshDay(dStr); FirebaseSync.pushUpdate(dStr);
+        if (!dayData) continue;
+        
+        dayData.shifts = Utils.normalizeShifts(dayData.shifts);
+        if (dayData.shifts.length > 0) {
+          dayData.shifts.pop();
+          UI.silentRefreshDay(dStr); FirebaseSync.pushUpdate(dStr);
           Engine.evaluateAutoLock(); return;
         }
       }
@@ -377,7 +372,10 @@
       for (let i = 6; i >= 1; i--) {
         const dStr = Utils.addDays(STATE.focusedWeekStart, i);
         const dayData = STATE.daysMap[dStr];
-        if (dayData && (dayData.shifts?.length > 0 || dayData.isFullDayHoliday)) {
+        if (!dayData) continue;
+        
+        const shifts = Utils.normalizeShifts(dayData.shifts);
+        if (shifts.length > 0 || dayData.isFullDayHoliday) {
           STATE.daysMap[dStr] = { isFullDayHoliday: false, shifts: [], unlocked: dayData.unlocked };
           UI.silentRefreshDay(dStr); FirebaseSync.pushUpdate(dStr); Engine.evaluateAutoLock(); return;
         }
@@ -393,31 +391,60 @@
       }
       try {
         const app = initializeApp({ ...CONFIG.firebaseBase, apiKey: STATE.apiKey });
-        STATE.db = getDatabase(app);
+        // 【防呆修正 1】明確指定 databaseURL，解決亞洲區伺服器對接問題
+        STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
+        
         UI.connStatus.innerText = '🟢 已連線'; UI.connStatus.className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200';
+        
         onValue(ref(STATE.db, CONFIG.dbPath), (snapshot) => {
-          const data = snapshot.val();
-          if (data) {
-            Object.keys(data).forEach(dStr => {
-              if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(data[dStr])) {
-                STATE.daysMap[dStr] = data[dStr]; UI.silentRefreshDay(dStr);
-              }
+          let data = snapshot.val();
+          if (!data) return;
+
+          // 【防呆修正 2】自動化扁平遷移：若發現舊版的 `daysMap` 節點，抽出來並砍掉舊節點
+          if (data.daysMap) {
+            console.log("🔄 偵測到舊版 daysMap 巢狀結構，自動執行資料扁平化遷移...");
+            const batchUpdates = {};
+            // 將內部資料抽出移到外層
+            Object.keys(data.daysMap).forEach(dateKey => {
+               if (!data[dateKey]) batchUpdates[`${CONFIG.dbPath}/${dateKey}`] = data.daysMap[dateKey];
             });
-            Engine.evaluateAutoLock();
+            // 刪除舊巢狀節點
+            batchUpdates[`${CONFIG.dbPath}/daysMap`] = null; 
+            
+            update(ref(STATE.db), batchUpdates).then(() => console.log("✅ 資料扁平化完成，以後不再產生 daysMap 節點！"));
+            // 讓 Firebase 自然觸發下一次 onValue 載入正確資料
+            return; 
           }
+
+          // 正常處理平坦化的資料
+          Object.keys(data).forEach(dStr => {
+            // 過濾掉非日期格式的異常金鑰
+            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dStr) && dStr.length !== 10) return; 
+
+            let dayData = data[dStr];
+            
+            // 【防呆修正 3】寫入 STATE 前，先清理變形的 Array
+            if (dayData && dayData.shifts) {
+                dayData.shifts = Utils.normalizeShifts(dayData.shifts);
+            }
+
+            if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(dayData)) {
+              STATE.daysMap[dStr] = dayData; UI.silentRefreshDay(dStr);
+            }
+          });
+          Engine.evaluateAutoLock();
         });
-      } catch (err) { UI.connStatus.innerText = '🔴 連線失敗'; }
+      } catch (err) { UI.connStatus.innerText = '🔴 連線失敗'; console.error(err); }
     },
     pushUpdate: (dateStr) => {
       if (!STATE.db) return;
-      const updates = {}; updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr];
+      // 以後所有的推送，一律直接推到扁平化路徑
+      const updates = {};
+      updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr];
       update(ref(STATE.db), updates).catch(console.error);
     }
   };
 
-  // ==========================================
-  // [新增] ⚙️ Settings Manager
-  // ==========================================
   const SettingsManager = {
     modal: document.getElementById('modal-settings'),
     init: () => {
@@ -435,14 +462,11 @@
       document.getElementById('btn-save-settings').addEventListener('click', () => {
         const val = document.getElementById('input-api-key').value.trim();
         localStorage.setItem('roster_api_key', val);
-        window.location.reload(); // 儲存後立即刷新以重啟 Firebase
+        window.location.reload(); 
       });
     }
   };
 
-  // ==========================================
-  // [新增] 📊 Stats & AI Prompt Engine
-  // ==========================================
   const StatsEngine = {
     modal: document.getElementById('modal-stats'),
     toggle: document.getElementById('toggle-slide'),
@@ -456,7 +480,6 @@
       CONFIG.STAFF_LIST.forEach(s => stats[s] = { sum: 0, count: 0 });
       let baseSum = 0, baseCount = 0;
 
-      // 擷取過去 60 天的日期 (從今日往前推)
       const pastDates = [];
       for(let i=0; i<60; i++) pastDates.push(Utils.addDays(STATE.todayStr, -i));
       
@@ -465,24 +488,22 @@
 
       pastDates.forEach(dStr => {
         const d = new Date(dStr);
-        // 完全排除星期六(6)與星期日(0)
         if(d.getDay() === 6 || d.getDay() === 0) return; 
         
         const dayData = STATE.daysMap[dStr];
-        if(!dayData || dayData.isFullDayHoliday || !dayData.shifts || dayData.shifts.length === 0) return;
+        if(!dayData || dayData.isFullDayHoliday) return;
+        
+        const shifts = Utils.normalizeShifts(dayData.shifts);
+        if(shifts.length === 0) return;
 
-        if(!lastValidDate) lastValidDate = dStr; // 最近的一天
-        firstValidDate = dStr; // 最遠的一天
+        if(!lastValidDate) lastValidDate = dStr; 
+        firstValidDate = dStr; 
 
-        const shifts = dayData.shifts;
         const N = shifts.length;
         promptData[dStr] = shifts.map(s => s.staff);
 
         shifts.forEach((shift, idx) => {
-          // 核心演算法：若剔除休假(ON) -> 5人佔 2~6 更 -> shiftValue = (6 - N + 1) + idx
-          // 若不剔除(OFF) -> 順序佔 1~N 更 -> shiftValue = idx + 1
           const shiftValue = excludeHoliday ? ((6 - N + 1) + idx) : (idx + 1);
-          
           if(stats[shift.staff]) {
             stats[shift.staff].sum += shiftValue;
             stats[shift.staff].count += 1;
@@ -513,12 +534,11 @@
         const sData = obj.staff[staff];
         const avg = sData.count > 0 ? (sData.sum / sData.count).toFixed(2) : '--';
         
-        // 視覺化提示：數字比基準大(排差位)顯示紅字，比基準小(好位)顯示綠字
         let colorClass = 'text-gray-700';
         if (avg !== '--' && obj.baseline !== '0.00') {
           const diff = parseFloat(avg) - parseFloat(obj.baseline);
-          if (diff > 0.1) colorClass = 'text-red-500 font-bold'; // 蝕底
-          else if (diff < -0.1) colorClass = 'text-green-600 font-bold'; // 著數
+          if (diff > 0.1) colorClass = 'text-red-500 font-bold'; 
+          else if (diff < -0.1) colorClass = 'text-green-600 font-bold'; 
         }
 
         grid.innerHTML += `
@@ -541,7 +561,6 @@
       });
       StatsEngine.toggle.addEventListener('change', StatsEngine.calculate);
 
-      // 產生 Prompt 並複製
       const btnCopy = document.getElementById('btn-copy-prompt');
       btnCopy.addEventListener('click', () => {
         if(!StatsEngine.latestStatsObj) return;
@@ -572,9 +591,6 @@
     }
   };
 
-  // ==========================================
-  // 啟動應用程式
-  // ==========================================
   const initApp = () => {
     const keysContainer = document.getElementById('staff-keys');
     CONFIG.STAFF_LIST.forEach(staff => {
