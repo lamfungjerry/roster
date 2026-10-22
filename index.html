@@ -32,7 +32,7 @@
       flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
     }
 
-    /* 確保每一週完美置中，並避開頂底工具列 */
+    /* 確保每一週完美置中，避開頂底工具列 */
     .week-section {
       min-height: 100%;
       min-height: 100dvh;
@@ -41,14 +41,14 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding-top: 85px;     /* 避開 Header */
+      padding-top: 90px;     /* 避開 Header */
       padding-bottom: 120px; /* 避開底部鍵盤 */
     }
 
     #scroll-area::-webkit-scrollbar { display: none; }
     #scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* 鎖定與解鎖的無縫切換類別 */
+    /* 鎖定與解鎖無縫切換 */
     .fade-out { opacity: 0; pointer-events: none; position: absolute; visibility: hidden; transform: translateY(10px); transition: all 0.2s; }
     .fade-in { opacity: 1; pointer-events: auto; position: relative; visibility: visible; transform: translateY(0); transition: all 0.2s; }
   </style>
@@ -57,35 +57,35 @@
 
 <div id="app-container">
 
-  <!-- 雙層頂部固定 Header -->
+  <!-- 固定 Header -->
   <header class="fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-sm">
     <!-- 第一層：圖示與工具 -->
-    <div class="px-4 py-2.5 flex items-center justify-between">
+    <div class="px-4 py-2 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <span class="text-2xl">📅</span>
-        <span id="sync-badge" onclick="openSettingsModal()" class="text-xs px-2.5 py-1 rounded-full bg-slate-200 text-slate-600 font-bold cursor-pointer transition-colors">
+        <span id="sync-badge" onclick="openSettingsModal()" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-200 text-slate-600 font-bold cursor-pointer transition-colors">
           檢查連線...
         </span>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="openStatsModal()" class="px-3 py-2 text-sm font-bold rounded-xl bg-slate-100 text-slate-700 active:bg-slate-200">📊 統計</button>
-        <button onclick="copySuperPrompt()" class="px-3 py-1 text-[11px] leading-tight font-black rounded-xl bg-emerald-600 text-white shadow-xs active:bg-emerald-700 text-center">📋<br>複製Prompt</button>
-        <button onclick="openSettingsModal()" class="p-2 text-lg text-slate-500 rounded-xl active:bg-slate-100">⚙️</button>
+        <button onclick="openStatsModal()" class="px-3 py-1.5 text-sm font-bold rounded-xl bg-slate-100 text-slate-700 active:bg-slate-200">📊 統計</button>
+        <button onclick="copySuperPrompt()" class="px-3 py-1 text-[11px] leading-[1.2] font-black rounded-xl bg-emerald-600 text-white shadow-xs active:bg-emerald-700 text-center">📋<br>複製Prompt</button>
+        <button onclick="openSettingsModal()" class="p-1.5 text-xl text-slate-500 rounded-xl active:bg-slate-100">⚙️</button>
       </div>
     </div>
 
     <!-- 第二層：週次切換列 -->
     <div class="px-3 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
-      <button onclick="scrollWeek(-1)" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-black active:bg-slate-100 shadow-xs flex items-center">
+      <button onclick="scrollWeek(-1)" class="px-4 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-black active:bg-slate-100 shadow-xs flex items-center">
         ‹ 上週
       </button>
       
-      <button onclick="openCalendarModal()" class="flex-1 py-2 px-2 rounded-xl bg-white border border-slate-200 text-[15px] font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs tracking-wide">
+      <button onclick="openCalendarModal()" class="flex-1 py-1.5 px-2 rounded-xl bg-white border border-slate-200 text-[15px] font-extrabold text-slate-800 text-center flex items-center justify-center gap-1.5 active:bg-slate-50 shadow-xs tracking-wide">
         <span id="header-week-range">--/-- ~ --/--</span>
         <span class="text-indigo-600 text-[10px]">▼</span>
       </button>
 
-      <button onclick="scrollWeek(1)" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-black active:bg-slate-100 shadow-xs flex items-center">
+      <button onclick="scrollWeek(1)" class="px-4 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-black active:bg-slate-100 shadow-xs flex items-center">
         下週 ›
       </button>
     </div>
@@ -96,12 +96,12 @@
     <div id="schedule-container" class="w-full max-w-md mx-auto px-2"></div>
   </main>
 
-  <!-- 底部固定容器 -->
+  <!-- 底部固定容器 (高度大幅精簡) -->
   <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] px-3 pb-[calc(env(safe-area-inset-bottom,20px)+8px)] pt-2.5 min-h-[60px] flex flex-col justify-center">
     
     <!-- 狀態 1：鎖定狀態 (單一輕量按鈕) -->
     <div id="dock-locked" class="w-full max-w-md mx-auto fade-out">
-      <button onclick="unlockAction()" class="w-full h-[46px] bg-slate-800 text-white rounded-[14px] font-black text-[15px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+      <button onclick="unlockAction()" class="w-full h-[40px] bg-slate-800 text-white rounded-xl font-black text-sm shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
         🔒 點擊解鎖以編輯更表
       </button>
     </div>
@@ -110,16 +110,16 @@
     <div id="dock-unlocked" class="w-full max-w-md mx-auto fade-in">
       <div class="flex items-center justify-between mb-2 px-0.5">
         <div class="flex items-center gap-1.5">
-          <button onclick="lockAction()" title="手動鎖定" class="w-10 h-10 rounded-xl bg-slate-800 text-white font-black flex items-center justify-center text-sm shadow-md active:scale-95 transition-transform">🔒</button>
-          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">🧹</button>
-          <span id="active-day-label" class="text-[15px] font-black text-indigo-700 pl-1.5 tracking-tight">--</span>
+          <button onclick="lockAction()" title="手動鎖定" class="w-10 h-9 rounded-xl bg-slate-800 text-white font-black flex items-center justify-center text-sm shadow-md active:scale-95 transition-transform">🔒</button>
+          <button onclick="clearActiveDay()" title="清空當天" class="w-10 h-9 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">🧹</button>
+          <span id="active-day-label" class="text-sm font-black text-indigo-700 pl-1.5 tracking-tight">--</span>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="toggleActiveFullHoliday()" class="px-5 py-2 h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-sm font-black active:bg-rose-100 shadow-xs active:scale-95 transition-transform">🌴 全休</button>
-          <button onclick="backspaceStaff()" title="退格刪除" class="w-12 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-xl active:bg-slate-200 shadow-xs active:scale-95 transition-transform">⌫</button>
+          <button onclick="toggleActiveFullHoliday()" class="px-4 h-9 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-xs font-black active:bg-rose-100 shadow-xs active:scale-95 transition-transform">🌴 全休</button>
+          <button onclick="backspaceStaff()" title="退格刪除" class="w-10 h-9 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-lg active:bg-slate-200 shadow-xs active:scale-95 transition-transform">⌫</button>
         </div>
       </div>
-      <!-- 6 位員工鍵盤 -->
+      <!-- 6 位員工鍵盤 (高度精簡至 44px) -->
       <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
 
@@ -202,6 +202,7 @@
   <!-- ================= 核心邏輯 ================= -->
   <script>
     let db = null;
+    let observer = null;
     let saveTimeout = null;
 
     // 預載：前4週 + 後4週 + 當前 = 9週
@@ -257,6 +258,17 @@
       document.getElementById('header-week-range').innerHTML = `${startIso.substring(5).replace('-','/')} ~ ${formatLocalYMD(end).substring(5).replace('-','/')}`;
     }
 
+    // Modal 安全顯示機制 (修復點擊無反應問題)
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if(el) { el.style.display = 'flex'; }
+    }
+    
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if(el) { el.style.display = 'none'; }
+    }
+
     // 嚴格載入 Config
     (function loadFreshConfig() {
       const script = document.createElement('script');
@@ -281,7 +293,7 @@
     function initApp() {
       state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT;
       loadLocalPreferences();
-      loadFromLocalStorage();
+      loadFromLocalStorage(); // 瞬間讀取本地資料
       initKeyboardButtons();
 
       const today = new Date();
@@ -298,19 +310,26 @@
       state.calYear = todayMonday.getFullYear();
       state.calMonth = todayMonday.getMonth();
 
-      // 本地極速渲染
+      // 第一步：本地極速渲染與滾動對位，確保畫面絕不卡頓
       renderAllWeeks();
       
-      // 畫面渲染後立刻評估鎖定
-      evaluateAutoLockOnScroll();
-      
-      // 精準滾動到本週
+      // 第二步：鎖定並跳轉到當週
       setTimeout(() => {
+        const scrollArea = document.getElementById('scroll-area');
         const weekEl = document.getElementById('week-' + state.anchorMonday);
-        if (weekEl) document.getElementById('scroll-area').scrollTo({ top: weekEl.offsetTop, behavior: 'auto' });
+        if (weekEl) {
+          // 暫停 Snap 以防跳轉失準
+          scrollArea.style.scrollSnapType = 'none';
+          scrollArea.scrollTop = weekEl.offsetTop;
+          // 恢復 Snap
+          setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
+        }
+        
+        // 確保滾動後，準確評估該週是否應該自動鎖定
+        evaluateAutoLockOnScroll();
       }, 50);
 
-      // 非同步執行 Firebase 讀取，絕不卡畫面
+      // 第三步：非同步執行 Firebase 檢查，不阻礙畫面顯示
       setTimeout(initFirebaseWithStoredKey, 100);
       
       // 綁定極速滾動偵測
@@ -344,7 +363,7 @@
       window.APP_CONFIG.STAFF_LIST.forEach(staff => {
         const btn = document.createElement('button');
         btn.id = `btn-${staff}`;
-        btn.className = 'h-[46px] rounded-[14px] bg-slate-900 text-white font-black text-[22px] active:scale-95 transition-transform shadow-md';
+        btn.className = 'h-[44px] rounded-[14px] bg-slate-900 text-white font-black text-[22px] active:scale-95 transition-transform shadow-md';
         btn.innerText = staff;
         btn.onclick = () => inputStaff(staff);
         grid.appendChild(btn);
@@ -385,7 +404,7 @@
       if (checkCurrentWeekCompletion()) {
         state.isLocked = true;
         updateLockUI();
-        showToast('✅ 一至五已排滿，自動鎖定');
+        showToast('✅ 本週已排滿，自動鎖定');
       }
     }
 
@@ -414,11 +433,16 @@
         dockUnlocked.classList.remove('fade-out'); dockUnlocked.classList.add('fade-in');
       }
       
-      // 重新渲染以更新可點擊狀態，維持滾動不變
+      // 重新渲染畫面以移除/加入點擊指標，並維持當前滾動位置
       const scrollArea = document.getElementById('scroll-area');
       const currentScroll = scrollArea.scrollTop;
+      
+      // 靜默重繪
+      scrollArea.style.scrollSnapType = 'none';
       renderAllWeeks();
-      scrollArea.scrollTo({ top: currentScroll, behavior: 'auto' });
+      scrollArea.scrollTop = currentScroll;
+      // 恢復 Snap
+      setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
     }
 
     // ================= 🔄 Snap Scrolling 渲染 =================
@@ -446,6 +470,7 @@
         const cardInner = document.createElement('div');
         cardInner.className = 'bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden w-full';
 
+        // 緊湊版表頭
         cardInner.innerHTML = `
           <div class="flex items-center bg-slate-50 border-b border-slate-200/80 px-2 py-1.5 text-[11px] font-black text-slate-400">
             <div class="w-14 text-center tracking-widest">日期</div>
@@ -522,16 +547,24 @@
         evaluateAutoLockOnScroll();
       } else {
         state.anchorMonday = targetIso;
+        
+        // 暫停 Snap
+        scrollArea.style.scrollSnapType = 'none';
         renderAllWeeks();
+        
         const newTarget = document.getElementById('week-' + targetIso);
-        if(newTarget) scrollArea.scrollTo({ top: newTarget.offsetTop, behavior: 'auto' });
+        if(newTarget) scrollArea.scrollTop = newTarget.offsetTop;
+        
+        // 恢復 Snap
+        setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
+        
         state.currentVisibleWeekStart = targetIso;
         updateHeaderWeekRange(targetIso);
         evaluateAutoLockOnScroll();
       }
     }
 
-    // ================= 🃏 單行更位資料 (高度適配) =================
+    // ================= 🃏 單行更位資料 (星期六隱藏空格) =================
     function createDayRow(iso, dayIdx) {
       const row = document.createElement('div');
       row.id = `day-row-${iso}`;
@@ -544,7 +577,7 @@
       if (!isActive && isFullHoliday) bgClass = 'bg-rose-50/40';
 
       const pointerClass = state.isLocked ? '' : 'cursor-pointer';
-      row.className = `relative flex items-stretch px-2 py-2.5 transition-all ${bgClass} ${pointerClass}`;
+      row.className = `relative flex items-stretch px-2 py-1.5 transition-all ${bgClass} ${pointerClass}`;
       
       if (!state.isLocked) row.onclick = () => selectActiveDay(iso);
 
@@ -562,9 +595,9 @@
 
       let shiftsHtml = '';
       if (isFullHoliday) {
-        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-[15px] font-black text-rose-600 bg-rose-100 px-5 py-2 rounded-xl border border-rose-200">🌴 全日休假</span></div>`;
-      } else if (dayIdx === 6 && (!dayRecord.shifts || dayRecord.shifts.length === 0) && !isActive) {
-        // 星期六若無排班且非編輯中，直接顯示文字，不留空格
+        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-[15px] font-black text-rose-600 bg-rose-100 px-5 py-1.5 rounded-xl border border-rose-200">🌴 全日休假</span></div>`;
+      } else if (dayIdx === 6) {
+        // 核心更新：星期六若無排班，直接顯示無編排，不顯示6個空格
         shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-xs font-bold text-slate-300 tracking-widest">週六無編排</span></div>`;
       } else {
         shiftsHtml = `<div class="flex-1 flex items-center px-1">`;
@@ -581,7 +614,7 @@
 
             shiftsHtml += `
               <div class="flex-1 flex justify-center px-0.5">
-                <button ${clickAttr} class="w-full relative h-[48px] rounded-[10px] border-[1.5px] flex items-center justify-center text-[16px] font-black transition-transform ${scaleClass} ${btnBg}">
+                <button ${clickAttr} class="w-full relative h-[46px] rounded-lg border-[1.5px] flex items-center justify-center text-[15px] font-black transition-transform ${scaleClass} ${btnBg}">
                   ${shift.staff}
                   ${offBadge}
                 </button>
@@ -590,7 +623,7 @@
           } else {
             shiftsHtml += `
               <div class="flex-1 flex justify-center px-0.5">
-                <div class="w-full h-[48px] rounded-[10px] border border-dashed border-slate-300 bg-slate-50/50"></div>
+                <div class="w-full h-[46px] rounded-lg border border-dashed border-slate-300 bg-slate-50/50"></div>
               </div>
             `;
           }
@@ -616,6 +649,9 @@
 
     function selectActiveDay(iso) {
       if (state.isLocked) return;
+      const d = parseLocalYMD(iso);
+      if (d.getDay() === 6) return; // 星期六不允許透過點擊喚醒鍵盤排班
+
       const oldIso = state.activeDate;
       state.activeDate = iso;
       if (oldIso && oldIso !== iso) updateDayCardDOM(oldIso);
@@ -745,25 +781,19 @@
       
       if (!document.getElementById(`day-row-${newIso}`)) {
         state.anchorMonday = formatLocalYMD(getMondayOfDate(curr));
+        
+        const scrollArea = document.getElementById('scroll-area');
+        scrollArea.style.scrollSnapType = 'none';
         renderAllWeeks();
+        const newTarget = document.getElementById(`week-${state.anchorMonday}`);
+        if(newTarget) scrollArea.scrollTop = newTarget.offsetTop;
+        setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
       }
       
       state.activeDate = newIso;
       updateDayCardDOM(oldIso);
       updateDayCardDOM(newIso);
       updateActiveDock();
-    }
-
-    // ================= 🗓️ Modal 安全顯示機制 =================
-    // 放棄容易出 bug 的 hidden，使用最穩定的 JS Style 切換
-    function openModal(id) {
-      const el = document.getElementById(id);
-      if(el) { el.style.display = 'flex'; }
-    }
-    
-    function closeModal(id) {
-      const el = document.getElementById(id);
-      if(el) { el.style.display = 'none'; }
     }
 
     // ================= 🗓️ 自訂視覺化月曆 =================
@@ -826,13 +856,18 @@
           }
 
           const targetWeekEl = document.getElementById('week-' + targetMonday);
+          const scrollArea = document.getElementById('scroll-area');
+
           if (targetWeekEl) {
-            document.getElementById('scroll-area').scrollTo({ top: targetWeekEl.offsetTop, behavior: 'smooth' });
+            scrollArea.scrollTo({ top: targetWeekEl.offsetTop, behavior: 'smooth' });
             if (!state.isLocked) updateDayCardDOM(iso);
           } else {
             state.anchorMonday = targetMonday;
+            scrollArea.style.scrollSnapType = 'none';
             renderAllWeeks();
-            document.getElementById('scroll-area').scrollTo({ top: document.getElementById('week-' + targetMonday).offsetTop, behavior: 'auto' });
+            const newWeekEl = document.getElementById('week-' + targetMonday);
+            if (newWeekEl) scrollArea.scrollTop = newWeekEl.offsetTop;
+            setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
           }
           
           state.currentVisibleWeekStart = targetMonday;
@@ -858,7 +893,7 @@
       }
     }
 
-    // ================= 儲存與同步 (嚴格離線防護) =================
+    // ================= 儲存與同步 =================
     function saveLocalImmediately() {
       try { localStorage.setItem('roster_days_map', JSON.stringify(state.daysMap)); } 
       catch (e) { console.warn('本地快取寫入失敗', e); }
@@ -868,7 +903,7 @@
       if (!db) return;
       const badge = document.getElementById('sync-badge');
       badge.innerText = '儲存中...';
-      badge.className = 'text-xs px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 font-bold cursor-pointer';
+      badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 font-bold cursor-pointer';
       clearTimeout(saveTimeout);
       saveTimeout = setTimeout(saveAllData, 600);
     }
@@ -881,35 +916,26 @@
       .then(() => {
         const badge = document.getElementById('sync-badge');
         badge.innerText = '已連線';
-        badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer transition-colors';
+        badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer transition-colors';
       }).catch(err => {
         const badge = document.getElementById('sync-badge');
         badge.innerText = '已存本地';
-        badge.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer transition-colors';
+        badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer transition-colors';
       });
     }
 
     function initFirebaseWithStoredKey() {
       const apiKey = localStorage.getItem('shift_firebase_api_key');
       const badge = document.getElementById('sync-badge');
-      const statusLabel = document.getElementById('api-status-label');
       
       if (!apiKey) {
-        if(statusLabel) {
-           statusLabel.innerText = '🔴 未設定';
-           statusLabel.className = 'text-[12px] font-black px-3 py-1 rounded-lg bg-rose-100 text-rose-700';
-        }
+        document.getElementById('api-key-input').value = '';
         badge.innerText = '未綁定 Key';
         badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
         return;
       }
 
-      if(statusLabel) {
-         statusLabel.innerText = '🟢 已綁定';
-         statusLabel.className = 'text-[12px] font-black px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700';
-      }
-
-      // 嚴格離線防護
+      // 離線靜默保護：避免報錯中斷
       if (typeof firebase === 'undefined') {
          badge.innerText = '📶 離線模式 (Local)';
          badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-slate-200 text-slate-600 font-bold';
@@ -926,7 +952,7 @@
               badge.innerText = '📶 離線模式 (Local)';
               badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-slate-200 text-slate-600 font-bold cursor-pointer';
            }
-        }, 3000); // 縮短至 3 秒判定離線
+        }, 3000);
 
         db.ref(window.APP_CONFIG.dbPath || 'roster_data').once('value').then(snap => {
           isConnected = true;
@@ -937,8 +963,15 @@
               state.daysMap = { ...state.daysMap, ...val.daysMap };
               saveLocalImmediately();
               
-              // 載入雲端後靜默更新畫面
+              // 載入雲端後靜默更新畫面，確保鎖定狀態即時反映
+              const scrollArea = document.getElementById('scroll-area');
+              const currentScroll = scrollArea.scrollTop;
+              
+              scrollArea.style.scrollSnapType = 'none';
               renderAllWeeks();
+              scrollArea.scrollTop = currentScroll;
+              setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
+              
               evaluateAutoLockOnScroll();
             }
           }
@@ -1099,12 +1132,11 @@
         savedBox.style.display = 'none'; inputBox.style.display = 'block'; 
       }
 
-      document.getElementById('prompt-template-input').value = state.promptTemplate;
+      document.getElementById('prompt-template-input').value = state.promptTemplate || '';
       openModal('settings-modal');
     }
 
     function showKeyInputForm() { document.getElementById('key-saved-container').style.display = 'none'; document.getElementById('key-input-container').style.display = 'block'; }
-    function hideKeyInputForm() { document.getElementById('key-saved-container').style.display = 'flex'; document.getElementById('key-input-container').style.display = 'none'; }
 
     function saveApiKey() {
       const key = document.getElementById('api-key-input').value.trim();
