@@ -96,17 +96,17 @@
     <div id="schedule-container" class="w-full max-w-md mx-auto px-2"></div>
   </main>
 
-  <!-- 底部固定容器 -->
+  <!-- 底部固定容器 (高度大幅精簡) -->
   <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] px-3 pb-[calc(env(safe-area-inset-bottom,20px)+8px)] pt-2.5 min-h-[60px] flex flex-col justify-center">
     
-    <!-- 狀態 1：鎖定狀態 -->
+    <!-- 狀態 1：鎖定狀態 (單一輕量按鈕) -->
     <div id="dock-locked" class="w-full max-w-md mx-auto fade-out">
       <button onclick="unlockAction()" class="w-full h-[46px] bg-slate-800 text-white rounded-[14px] font-black text-[15px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
         🔒 點擊解鎖以編輯更表
       </button>
     </div>
 
-    <!-- 狀態 2：解鎖狀態 -->
+    <!-- 狀態 2：解鎖狀態 (工具列 + 鍵盤) -->
     <div id="dock-unlocked" class="w-full max-w-md mx-auto fade-in">
       <div class="flex items-center justify-between mb-2 px-0.5">
         <div class="flex items-center gap-1.5">
@@ -119,6 +119,7 @@
           <button onclick="backspaceStaff()" title="退格刪除" class="w-12 h-10 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-xl active:bg-slate-200 shadow-xs active:scale-95 transition-transform">⌫</button>
         </div>
       </div>
+      <!-- 6 位員工鍵盤 (高度精簡) -->
       <div id="keyboard-grid" class="grid grid-cols-6 gap-1.5"></div>
     </div>
 
@@ -126,7 +127,7 @@
 
 </div>
 
-  <!-- 🗓️ 視覺化月曆 Modal -->
+  <!-- 🗓️ 視覺化月曆 Modal (週日為首) -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md hidden flex-col items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-[32px] p-5 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -213,6 +214,7 @@
     let observer = null;
     let saveTimeout = null;
 
+    // 預載：前4週 + 後4週 + 當前 = 9週
     const PAST_WEEKS = 4;
     const FUTURE_WEEKS = 4;
 
@@ -246,6 +248,15 @@
       const diff = (day === 0) ? -6 : 1 - day; 
       date.setDate(date.getDate() + diff);
       return date;
+    }
+
+    function getThisWeekEndIso() {
+      const now = new Date();
+      const day = now.getDay();
+      const diffToSunday = (day === 0) ? 0 : (7 - day);
+      const sun = new Date(now);
+      sun.setDate(now.getDate() + diffToSunday);
+      return formatLocalYMD(sun);
     }
 
     function updateHeaderWeekRange(startIso) {
@@ -285,7 +296,7 @@
       alert(errorMessage);
     }
 
-    // ================= 🚀 初始化系統 (100% 精準定位) =================
+    // ================= 🚀 初始化系統 (保證 100% 精準對位本週) =================
     function initApp() {
       state.promptTemplate = window.APP_CONFIG.DEFAULT_PROMPT;
       loadLocalPreferences();
@@ -304,39 +315,34 @@
       state.calYear = todayMonday.getFullYear();
       state.calMonth = todayMonday.getMonth();
 
-      // 本地秒速渲染
+      // 本地極速渲染
       renderAllWeeks();
       
-      // 💯 確保第一次載入 100% 對準本週
-      forceScrollToWeek(state.anchorMonday);
-
-      // 非同步執行 Firebase 讀取
-      setTimeout(initFirebaseWithStoredKey, 50);
-    }
-
-    // 強制精準滾動，徹底擊敗 iOS Safari 的自動重置機制
-    function forceScrollToWeek(iso) {
+      // 💯 確保第一次載入強制跳轉到本週，絕不跑位
       const scrollArea = document.getElementById('scroll-area');
-      const targetEl = document.getElementById('week-' + iso);
-      if (!targetEl || !scrollArea) return;
+      const weekEl = document.getElementById('week-' + state.anchorMonday);
+      
+      if (weekEl) {
+        scrollArea.style.scrollSnapType = 'none';
+        scrollArea.scrollTop = weekEl.offsetTop;
+        
+        requestAnimationFrame(() => {
+          scrollArea.scrollTop = weekEl.offsetTop;
+          setTimeout(() => {
+            scrollArea.scrollTop = weekEl.offsetTop;
+            scrollArea.style.scrollSnapType = 'y mandatory';
+            evaluateAutoLockOnScroll();
+            
+            // 延遲綁定滾動偵測，避免干擾初始對位
+            setTimeout(() => {
+              scrollArea.addEventListener('scroll', handleScroll);
+            }, 300);
+          }, 50);
+        });
+      }
 
-      scrollArea.style.scrollSnapType = 'none';
-      scrollArea.scrollTop = targetEl.offsetTop;
-
-      requestAnimationFrame(() => {
-        scrollArea.scrollTop = targetEl.offsetTop;
-        setTimeout(() => {
-          scrollArea.scrollTop = targetEl.offsetTop;
-          scrollArea.style.scrollSnapType = 'y mandatory';
-          state.currentVisibleWeekStart = iso;
-          updateHeaderWeekRange(iso);
-          evaluateAutoLockOnScroll();
-          
-          // 確保滾動穩定後才綁定監聽，防止誤判
-          scrollArea.removeEventListener('scroll', handleScroll);
-          scrollArea.addEventListener('scroll', handleScroll);
-        }, 150);
-      });
+      // 非同步執行 Firebase，絕不阻塞畫面
+      setTimeout(initFirebaseWithStoredKey, 50);
     }
 
     function showToast(msg) {
@@ -373,7 +379,7 @@
       });
     }
 
-    // ================= 🤖 智能自動鎖定 =================
+    // ================= 🤖 智能自動鎖定邏輯 =================
     function checkCurrentWeekCompletion() {
       if (!state.currentVisibleWeekStart) return false;
       let isComplete = true;
@@ -383,7 +389,7 @@
         const iso = formatLocalYMD(curr);
         const record = state.daysMap[iso];
         const isFullHoliday = !!(record && (record.isFullDayHoliday || record.isFullHoliday));
-        const shifts = record && record.shifts ? record.shifts : []; // 修復空陣列 Undefined 問題
+        const shifts = record && record.shifts ? record.shifts : []; 
         
         if (!isFullHoliday && shifts.length < 6) {
           isComplete = false;
@@ -432,16 +438,30 @@
         dockUnlocked.classList.remove('fade-out'); dockUnlocked.classList.add('fade-in');
       }
       
+      // 靜默更新畫面，確保滾動條絕不亂跳
       const scrollArea = document.getElementById('scroll-area');
       const currentScroll = scrollArea.scrollTop;
       
       scrollArea.style.scrollSnapType = 'none';
-      renderAllWeeks();
+      
+      // 僅更新 DOM 內的現有行，不觸發 renderAllWeeks 重新建構
+      silentRefreshAllDays();
+      
       scrollArea.scrollTop = currentScroll;
       setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
     }
 
-    // ================= 🔄 Snap Scrolling =================
+    // ================= 🔄 靜默局部更新 (Silent Refresh) =================
+    // 這個魔法函數會把畫面上所有的日子局部刷新，不會干擾 Scroll，不會閃爍
+    function silentRefreshAllDays() {
+      const renderedRows = document.querySelectorAll('[id^="day-row-"]');
+      renderedRows.forEach(row => {
+          const iso = row.id.replace('day-row-', '');
+          updateDayCardDOM(iso);
+      });
+      updateActiveDock();
+    }
+
     function renderAllWeeks() {
       const container = document.getElementById('schedule-container');
       container.innerHTML = '';
@@ -491,6 +511,7 @@
         container.appendChild(weekCard);
         baseDate.setDate(baseDate.getDate() + 7);
       }
+
       updateActiveDock();
     }
 
@@ -527,13 +548,26 @@
       const curr = parseLocalYMD(state.currentVisibleWeekStart);
       curr.setDate(curr.getDate() + (direction * 7));
       const targetIso = formatLocalYMD(curr);
-      
       const targetEl = document.getElementById('week-' + targetIso);
-      if (!targetEl) {
+      const scrollArea = document.getElementById('scroll-area');
+      
+      if (targetEl) {
+        scrollArea.scrollTo({ top: targetEl.offsetTop, behavior: 'smooth' });
+        state.currentVisibleWeekStart = targetIso;
+        updateHeaderWeekRange(targetIso);
+        evaluateAutoLockOnScroll();
+      } else {
         state.anchorMonday = targetIso;
+        scrollArea.style.scrollSnapType = 'none';
         renderAllWeeks();
+        const newTarget = document.getElementById('week-' + targetIso);
+        if(newTarget) scrollArea.scrollTop = newTarget.offsetTop;
+        setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
+        
+        state.currentVisibleWeekStart = targetIso;
+        updateHeaderWeekRange(targetIso);
+        evaluateAutoLockOnScroll();
       }
-      forceScrollToWeek(targetIso);
     }
 
     // ================= 🃏 單行更位資料 =================
@@ -544,7 +578,7 @@
       const isToday = (iso === formatLocalYMD(new Date()));
       const dayRecord = state.daysMap[iso] || { shifts: [], isFullDayHoliday: false };
       const isFullHoliday = !!(dayRecord.isFullDayHoliday || dayRecord.isFullHoliday);
-      const shifts = dayRecord.shifts || []; // 💯 修復空陣列報錯
+      const shifts = dayRecord.shifts || []; 
 
       let bgClass = isActive ? 'bg-indigo-50/60 ring-2 ring-inset ring-indigo-500/40 z-10' : 'bg-white hover:bg-slate-50/50';
       if (!isActive && isFullHoliday) bgClass = 'bg-rose-50/40';
@@ -752,12 +786,12 @@
       
       if (!document.getElementById(`day-row-${newIso}`)) {
         state.anchorMonday = formatLocalYMD(getMondayOfDate(curr));
-        renderAllWeeks();
-        forceScrollToWeek(state.anchorMonday);
-      } else {
         const scrollArea = document.getElementById('scroll-area');
-        const targetRow = document.getElementById(`day-row-${newIso}`);
-        scrollArea.scrollTo({top: targetRow.offsetTop - 130, behavior: 'smooth'});
+        scrollArea.style.scrollSnapType = 'none';
+        renderAllWeeks();
+        const newTarget = document.getElementById(`week-${state.anchorMonday}`);
+        if(newTarget) scrollArea.scrollTop = newTarget.offsetTop;
+        setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
       }
       
       state.activeDate = newIso;
@@ -820,19 +854,30 @@
           const targetMonday = formatLocalYMD(getMondayOfDate(currDate));
           closeModal('calendar-modal');
           
-          if (!state.isLocked && !isSunday && !isSaturday) state.activeDate = iso;
-          else state.activeDate = targetMonday;
+          if (!state.isLocked && !isSunday && !isSaturday) {
+            state.activeDate = iso;
+          } else {
+            state.activeDate = targetMonday;
+          }
 
           const targetWeekEl = document.getElementById('week-' + targetMonday);
+          const scrollArea = document.getElementById('scroll-area');
+
           if (targetWeekEl) {
-            forceScrollToWeek(targetMonday);
+            scrollArea.scrollTo({ top: targetWeekEl.offsetTop, behavior: 'smooth' });
             if (!state.isLocked) updateDayCardDOM(iso);
           } else {
             state.anchorMonday = targetMonday;
+            scrollArea.style.scrollSnapType = 'none';
             renderAllWeeks();
-            forceScrollToWeek(targetMonday);
+            const newWeekEl = document.getElementById('week-' + targetMonday);
+            if (newWeekEl) scrollArea.scrollTop = newWeekEl.offsetTop;
+            setTimeout(() => { scrollArea.style.scrollSnapType = 'y mandatory'; }, 50);
           }
-          updateActiveDock();
+          
+          state.currentVisibleWeekStart = targetMonday;
+          updateHeaderWeekRange(targetMonday);
+          evaluateAutoLockOnScroll();
         };
 
         let numColor = 'text-slate-700'; let bgStyle = 'bg-slate-50 border border-slate-100';
@@ -853,7 +898,7 @@
       }
     }
 
-    // ================= 儲存與同步 (精準更新防覆蓋 & 報錯顯示) =================
+    // ================= 儲存與同步 =================
     function saveLocalImmediately() {
       try { localStorage.setItem('roster_days_map', JSON.stringify(state.daysMap)); } 
       catch (e) { console.warn('本地快取寫入失敗', e); }
@@ -873,7 +918,6 @@
       if (!db) return;
       const path = window.APP_CONFIG.dbPath || 'roster_data';
       
-      // 💯 精準更新 (Granular Update)：只更新指定的日期，絕不互相覆蓋！
       let updates = { updatedAt: new Date().toISOString() };
       Object.keys(state.daysMap).forEach(iso => {
         updates[`daysMap/${iso}`] = state.daysMap[iso];
@@ -884,15 +928,12 @@
         const badge = document.getElementById('sync-badge');
         badge.innerText = '已連線';
         badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold cursor-pointer transition-colors';
-        badge.onclick = openSettingsModal; // 恢復正常點擊
+        badge.onclick = openSettingsModal; 
       }).catch(err => {
         const badge = document.getElementById('sync-badge');
         badge.innerText = '儲存失敗(點擊查看)';
         badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold cursor-pointer transition-colors';
-        badge.onclick = () => {
-           alert("Firebase 儲存錯誤:\n" + err.message);
-           openSettingsModal();
-        };
+        badge.onclick = () => { alert("Firebase 儲存錯誤:\n" + err.message); openSettingsModal(); };
         showToast('儲存失敗: ' + err.message);
       });
     }
@@ -919,7 +960,6 @@
          statusLabel.className = 'text-[12px] font-black px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700';
       }
 
-      // 嚴格離線防護：無 SDK 瞬間顯示 Local 模式
       if (typeof firebase === 'undefined') {
          badge.innerText = '📶 離線模式 (Local)';
          badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-slate-200 text-slate-600 font-bold';
@@ -947,11 +987,8 @@
               state.daysMap = { ...state.daysMap, ...val.daysMap };
               saveLocalImmediately();
               
-              const currentIso = state.currentVisibleWeekStart || state.anchorMonday;
-              renderAllWeeks();
-              
-              // 確保載入後不會亂跳，強制穩固在原本視角
-              forceScrollToWeek(currentIso);
+              // 💯 靜默更新：不干擾滾動，只更新存在的列
+              silentRefreshAllDays();
             }
           }
           badge.innerText = '已連線';
@@ -961,10 +998,7 @@
           clearTimeout(connTimeout);
           badge.innerText = '連線被拒(點擊查看)';
           badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
-          badge.onclick = () => {
-             alert("Firebase 連線錯誤:\n" + err.message);
-             openSettingsModal();
-          };
+          badge.onclick = () => { alert("Firebase 連線錯誤:\n" + err.message); openSettingsModal(); };
           showToast('連線錯誤: ' + err.message);
         });
       } catch (e) { 
@@ -972,6 +1006,16 @@
         badge.className = 'text-[11px] px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold cursor-pointer';
         badge.onclick = () => { alert("Firebase 系統錯誤:\n" + e.message); openSettingsModal(); };
       }
+    }
+
+    // 💯 魔法靜默更新：只更新 HTML 存在的格子，不影響滾動
+    function silentRefreshAllDays() {
+      const renderedRows = document.querySelectorAll('[id^="day-row-"]');
+      renderedRows.forEach(row => {
+          const iso = row.id.replace('day-row-', '');
+          updateDayCardDOM(iso);
+      });
+      evaluateAutoLockOnScroll();
     }
 
     // ================= 統計 Modal =================
@@ -987,7 +1031,7 @@
         if (dDate.getDay() === 0 || dDate.getDay() === 6) return;
 
         const d = state.daysMap[iso];
-        const shifts = d.shifts || []; // 💯 修復 Undefined
+        const shifts = d.shifts || []; 
         if (!d.isFullDayHoliday && shifts.length > 0) {
           validWorkingDays++;
           const onStaff = [];
@@ -1096,7 +1140,6 @@
          return d.isFullDayHoliday || (d.shifts && d.shifts.length > 0);
       }).sort();
       
-      // 💯 僅抓取最近 60 天的資料送出，防止 Token 溢出！
       const recentDates = validDates.slice(-60);
       const filteredDaysMap = {};
       recentDates.forEach(iso => filteredDaysMap[iso] = state.daysMap[iso]);
