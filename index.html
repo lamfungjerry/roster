@@ -127,7 +127,7 @@
 
 </div> <!-- /#app-container -->
 
-  <!-- 🗓️ 視覺化月曆 Modal (週日為首) -->
+  <!-- 🗓️ 視覺化自訂月曆 Modal -->
   <div id="calendar-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-[32px] p-5 shadow-2xl space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -177,14 +177,6 @@
         <button onclick="closeSettingsModal()" class="text-slate-400 text-2xl font-bold px-2 py-1">✕</button>
       </div>
       
-      <div class="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-        <div>
-          <div class="text-sm font-black text-slate-800">星期六需要排班</div>
-          <div class="text-[11px] text-slate-400 font-bold mt-0.5">開啟需輸入 6 人；關閉則自動排為週六公休</div>
-        </div>
-        <input type="checkbox" id="include-sat-toggle" onchange="toggleSaturdaySetting()" class="w-5 h-5 text-indigo-600 rounded">
-      </div>
-
       <!-- API Key 設定 -->
       <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
         <div class="flex items-center justify-between mb-3">
@@ -200,7 +192,7 @@
       <!-- Prompt 唯讀顯示區 -->
       <div>
         <label class="block text-sm font-black text-slate-700 mb-2">📝 系統 Prompt (唯讀，於 config.js 修改)</label>
-        <textarea id="prompt-template-input" rows="10" readonly class="w-full text-[11px] font-mono bg-slate-100 border border-slate-200 rounded-xl p-3 outline-none leading-relaxed text-slate-500 cursor-not-allowed shadow-inner"></textarea>
+        <textarea id="prompt-template-input" rows="12" readonly class="w-full text-[11px] font-mono bg-slate-100 border border-slate-200 rounded-xl p-3 outline-none leading-relaxed text-slate-500 cursor-not-allowed shadow-inner"></textarea>
       </div>
     </div>
   </div>
@@ -321,10 +313,6 @@
     function loadLocalPreferences() {
       const savedExclude = localStorage.getItem('shift_stats_exclude_leave');
       state.excludeLeaveInStats = (savedExclude === 'true');
-      const savedSat = localStorage.getItem('shift_include_saturday');
-      state.includeSaturday = savedSat !== null ? (savedSat === 'true') : (window.APP_CONFIG.DEFAULT_INCLUDE_SATURDAY || false);
-      const satToggle = document.getElementById('include-sat-toggle');
-      if (satToggle) satToggle.checked = state.includeSaturday;
     }
 
     function loadFromLocalStorage() {
@@ -372,7 +360,7 @@
 
     function evaluateAutoLockOnScroll() {
       const isComplete = checkCurrentWeekCompletion();
-      state.isLocked = isComplete; // 完全依據週狀態切換鎖定
+      state.isLocked = isComplete; // 依據週狀態切換鎖定
       updateLockUI();
     }
 
@@ -430,7 +418,7 @@
       for (let w = 0; w < totalWeeks; w++) {
         const weekStartIso = formatLocalYMD(baseDate);
         const weekEnd = new Date(baseDate);
-        weekEnd.setDate(baseDate.getDate() + 5);
+        weekEnd.setDate(baseDate.getDate() + 5); // 週六
         const weekEndIso = formatLocalYMD(weekEnd);
 
         const weekCard = document.createElement('div');
@@ -546,8 +534,6 @@
       let shiftsHtml = '';
       if (isFullHoliday) {
         shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-[15px] font-black text-rose-600 bg-rose-100 px-5 py-2 rounded-xl border border-rose-200">🌴 全日休假</span></div>`;
-      } else if (dayIdx === 6 && !state.includeSaturday) {
-        shiftsHtml = `<div class="flex-1 flex items-center justify-center"><span class="text-xs font-bold text-slate-400">週六休</span></div>`;
       } else {
         shiftsHtml = `<div class="flex-1 flex items-center px-1">`;
         
@@ -611,21 +597,6 @@
       return state.daysMap[state.activeDate];
     }
 
-    function isRestDay(dayIdx) {
-      if (dayIdx === 0) return true;
-      if (dayIdx === 6 && !state.includeSaturday) return true;
-      return false;
-    }
-
-    function toggleSaturdaySetting() {
-      state.includeSaturday = document.getElementById('include-sat-toggle').checked;
-      localStorage.setItem('shift_include_saturday', state.includeSaturday);
-      renderAllWeeks();
-      setupIntersectionObserver();
-      saveAllData();
-      showToast(state.includeSaturday ? '已開啟星期六排班' : '已關閉星期六排班');
-    }
-
     function updateActiveDock() {
       if (state.isLocked) return;
       const label = document.getElementById('active-day-label');
@@ -662,7 +633,7 @@
       if (record.shifts.length >= 6) {
         updateDayCardDOM(state.activeDate);
         evaluateAutoLockOnEdit();
-        jumpNextDay();
+        if(!state.isLocked) jumpNextDay();
       } else {
         updateDayCardDOM(state.activeDate);
         updateActiveDock();
@@ -706,7 +677,7 @@
         saveLocalImmediately();
         updateDayCardDOM(state.activeDate);
         evaluateAutoLockOnEdit();
-        jumpNextDay();
+        if(!state.isLocked) jumpNextDay();
       } else {
         saveLocalImmediately();
         updateDayCardDOM(state.activeDate);
@@ -735,7 +706,7 @@
       
       while (true) {
         curr.setDate(curr.getDate() + 1);
-        if (curr.getDay() !== 0 && curr.getDay() !== 6) break; 
+        if (curr.getDay() !== 0 && curr.getDay() !== 6) break; // 忽略六日
       }
       
       const newIso = formatLocalYMD(curr);
@@ -750,15 +721,6 @@
       updateDayCardDOM(oldIso);
       updateDayCardDOM(newIso);
       updateActiveDock();
-      
-      setTimeout(() => {
-        const el = document.getElementById(`day-row-${newIso}`);
-        if (el) {
-           const scrollArea = document.getElementById('scroll-area');
-           const y = el.getBoundingClientRect().top + scrollArea.scrollTop - 160;
-           scrollArea.scrollTo({top: y, behavior: 'smooth'});
-        }
-      }, 50);
     }
 
     // ================= 🗓️ 自訂視覺化月曆 =================
@@ -919,7 +881,7 @@
               state.daysMap = { ...state.daysMap, ...val.daysMap };
               saveLocalImmediately();
               
-              // 資料載入後重新評估鎖定狀態並渲染
+              // 載入雲端資料後重新判定自動鎖定，並重繪畫面
               evaluateAutoLockOnScroll();
               renderAllWeeks();
             }
@@ -1072,23 +1034,11 @@
 
     // ================= 設定面板 =================
     function openSettingsModal() {
-      const hasKey = !!localStorage.getItem('shift_firebase_api_key');
-      const savedBox = document.getElementById('key-saved-container');
-      const inputBox = document.getElementById('key-input-container');
-      const cancelBtn = document.getElementById('cancel-key-btn');
-      
-      document.getElementById('api-key-input').value = '';
-      if (hasKey) {
-        savedBox.classList.remove('hidden'); inputBox.classList.add('hidden'); cancelBtn.classList.remove('hidden');
-      } else {
-        savedBox.classList.add('hidden'); inputBox.classList.remove('hidden'); cancelBtn.classList.add('hidden');
-      }
-
       document.getElementById('prompt-template-input').value = state.promptTemplate;
       document.getElementById('settings-modal').classList.remove('hidden');
     }
-
     function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+
     function showKeyInputForm() { document.getElementById('key-saved-container').classList.add('hidden'); document.getElementById('key-input-container').classList.remove('hidden'); }
     function hideKeyInputForm() { document.getElementById('key-saved-container').classList.remove('hidden'); document.getElementById('key-input-container').classList.add('hidden'); }
 
