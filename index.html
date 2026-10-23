@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v5.1</title>
+  <title>排更助手 v6</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -48,34 +48,34 @@
 <body>
 
 <div id="app">
-  <!-- Header (修復版：加入 whitespace-nowrap 防換行變形，字體微調適應手機) -->
+  <!-- Header (V6: 第一行顯著加大，第二行完美還原 V4 高度尺寸與防換行) -->
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
-    <div class="h-12 flex justify-between items-center px-3 border-b border-gray-100">
+    <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
       <div class="flex-1 flex justify-start">
         <span id="conn-status" class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 text-[10px] font-bold tracking-wider">📶 讀取快取</span>
       </div>
-      <h1 class="font-extrabold text-[17px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap">編更表</h1>
+      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap">編更表</h1>
       <div class="flex-1 flex justify-end gap-3">
-        <button id="btn-stats" class="text-[22px] p-1 active:scale-75 transition-transform opacity-80">📊</button>
-        <button id="btn-settings" class="text-[22px] p-1 active:scale-75 transition-transform opacity-80">⚙️</button>
+        <button id="btn-stats" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">📊</button>
+        <button id="btn-settings" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">⚙️</button>
       </div>
     </div>
-    <div class="h-14 flex justify-between items-center px-1 sm:px-2 bg-gray-50/50 gap-1">
-      <button id="prev-week" class="text-blue-600 font-bold px-2 py-2 active:scale-95 transition-transform text-[14px] whitespace-nowrap shrink-0">&lt; 上一週</button>
-      <button id="btn-open-calendar" class="font-bold text-[14px] text-gray-800 bg-white border border-gray-200 px-3 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center gap-1 whitespace-nowrap min-w-0 flex-1 mx-1">
+    <div class="h-12 flex justify-between items-center px-2 bg-gray-50/50 gap-1 overflow-hidden">
+      <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-sm whitespace-nowrap shrink-0">&lt; 上一週</button>
+      <button id="btn-open-calendar" class="font-bold text-[15px] text-gray-800 bg-white border border-gray-200 px-4 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center gap-1 whitespace-nowrap min-w-0 flex-1 mx-1">
         🗓️ <span id="header-date-range" class="whitespace-nowrap overflow-hidden text-ellipsis">載入中...</span>
       </button>
-      <button id="next-week" class="text-blue-600 font-bold px-2 py-2 active:scale-95 transition-transform text-[14px] whitespace-nowrap shrink-0">下一週 &gt;</button>
+      <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-sm whitespace-nowrap shrink-0">下一週 &gt;</button>
     </div>
   </header>
 
   <!-- Main Content (IG Infinite Scroll) -->
   <main id="weeks-container" class="instant-scroll"></main>
 
-  <!-- Footer Input Area -->
+  <!-- Footer Input Area (V6: 高度約 28dvh) -->
   <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 h-[28dvh] min-h-[210px] max-h-[270px]">
     
-    <!-- Smart Glass Overlay -->
+    <!-- Smart Glass Overlay (鎖定遮罩) -->
     <div id="lock-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex-col justify-center items-center cursor-pointer active:bg-white/60 transition-colors flex">
       <div id="lock-msg-box" class="bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1">
         <span id="lock-icon" class="text-lg">🔒</span> <span id="lock-text">本週已排滿鎖定</span>
@@ -91,10 +91,10 @@
       
       <!-- 左下角功能一分為二 (🔒手動鎖定 & 🧹清空日) -->
       <div class="col-span-1 w-full h-full flex gap-1.5">
-        <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-lg flex items-center justify-center transition-colors">
+        <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[20px] flex items-center justify-center transition-colors">
           🔒
         </button>
-        <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-lg flex items-center justify-center transition-colors">
+        <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-[20px] flex items-center justify-center transition-colors">
           🧹
         </button>
       </div>
@@ -127,22 +127,25 @@
   </div>
 </div>
 
-<!-- Modal: Stats (3 Tabs) -->
+<!-- Modal: Stats (V6: 三層式防跳動 Modal) -->
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
-  <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-    <div class="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-blue-50">
-      <h2 class="text-lg font-bold text-blue-900">📊 系統統計與 AI</h2>
-      <button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none">&times;</button>
-    </div>
+  <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[70vh] max-h-[600px] overflow-hidden">
     
-    <div class="flex border-b border-gray-200 bg-white">
-      <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位對比</button>
-      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(2)" id="tab-btn-2">累積盈虧</button>
-      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
+    <!-- 第一層：頂部固定區 -->
+    <div class="shrink-0">
+      <div class="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+        <h2 class="text-lg font-bold text-blue-900">📊 系統統計與 AI</h2>
+        <button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none">&times;</button>
+      </div>
+      <div class="flex border-b border-gray-200 bg-white">
+        <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位對比</button>
+        <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(2)" id="tab-btn-2">累積盈虧</button>
+        <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
+      </div>
     </div>
 
-    <!-- min-h-[380px] 防止 Tab 切換時高度跳動 -->
-    <div class="p-4 overflow-y-auto flex-1 flex flex-col bg-gray-50/50 min-h-[380px]">
+    <!-- 第二層：中間內容顯示區 (高度鎖死、溢出滾動) -->
+    <div class="flex-1 overflow-y-auto p-4 bg-gray-50/50">
       <!-- Tab 1 -->
       <div id="tab-content-1" class="block space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
@@ -167,33 +170,40 @@
           <div id="stats-grid-3" class="flex flex-col gap-2"></div>
         </div>
       </div>
+    </div>
 
-      <div class="mt-4 shrink-0">
-        <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-[16px]">📋 複製 AI Prompt</button>
-      </div>
+    <!-- 第三層：底部按鈕區 (獨立區塊，永遠沉底) -->
+    <div class="shrink-0 p-4 bg-white border-t border-gray-100">
+      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-[16px]">📋 複製 AI Prompt</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Calendar -->
-<div id="modal-calendar" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
-  <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col p-5 pb-8">
-    <div class="flex justify-between items-center mb-6 px-2">
-      <button id="cal-prev" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200">&lt;</button>
-      <h2 id="cal-month-title" class="text-xl font-extrabold text-gray-800 tracking-wider">YYYY年 MM月</h2>
-      <button id="cal-next" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200">&gt;</button>
+<!-- Modal: Calendar (V6: 原生 iOS 設計重構) -->
+<div id="modal-calendar" class="fixed inset-0 bg-gray-900/50 z-50 hidden flex-col justify-center items-center backdrop-blur-sm p-4">
+  <div class="bg-white w-full max-w-[340px] rounded-[2rem] shadow-2xl flex flex-col p-6">
+    <!-- 日曆頂部導航 -->
+    <div class="flex justify-between items-center mb-6">
+      <button id="cal-prev" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors">&lt;</button>
+      <h2 id="cal-month-title" class="text-[17px] font-extrabold text-gray-800">YYYY年 MM月</h2>
+      <button id="cal-next" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors">&gt;</button>
     </div>
-    <div class="grid grid-cols-7 text-center mb-2">
-      <div class="text-xs font-bold text-red-500">日</div><div class="text-xs font-bold text-gray-500">一</div><div class="text-xs font-bold text-gray-500">二</div>
-      <div class="text-xs font-bold text-gray-500">三</div><div class="text-xs font-bold text-gray-500">四</div><div class="text-xs font-bold text-gray-500">五</div><div class="text-xs font-bold text-gray-500">六</div>
+    <!-- 星期列 -->
+    <div class="grid grid-cols-7 text-center mb-3">
+      <div class="text-[12px] font-bold text-red-500">日</div>
+      <div class="text-[12px] font-bold text-gray-600">一</div><div class="text-[12px] font-bold text-gray-600">二</div><div class="text-[12px] font-bold text-gray-600">三</div>
+      <div class="text-[12px] font-bold text-gray-600">四</div><div class="text-[12px] font-bold text-gray-600">五</div><div class="text-[12px] font-bold text-gray-600">六</div>
     </div>
-    <div id="cal-grid" class="grid grid-cols-7 gap-y-3 gap-x-1 text-center mb-6"></div>
-    <div class="flex justify-center gap-4 text-[10px] font-bold text-gray-500 mb-6">
-      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span>已填</span>
-      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>未填</span>
-      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full border border-red-300 bg-red-50"></span>休假</span>
+    <!-- 日期方格 -->
+    <div id="cal-grid" class="grid grid-cols-7 gap-1.5 text-center mb-6"></div>
+    <!-- 圖例 -->
+    <div class="flex justify-center gap-4 text-[11px] font-bold text-gray-500 mb-5">
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span>已填</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>未填</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span>休假</span>
     </div>
-    <button id="close-calendar" class="w-full bg-gray-100 text-gray-700 font-bold py-3.5 rounded-xl active:bg-gray-200 transition-colors">關閉</button>
+    <!-- 關閉按鈕 -->
+    <button id="close-calendar" class="w-full bg-gray-50 text-gray-700 font-bold py-3.5 rounded-2xl active:bg-gray-200 transition-colors text-[15px]">關閉</button>
   </div>
 </div>
 
@@ -207,7 +217,7 @@
   import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v5';
+  const CACHE_KEY = 'roster_cache_v6';
 
   const Utils = {
     formatDate: (d) => {
@@ -339,15 +349,21 @@
                     <div class="flex flex-col flex-1 justify-around gap-0.5 pb-1">`;
       for (let i = 1; i <= 6; i++) html += UI.generateDayHTML(Utils.addDays(sundayStr, i), i);
       html += `</div></div>`;
-      
-      // ★★★ 呢度就係 V5 漏咗嘅「急救代碼」，加返之後個畫面就會出返嚟！ ★★★
       weekDiv.innerHTML = html;
-      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
       
+      // V6 核心修復：高度補償防暴走 (Scroll Anchoring)
       const existing = Array.from(UI.container.children);
-      const insertBefore = existing.find(node => node.dataset.weekStart > sundayStr);
-      if (insertBefore) UI.container.insertBefore(weekDiv, insertBefore);
-      else UI.container.appendChild(weekDiv);
+      const insertBeforeNode = existing.find(node => node.dataset.weekStart > sundayStr);
+      
+      if (insertBeforeNode) {
+        const oldHeight = UI.container.scrollHeight;
+        const oldScrollTop = UI.container.scrollTop;
+        UI.container.insertBefore(weekDiv, insertBeforeNode);
+        // 瞬間修正高度差，鎖死視覺畫面
+        UI.container.scrollTop = oldScrollTop + (UI.container.scrollHeight - oldHeight);
+      } else {
+        UI.container.appendChild(weekDiv);
+      }
     },
 
     refreshAllVisible: () => {
@@ -459,7 +475,6 @@
     toggleLeave: (e, dateStr, index) => {
       e.stopPropagation();
       Engine.setActiveDate(dateStr); 
-      
       if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return;
       
       const dayData = STATE.daysMap[dateStr];
@@ -553,16 +568,17 @@
         const dayData = STATE.daysMap[dStr] || { isFullDayHoliday: false, shifts: [] };
         const shifts = Utils.normalizeShifts(dayData.shifts);
 
-        let cellClass = "h-10 rounded-xl flex flex-col items-center justify-center text-sm font-bold active:scale-90 transition-transform cursor-pointer ";
         let isRed = (dayOfWeek === 0 || dayData.isFullDayHoliday);
+        // V6 原生 iOS 日曆格仔設計
+        let cellClass = "aspect-square rounded-2xl flex flex-col items-center justify-center text-[15px] font-bold active:scale-95 transition-transform cursor-pointer ";
         
-        if (isRed) cellClass += "text-red-500 bg-red-50 border border-red-100 ";
-        else cellClass += "text-gray-700 bg-white border border-gray-100 shadow-sm ";
+        if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 ";
+        else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
 
-        let dotHTML = `<div class="h-1.5 mt-0.5"></div>`; 
+        let dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></div>`; 
         if (!isRed && dayOfWeek >= 1 && dayOfWeek <= 5 && dStr >= CONFIG.SYSTEM_START_DATE) {
-          if (shifts.length === 6) dotHTML = `<div class="h-1.5 w-1.5 rounded-full bg-green-500 mt-0.5"></div>`;
-          else dotHTML = `<div class="h-1.5 w-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
+          if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`;
+          else dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
         }
 
         CalendarManager.grid.innerHTML += `
@@ -621,25 +637,35 @@
       const staffStats = {};
       CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
       let baseSum = 0, baseCount = 0;
-
-      const pastDates = [];
-      for(let i=0; i<60; i++) pastDates.push(Utils.addDays(STATE.todayStr, -i));
       
       const promptJSON = {};
       let firstDate = null, lastDate = null;
+      
+      // V6 核心修復：全圖譜掃描 (由 SYSTEM_START_DATE 到最新資料)
+      const startD = new Date(CONFIG.SYSTEM_START_DATE);
+      const sortedDates = Object.keys(STATE.daysMap).sort();
+      let endD = new Date(STATE.todayStr);
+      if (sortedDates.length > 0 && sortedDates[sortedDates.length - 1] > STATE.todayStr) {
+        endD = new Date(sortedDates[sortedDates.length - 1]);
+      }
 
-      pastDates.forEach(dStr => {
-        const d = new Date(dStr);
-        if(d.getDay() === 6 || d.getDay() === 0) return; 
-        
+      let curD = new Date(startD);
+      while(curD <= endD) {
+        const dStr = Utils.formatDate(curD);
+        curD.setDate(curD.getDate() + 1);
+
         const dayData = STATE.daysMap[dStr];
-        if(!dayData || dayData.isFullDayHoliday) return;
+        // 嚴格跳過「全休日」，唔計個人假
+        if(!dayData || dayData.isFullDayHoliday) continue;
         
         const shifts = Utils.normalizeShifts(dayData.shifts);
-        if(shifts.length === 0) return;
+        if(shifts.length === 0) continue;
 
-        if(!lastDate) lastDate = dStr; 
-        firstDate = dStr; 
+        if(!firstDate) firstDate = dStr;
+        lastDate = dStr;
+
+        const dObj = new Date(dStr);
+        const isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
 
         promptJSON[dStr] = shifts.map(s => s.staff);
         const activeCount = shifts.filter(s => s.status !== 'LEAVE').length;
@@ -647,21 +673,27 @@
         let activeIdx = 0;
         shifts.forEach((shift, visualSlot) => {
           if(!staffStats[shift.staff]) return;
+          
+          // 獨立計算個人假 (無視週末限制，只要 mark 咗就計)
           if (shift.status === 'LEAVE') {
             staffStats[shift.staff].leaveCount++; return;
           }
-          const shiftScore = (6 - activeCount + 1) + activeIdx;
-          staffStats[shift.staff].sum += shiftScore;
-          staffStats[shift.staff].count += 1;
-          baseSum += shiftScore;
-          baseCount += 1;
-          activeIdx++;
+          
+          // 計算均位與命中率 (忽略週末)
+          if (!isWeekend) {
+            const shiftScore = (6 - activeCount + 1) + activeIdx;
+            staffStats[shift.staff].sum += shiftScore;
+            staffStats[shift.staff].count += 1;
+            baseSum += shiftScore;
+            baseCount += 1;
+            activeIdx++;
 
-          if (visualSlot <= 1) staffStats[shift.staff].hits.good++;
-          else if (visualSlot <= 3) staffStats[shift.staff].hits.mid++;
-          else staffStats[shift.staff].hits.bad++;
+            if (visualSlot <= 1) staffStats[shift.staff].hits.good++;
+            else if (visualSlot <= 3) staffStats[shift.staff].hits.mid++;
+            else staffStats[shift.staff].hits.bad++;
+          }
         });
-      });
+      }
 
       const globalAvg = baseCount > 0 ? (baseSum / baseCount) : 0;
       
@@ -863,9 +895,9 @@
     document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
     document.getElementById('lock-overlay').addEventListener('click', Engine.handleOverlayClick);
     
+    // V6 左下角手動鎖定按鈕 (不重置 ActiveDate)
     document.getElementById('btn-manual-lock').addEventListener('click', () => {
       STATE.inputMode = 'LOCKED';
-      STATE.activeDate = null; 
       UI.refreshAllVisible();
     });
     document.getElementById('btn-clear-active').addEventListener('click', () => {
