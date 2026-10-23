@@ -135,6 +135,7 @@
       
       <!-- Tab 0: Overview (V8 緊湊總覽) -->
       <div id="tab-content-0" class="flex flex-col gap-2.5 h-full">
+        <div id="overview-date-range" class="text-[11px] font-bold text-gray-500 text-center tracking-wider bg-white rounded-lg py-1.5 border border-gray-200 shadow-sm shrink-0"></div>
         <!-- AI Card: Mini Ring + Text -->
         <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex items-center gap-3 shrink-0">
            <div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle">
@@ -582,6 +583,7 @@
 
       StatsEngine.renderDashboard(pnls, maxAbsPnl);
       StatsEngine.renderTabs(globalAvg, staffStats);
+      document.getElementById('overview-date-range').innerText = `📅 統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`;
       StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
     },
     renderDashboard: (pnls, maxAbs) => {
