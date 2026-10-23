@@ -550,7 +550,7 @@
         
         const shifts = Utils.normalizeShifts(dayData.shifts);
         if(shifts.length === 0) continue;
-        promptJSON[dStr] = shifts.map(s => s.staff);
+        promptJSON[dStr] = shifts.map(s => s.status === 'LEAVE' ? s.staff + '(休假)' : s.staff);
 
         const dObj = new Date(dStr), isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
         const activeCount = shifts.filter(s => s.status !== 'LEAVE').length;
