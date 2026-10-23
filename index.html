@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v5</title>
+  <title>排更助手 v5.1</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -32,7 +32,6 @@
     #weeks-container.instant-scroll { scroll-behavior: auto; }
     #weeks-container::-webkit-scrollbar { display: none; }
     
-    /* V5: scroll-snap-align 改為 start 確保完美貼頂 */
     .week-page {
       height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
       display: flex; flex-direction: column; padding: 0.5rem; box-sizing: border-box;
@@ -49,31 +48,31 @@
 <body>
 
 <div id="app">
-  <!-- Header (V5: 按鈕與字體微調放大) -->
+  <!-- Header (修復版：加入 whitespace-nowrap 防換行變形，字體微調適應手機) -->
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
     <div class="h-12 flex justify-between items-center px-3 border-b border-gray-100">
       <div class="flex-1 flex justify-start">
         <span id="conn-status" class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 text-[10px] font-bold tracking-wider">📶 讀取快取</span>
       </div>
-      <h1 class="font-extrabold text-[17px] text-gray-900 tracking-widest text-center flex-1">編更表</h1>
+      <h1 class="font-extrabold text-[17px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap">編更表</h1>
       <div class="flex-1 flex justify-end gap-3">
         <button id="btn-stats" class="text-[22px] p-1 active:scale-75 transition-transform opacity-80">📊</button>
         <button id="btn-settings" class="text-[22px] p-1 active:scale-75 transition-transform opacity-80">⚙️</button>
       </div>
     </div>
-    <div class="h-14 flex justify-between items-center px-2 bg-gray-50/50">
-      <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[16px]">&lt; 上一週</button>
-      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-5 py-2 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center gap-1">
-        🗓️ <span id="header-date-range">載入中...</span>
+    <div class="h-14 flex justify-between items-center px-1 sm:px-2 bg-gray-50/50 gap-1">
+      <button id="prev-week" class="text-blue-600 font-bold px-2 py-2 active:scale-95 transition-transform text-[14px] whitespace-nowrap shrink-0">&lt; 上一週</button>
+      <button id="btn-open-calendar" class="font-bold text-[14px] text-gray-800 bg-white border border-gray-200 px-3 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center gap-1 whitespace-nowrap min-w-0 flex-1 mx-1">
+        🗓️ <span id="header-date-range" class="whitespace-nowrap overflow-hidden text-ellipsis">載入中...</span>
       </button>
-      <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[16px]">下一週 &gt;</button>
+      <button id="next-week" class="text-blue-600 font-bold px-2 py-2 active:scale-95 transition-transform text-[14px] whitespace-nowrap shrink-0">下一週 &gt;</button>
     </div>
   </header>
 
   <!-- Main Content (IG Infinite Scroll) -->
   <main id="weeks-container" class="instant-scroll"></main>
 
-  <!-- Footer Input Area (V5: 高度縮小約 15% -> 28dvh) -->
+  <!-- Footer Input Area -->
   <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 h-[28dvh] min-h-[210px] max-h-[270px]">
     
     <!-- Smart Glass Overlay -->
@@ -87,10 +86,10 @@
     <!-- Keyboard (完美等高 3x3 九宮格) -->
     <div id="keyboard-area" class="p-2 pt-2 h-full grid grid-cols-3 grid-rows-3 gap-2 pb-[calc(0.5rem+var(--safe-bottom))]">
       
-      <!-- 員工按鈕 (contents 屬性令其直接參與外層 Grid 排版) -->
+      <!-- 員工按鈕 -->
       <div id="staff-keys" class="contents"></div>
       
-      <!-- V5: 左下角功能一分為二 (🔒手動鎖定 & 🧹清空日) -->
+      <!-- 左下角功能一分為二 (🔒手動鎖定 & 🧹清空日) -->
       <div class="col-span-1 w-full h-full flex gap-1.5">
         <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-lg flex items-center justify-center transition-colors">
           🔒
@@ -142,7 +141,7 @@
       <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
     </div>
 
-    <!-- V5: 加入 min-h-[380px] 防止 Tab 切換時高度跳動 -->
+    <!-- min-h-[380px] 防止 Tab 切換時高度跳動 -->
     <div class="p-4 overflow-y-auto flex-1 flex flex-col bg-gray-50/50 min-h-[380px]">
       <!-- Tab 1 -->
       <div id="tab-content-1" class="block space-y-3">
@@ -240,7 +239,6 @@
     renderedWeeks: new Set(), 
     focusedWeekStart: null,
     
-    // LOCKED | WAITING | ACTIVE
     inputMode: 'LOCKED', 
     activeDate: null, 
     
@@ -342,6 +340,10 @@
       for (let i = 1; i <= 6; i++) html += UI.generateDayHTML(Utils.addDays(sundayStr, i), i);
       html += `</div></div>`;
       
+      // ★★★ 呢度就係 V5 漏咗嘅「急救代碼」，加返之後個畫面就會出返嚟！ ★★★
+      weekDiv.innerHTML = html;
+      // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+      
       const existing = Array.from(UI.container.children);
       const insertBefore = existing.find(node => node.dataset.weekStart > sundayStr);
       if (insertBefore) UI.container.insertBefore(weekDiv, insertBefore);
@@ -362,7 +364,6 @@
     },
 
     updateFooter: () => {
-      // V5: 左下角功能鍵變成靜態按鈕，只需控制 overlay 顯示隱藏
       if (STATE.inputMode === 'LOCKED') {
         UI.lockOverlay.classList.remove('hidden');
         UI.lockMsgBox.className = "bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1";
@@ -383,7 +384,6 @@
 
     scrollToWeek: (sundayStr) => {
       const weekEl = document.querySelector(`div[data-week-start="${sundayStr}"]`);
-      // V5: 滑動對齊改為 start 解決虛線露出
       if (weekEl) weekEl.scrollIntoView({ block: 'start' });
       setTimeout(() => UI.container.classList.remove('instant-scroll'), 100);
     },
@@ -863,7 +863,6 @@
     document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
     document.getElementById('lock-overlay').addEventListener('click', Engine.handleOverlayClick);
     
-    // V5: 左下角新增按鈕事件綁定
     document.getElementById('btn-manual-lock').addEventListener('click', () => {
       STATE.inputMode = 'LOCKED';
       STATE.activeDate = null; 
