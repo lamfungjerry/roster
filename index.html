@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v4</title>
+  <title>排更助手 v5</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -31,8 +31,10 @@
     }
     #weeks-container.instant-scroll { scroll-behavior: auto; }
     #weeks-container::-webkit-scrollbar { display: none; }
+    
+    /* V5: scroll-snap-align 改為 start 確保完美貼頂 */
     .week-page {
-      height: 100%; scroll-snap-align: center; scroll-snap-stop: always;
+      height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
       display: flex; flex-direction: column; padding: 0.5rem; box-sizing: border-box;
     }
     .shift-divider { width: 1px; background-color: #e5e7eb; margin: 0 4px; }
@@ -47,32 +49,32 @@
 <body>
 
 <div id="app">
-  <!-- Header -->
+  <!-- Header (V5: 按鈕與字體微調放大) -->
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
-    <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
+    <div class="h-12 flex justify-between items-center px-3 border-b border-gray-100">
       <div class="flex-1 flex justify-start">
         <span id="conn-status" class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 text-[10px] font-bold tracking-wider">📶 讀取快取</span>
       </div>
       <h1 class="font-extrabold text-[17px] text-gray-900 tracking-widest text-center flex-1">編更表</h1>
-      <div class="flex-1 flex justify-end gap-4">
-        <button id="btn-stats" class="text-xl active:scale-75 transition-transform opacity-80">📊</button>
-        <button id="btn-settings" class="text-xl active:scale-75 transition-transform opacity-80">⚙️</button>
+      <div class="flex-1 flex justify-end gap-3">
+        <button id="btn-stats" class="text-[22px] p-1 active:scale-75 transition-transform opacity-80">📊</button>
+        <button id="btn-settings" class="text-[22px] p-1 active:scale-75 transition-transform opacity-80">⚙️</button>
       </div>
     </div>
-    <div class="h-12 flex justify-between items-center px-2 bg-gray-50/50">
-      <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-sm">&lt; 上一週</button>
-      <button id="btn-open-calendar" class="font-bold text-[15px] text-gray-800 bg-white border border-gray-200 px-4 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center gap-1">
+    <div class="h-14 flex justify-between items-center px-2 bg-gray-50/50">
+      <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[16px]">&lt; 上一週</button>
+      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-5 py-2 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center gap-1">
         🗓️ <span id="header-date-range">載入中...</span>
       </button>
-      <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-sm">下一週 &gt;</button>
+      <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[16px]">下一週 &gt;</button>
     </div>
   </header>
 
   <!-- Main Content (IG Infinite Scroll) -->
   <main id="weeks-container" class="instant-scroll"></main>
 
-  <!-- Footer Input Area (動態高度 33dvh + 完美九宮格) -->
-  <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 h-[33dvh] min-h-[250px] max-h-[320px]">
+  <!-- Footer Input Area (V5: 高度縮小約 15% -> 28dvh) -->
+  <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 h-[28dvh] min-h-[210px] max-h-[270px]">
     
     <!-- Smart Glass Overlay -->
     <div id="lock-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex-col justify-center items-center cursor-pointer active:bg-white/60 transition-colors flex">
@@ -83,14 +85,19 @@
     </div>
 
     <!-- Keyboard (完美等高 3x3 九宮格) -->
-    <div id="keyboard-area" class="p-2 pt-2.5 h-full grid grid-cols-3 grid-rows-3 gap-2 pb-[calc(0.5rem+var(--safe-bottom))]">
+    <div id="keyboard-area" class="p-2 pt-2 h-full grid grid-cols-3 grid-rows-3 gap-2 pb-[calc(0.5rem+var(--safe-bottom))]">
       
       <!-- 員工按鈕 (contents 屬性令其直接參與外層 Grid 排版) -->
       <div id="staff-keys" class="contents"></div>
       
-      <!-- 下方控制列 -->
-      <div id="active-date-display" class="col-span-1 w-full h-full flex flex-row items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-2 shadow-sm">
-        <!-- Dynamically populated -->
+      <!-- V5: 左下角功能一分為二 (🔒手動鎖定 & 🧹清空日) -->
+      <div class="col-span-1 w-full h-full flex gap-1.5">
+        <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-lg flex items-center justify-center transition-colors">
+          🔒
+        </button>
+        <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-lg flex items-center justify-center transition-colors">
+          🧹
+        </button>
       </div>
       
       <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1">
@@ -135,7 +142,8 @@
       <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
     </div>
 
-    <div class="p-4 overflow-y-auto flex-1 flex flex-col bg-gray-50/50">
+    <!-- V5: 加入 min-h-[380px] 防止 Tab 切換時高度跳動 -->
+    <div class="p-4 overflow-y-auto flex-1 flex flex-col bg-gray-50/50 min-h-[380px]">
       <!-- Tab 1 -->
       <div id="tab-content-1" class="block space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
@@ -200,7 +208,7 @@
   import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v4';
+  const CACHE_KEY = 'roster_cache_v5';
 
   const Utils = {
     formatDate: (d) => {
@@ -236,7 +244,6 @@
     inputMode: 'LOCKED', 
     activeDate: null, 
     
-    // V4: 星期六只在 Session 內解鎖 (不存入 Firebase/Cache，重新載入會清空)
     unlockedSaturdays: new Set(),
     
     apiKey: localStorage.getItem('roster_api_key') || '',
@@ -252,10 +259,9 @@
     lockIcon: document.getElementById('lock-icon'),
     lockText: document.getElementById('lock-text'),
     lockSubtext: document.getElementById('lock-subtext'),
-    activeDateDisplay: document.getElementById('active-date-display'),
 
     generateDayHTML: (dateStr, dayIndex) => {
-      if (dayIndex === 0) return ''; // 隱藏星期日
+      if (dayIndex === 0) return ''; 
 
       const dObj = new Date(dateStr);
       const dayName = CONFIG.WEEK_DAYS[dayIndex];
@@ -267,7 +273,6 @@
       const isActive = STATE.activeDate === dateStr;
       const todayTag = (dateStr === STATE.todayStr) ? `<div class="absolute -left-1 -top-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20">今日</div>` : '';
 
-      // V4: 發光藍框包住全條欄
       const rowWrapperClass = `flex items-center mt-1 bg-white rounded-lg p-1 border shadow-sm cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20 z-10' : 'border-gray-200/75 active:bg-gray-50'}`;
       const leftBlockClass = `w-12 flex flex-col items-center justify-center border-r border-gray-200/60 mr-1 pr-1 shrink-0 relative h-full`;
       
@@ -279,7 +284,6 @@
         </div>
       `;
 
-      // V4: 星期六判斷 (加入 Session Set 檢查)
       if (dayIndex === 6 && shifts.length === 0 && !dayData.isFullDayHoliday && !STATE.unlockedSaturdays.has(dateStr)) {
         return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">
                   ${labelBlock}
@@ -291,7 +295,6 @@
                 </div>`;
       }
       
-      // 全休日
       if (dayData.isFullDayHoliday) {
         return `<div class="${rowWrapperClass} h-full min-h-[46px] !bg-red-50 !border-red-100" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">
                   ${labelBlock}
@@ -299,7 +302,6 @@
                 </div>`;
       }
 
-      // 正常格仔
       const slotsPointerClass = (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') ? 'pointer-events-none' : '';
       let slotsHTML = '';
       for (let i = 0; i < 6; i++) {
@@ -339,7 +341,6 @@
                     <div class="flex flex-col flex-1 justify-around gap-0.5 pb-1">`;
       for (let i = 1; i <= 6; i++) html += UI.generateDayHTML(Utils.addDays(sundayStr, i), i);
       html += `</div></div>`;
-      weekDiv.innerHTML = html;
       
       const existing = Array.from(UI.container.children);
       const insertBefore = existing.find(node => node.dataset.weekStart > sundayStr);
@@ -361,6 +362,7 @@
     },
 
     updateFooter: () => {
+      // V5: 左下角功能鍵變成靜態按鈕，只需控制 overlay 顯示隱藏
       if (STATE.inputMode === 'LOCKED') {
         UI.lockOverlay.classList.remove('hidden');
         UI.lockMsgBox.className = "bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1";
@@ -368,38 +370,21 @@
         UI.lockText.innerText = "本週已排滿鎖定";
         UI.lockSubtext.innerText = "點擊此處解鎖修改";
         UI.lockSubtext.classList.remove('hidden');
-        UI.activeDateDisplay.innerHTML = "";
-        UI.activeDateDisplay.className = "col-span-1 w-full h-full flex flex-row items-center justify-between px-2"; 
       } else if (STATE.inputMode === 'WAITING') {
         UI.lockOverlay.classList.remove('hidden');
         UI.lockMsgBox.className = "bg-blue-100 border border-blue-300 text-blue-800 px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1";
         UI.lockIcon.innerText = "👆";
         UI.lockText.innerText = "請點擊上方更表選擇日子";
         UI.lockSubtext.classList.add('hidden');
-        UI.activeDateDisplay.innerHTML = "";
-        UI.activeDateDisplay.className = "col-span-1 w-full h-full flex flex-row items-center justify-between px-2"; 
       } else if (STATE.inputMode === 'ACTIVE') {
         UI.lockOverlay.classList.add('hidden');
-        UI.activeDateDisplay.className = "col-span-1 w-full h-full flex flex-row items-center justify-between bg-white border border-gray-300 rounded-xl px-2 shadow-sm"; 
-        const dObj = new Date(STATE.activeDate);
-        UI.activeDateDisplay.innerHTML = `
-          <div class="flex w-full justify-between items-center h-full px-1">
-            <div class="flex flex-col items-center leading-tight">
-              <span class="text-[15px] font-extrabold text-blue-700">${CONFIG.WEEK_DAYS[dObj.getDay()]}</span>
-              <span class="text-[10px] text-gray-500 font-bold">${dObj.getMonth()+1}/${dObj.getDate()}</span>
-            </div>
-            <button id="btn-clear-active" class="h-8 w-8 bg-gray-50 border border-gray-200 rounded-lg shadow-sm text-red-500 flex justify-center items-center active:bg-gray-200 transition-colors">
-               <span class="text-sm">🧹</span>
-            </button>
-          </div>
-        `;
-        document.getElementById('btn-clear-active').onclick = () => Engine.clearDay(STATE.activeDate);
       }
     },
 
     scrollToWeek: (sundayStr) => {
       const weekEl = document.querySelector(`div[data-week-start="${sundayStr}"]`);
-      if (weekEl) weekEl.scrollIntoView({ block: 'center' });
+      // V5: 滑動對齊改為 start 解決虛線露出
+      if (weekEl) weekEl.scrollIntoView({ block: 'start' });
       setTimeout(() => UI.container.classList.remove('instant-scroll'), 100);
     },
     
@@ -423,17 +408,11 @@
       if (isFull) {
         STATE.inputMode = 'LOCKED';
       } else {
-        // ==========================================
-        // [V4-ROLLBACK-START] 轉週自動 Ready 邏輯
-        // 備註：如果發覺鍵盤長期解鎖太易誤觸，可將下面呢個 if-else 整段刪除，
-        // 並替換為單單一句: STATE.inputMode = 'WAITING';
         if (!STATE.activeDate || STATE.inputMode === 'WAITING') {
           Engine.autoSetNextActive();
         } else {
           STATE.inputMode = 'ACTIVE'; 
         }
-        // [V4-ROLLBACK-END]
-        // ==========================================
       }
       UI.refreshAllVisible();
     },
@@ -463,7 +442,7 @@
 
     unlockSaturday: (e, dateStr) => {
       e.stopPropagation();
-      STATE.unlockedSaturdays.add(dateStr); // 加入 Session 快取，重新載入會失效
+      STATE.unlockedSaturdays.add(dateStr); 
       STATE.activeDate = dateStr;
       STATE.inputMode = 'ACTIVE';
       UI.refreshAllVisible();
@@ -479,9 +458,8 @@
 
     toggleLeave: (e, dateStr, index) => {
       e.stopPropagation();
-      Engine.setActiveDate(dateStr); // V4: 點擊小格同樣會先設為 Active
+      Engine.setActiveDate(dateStr); 
       
-      // 如果處於鎖定狀態，只變 Active 不會切換放假 (防呆)
       if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return;
       
       const dayData = STATE.daysMap[dateStr];
@@ -547,7 +525,7 @@
     clearDay: (targetDate) => {
       if (!targetDate) return;
       STATE.daysMap[targetDate] = { isFullDayHoliday: false, shifts: [] };
-      STATE.unlockedSaturdays.delete(targetDate); // 掃把會徹底清空並重置星期六
+      STATE.unlockedSaturdays.delete(targetDate);
       FirebaseSync.pushUpdate(targetDate); 
       Engine.evaluateLockState();
     }
@@ -884,6 +862,16 @@
     document.getElementById('btn-backspace').addEventListener('click', Engine.backspace);
     document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
     document.getElementById('lock-overlay').addEventListener('click', Engine.handleOverlayClick);
+    
+    // V5: 左下角新增按鈕事件綁定
+    document.getElementById('btn-manual-lock').addEventListener('click', () => {
+      STATE.inputMode = 'LOCKED';
+      STATE.activeDate = null; 
+      UI.refreshAllVisible();
+    });
+    document.getElementById('btn-clear-active').addEventListener('click', () => {
+      if (STATE.activeDate) Engine.clearDay(STATE.activeDate);
+    });
     
     document.getElementById('prev-week').addEventListener('click', () => {
       UI.container.classList.remove('instant-scroll');
