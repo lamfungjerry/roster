@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v7</title>
+  <title>排更助手 v8</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -48,7 +48,6 @@
 <body>
 
 <div id="app">
-  <!-- Header (V7: 移除日曆Icon，保證日期置中且完整顯示) -->
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
     <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
       <div class="flex-1 flex justify-start">
@@ -71,7 +70,6 @@
 
   <main id="weeks-container" class="instant-scroll"></main>
 
-  <!-- Footer Input Area -->
   <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 h-[28dvh] min-h-[210px] max-h-[270px]">
     <div id="lock-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex-col justify-center items-center cursor-pointer active:bg-white/60 transition-colors flex">
       <div id="lock-msg-box" class="bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1">
@@ -113,92 +111,86 @@
   </div>
 </div>
 
-<!-- Modal: Stats (V7 兩層式設計) -->
+<!-- Modal: Stats (V8 極限瘦身 4-Tab 導航) -->
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
-  <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[75vh] max-h-[650px] overflow-hidden">
+  <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[78vh] max-h-[650px] overflow-hidden">
     
-    <!-- Header Area -->
-    <div class="shrink-0 px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-blue-50 relative">
-      <button id="btn-stats-back" class="hidden text-blue-600 font-bold active:opacity-50 text-[15px] absolute left-4 flex items-center gap-1">
-        &lt; 返回
-      </button>
-      <h2 id="stats-title" class="text-lg font-bold text-blue-900 flex-1 text-center">📊 AI 綜合評估</h2>
-      <div class="absolute right-12 flex items-center">
+    <div class="shrink-0 px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-blue-50">
+      <h2 class="text-[17px] font-bold text-blue-900 flex-1">📊 AI 綜合評估</h2>
+      <div class="flex items-center gap-3">
         <select id="stats-year-filter" class="bg-white border border-blue-200 text-blue-800 text-[12px] font-bold rounded px-1.5 py-1 outline-none"></select>
+        <button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none">&times;</button>
       </div>
-      <button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none absolute right-4">&times;</button>
     </div>
 
-    <!-- Layer 1: Dashboard Overview -->
-    <div id="stats-layer-overview" class="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col gap-4">
-      <!-- AI Alert Box -->
-      <div id="ai-alert-box" class="rounded-xl p-4 border shadow-sm font-bold text-[14px] leading-relaxed"></div>
+    <!-- 4 Tabs Navigation -->
+    <div class="flex border-b border-gray-200 bg-white shrink-0">
+      <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(0)" id="tab-btn-0">總覽</button>
+      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位</button>
+      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(2)" id="tab-btn-2">盈虧</button>
+      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-3 bg-gray-50 flex flex-col relative">
       
-      <!-- Dot Plot (天秤圖) -->
-      <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-        <h3 class="text-center font-extrabold text-[15px] text-gray-800 mb-6">累積盈虧分佈 (天秤圖)</h3>
-        <div class="relative w-full h-8 flex items-center px-4 mb-4">
-          <div class="absolute inset-x-4 h-1 bg-gradient-to-r from-red-200 via-gray-300 to-green-200 rounded-full"></div>
-          <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-6 bg-gray-400 rounded"></div>
-          <div class="absolute left-1/2 -top-4 -translate-x-1/2 text-[10px] font-bold text-gray-400">絕對公平</div>
-          <div id="dot-plot-container" class="absolute inset-x-4 top-1/2 -translate-y-1/2"></div>
+      <!-- Tab 0: Overview (V8 緊湊總覽) -->
+      <div id="tab-content-0" class="flex flex-col gap-2.5 h-full">
+        <!-- AI Card: Mini Ring + Text -->
+        <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex items-center gap-3 shrink-0">
+           <div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle">
+             <span class="text-[12px] font-black" id="mini-health-score">--</span>
+           </div>
+           <div id="mini-ai-alert" class="flex-1 text-[11px] font-bold leading-snug"></div>
         </div>
-        <div class="flex justify-between text-[10px] font-bold px-2">
-          <span class="text-red-400">硬食 (負分)</span>
-          <span class="text-green-500">靚更 (正分)</span>
+
+        <!-- Dot Plot (上下交錯天秤) -->
+        <div class="bg-white rounded-lg px-3 py-4 border border-gray-200 shadow-sm shrink-0">
+           <div class="text-center text-[11px] font-bold text-gray-500 mb-5">累積盈虧 (天秤圖)</div>
+           <div class="relative w-full h-5 flex items-center px-4">
+              <div class="absolute inset-x-4 h-1 bg-gradient-to-r from-red-200 via-gray-300 to-green-200 rounded-full"></div>
+              <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-4 bg-gray-400"></div>
+              <div id="dot-plot-container" class="absolute inset-x-4 top-1/2 -translate-y-1/2"></div>
+           </div>
+        </div>
+
+        <!-- Tornado Chart (正負排行榜) -->
+        <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex-1 flex flex-col min-h-0">
+           <div class="text-center text-[11px] font-bold text-gray-500 mb-2">排行榜 (紅=硬食 / 綠=靚位)</div>
+           <div id="tornado-chart" class="flex flex-col justify-around flex-1"></div>
+        </div>
+      </div>
+
+      <!-- Tab 1: 均位 -->
+      <div id="tab-content-1" class="hidden space-y-3">
+        <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-2 pb-2 border-b border-gray-100">動態基準均位: --</div>
+          <div class="text-[10px] text-gray-400 text-center mb-2">受人手短缺影響，大市基準會動態拉高</div>
+          <div id="stats-grid-1" class="grid grid-cols-2 gap-2"></div>
         </div>
       </div>
       
-      <!-- Health Score (公平度圓環) -->
-      <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex flex-col items-center justify-center py-6">
-        <div class="relative w-28 h-28 flex items-center justify-center rounded-full border-8" id="health-circle">
-          <div class="flex flex-col items-center">
-            <span class="text-3xl font-black text-gray-800" id="health-score-val">0%</span>
-          </div>
+      <!-- Tab 2: 盈虧 -->
+      <div id="tab-content-2" class="hidden space-y-3">
+        <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">累積盈虧分數</div>
+          <div class="text-[10px] text-gray-400 text-center mb-3 pb-2 border-b border-gray-100">已包含假期順延補償計算</div>
+          <div id="stats-grid-2" class="grid grid-cols-3 gap-2"></div>
         </div>
-        <div class="mt-3 font-extrabold text-[16px]" id="health-score-text">--</div>
       </div>
-
-      <button id="btn-show-details" class="mt-auto w-full bg-blue-50 text-blue-600 border border-blue-200 font-bold py-3.5 rounded-xl active:bg-blue-100 transition-colors flex items-center justify-center gap-2 text-[15px]">
-        🔍 查看詳細數據指標
-      </button>
-    </div>
-
-    <!-- Layer 2: Detailed Tabs -->
-    <div id="stats-layer-details" class="hidden flex-col h-full flex-1">
-      <div class="flex border-b border-gray-200 bg-white shrink-0">
-        <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位對比</button>
-        <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(2)" id="tab-btn-2">累積盈虧</button>
-        <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
-      </div>
-      <div class="flex-1 overflow-y-auto p-4 bg-gray-50/50">
-        <div id="tab-content-1" class="block space-y-3">
-          <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-            <div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-2 pb-2 border-b border-gray-100">動態基準均位: --</div>
-            <div class="text-[10px] text-gray-400 text-center mb-2">受人手短缺影響，大市基準會動態拉高</div>
-            <div id="stats-grid-1" class="grid grid-cols-2 gap-2"></div>
-          </div>
-        </div>
-        <div id="tab-content-2" class="hidden space-y-3">
-          <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-            <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">累積盈虧分數</div>
-            <div class="text-[10px] text-gray-400 text-center mb-3 pb-2 border-b border-gray-100">已包含假期順延補償計算</div>
-            <div id="stats-grid-2" class="grid grid-cols-3 gap-2"></div>
-          </div>
-        </div>
-        <div id="tab-content-3" class="hidden space-y-3">
-          <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-            <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">真實動態命中率</div>
-            <div class="text-[10px] text-gray-400 text-center mb-3 pb-2 border-b border-gray-100">以動態分數計算 (靚: 1-2分 | 平: 3-4分 | 差: 5-6分)</div>
-            <div id="stats-grid-3" class="flex flex-col gap-2"></div>
-          </div>
+      
+      <!-- Tab 3: 命中率 -->
+      <div id="tab-content-3" class="hidden space-y-3">
+        <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">真實動態命中率</div>
+          <div class="text-[10px] text-gray-400 text-center mb-3 pb-2 border-b border-gray-100">以動態分數計算 (靚: 1-2分 | 平: 3-4分 | 差: 5-6分)</div>
+          <div id="stats-grid-3" class="flex flex-col gap-2"></div>
         </div>
       </div>
     </div>
 
-    <!-- Footer Area (Always visible in Modal) -->
-    <div class="shrink-0 p-4 bg-white border-t border-gray-100">
-      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-[16px]">📋 複製 AI Prompt</button>
+    <!-- Footer Area (Always visible) -->
+    <div class="shrink-0 p-3 bg-white border-t border-gray-100">
+      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 text-[15px]">📋 複製 AI Prompt</button>
     </div>
   </div>
 </div>
@@ -235,7 +227,7 @@
   import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v7';
+  const CACHE_KEY = 'roster_cache_v8';
 
   const Utils = {
     formatDate: (d) => { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; },
@@ -251,13 +243,9 @@
     daysMap: Utils.loadCache(), 
     renderedWeeks: new Set(), 
     focusedWeekStart: null,
-    inputMode: 'LOCKED', 
-    activeDate: null, 
-    unlockedSaturdays: new Set(),
-    apiKey: localStorage.getItem('roster_api_key') || '',
-    db: null,
-    calRenderMonth: new Date(),
-    statsYear: 'ALL'
+    inputMode: 'LOCKED', activeDate: null, unlockedSaturdays: new Set(),
+    apiKey: localStorage.getItem('roster_api_key') || '', db: null,
+    calRenderMonth: new Date(), statsYear: 'ALL'
   };
 
   const MIN_SUNDAY = Utils.getSunday(CONFIG.SYSTEM_START_DATE);
@@ -299,13 +287,12 @@
       const leftBlockClass = `w-12 flex flex-col items-center justify-center border-r border-gray-200/60 mr-1 pr-1 shrink-0 relative h-full`;
       const labelBlock = `<div class="${leftBlockClass}">${todayTag}<div class="font-extrabold text-gray-700 text-lg leading-tight">${dayName}</div><div class="text-[10px] text-gray-400 font-bold">${mdStr}</div></div>`;
 
-      // 邊界防呆：系統起點前不允許操作
       if (dateStr < CONFIG.SYSTEM_START_DATE) {
         return `<div class="${rowWrapperClass} opacity-40 pointer-events-none" data-date="${dateStr}">${labelBlock}<div class="flex-1 flex justify-center text-gray-400 font-bold text-sm">無數據</div></div>`;
       }
 
       if (dayIndex === 6 && shifts.length === 0 && !dayData.isFullDayHoliday && !STATE.unlockedSaturdays.has(dateStr)) {
-        return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 h-[42px] px-1"><div class="w-full h-full rounded-lg sat-unlock-btn text-sm font-bold flex items-center justify-center gap-1 cursor-pointer" onclick="Engine.unlockSaturday(event, '${dateStr}')"><span>🔒</span> 點擊解鎖排班</div></div></div>`;
+        return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 h-[42px] px-1"><div class="w-full h-full rounded-lg sat-unlock-btn text-sm font-bold flex items-center justify-center gap-1 cursor-pointer" onclick="Engine.unlockSaturday(event, '${dateStr}')"><span>🔒</span> 點擊解鎖</div></div></div>`;
       }
       
       if (dayData.isFullDayHoliday) {
@@ -358,19 +345,16 @@
     updateHeader: (sundayStr) => {
       const d1 = new Date(sundayStr), d2 = new Date(Utils.addDays(sundayStr, 6));
       UI.headerDate.innerText = `${d1.getMonth()+1}/${d1.getDate()}(日) - ${d2.getMonth()+1}/${d2.getDate()}(六)`;
-      // Air Wall btn
       if (sundayStr <= MIN_SUNDAY) document.getElementById('prev-week').classList.add('opacity-30', 'pointer-events-none');
       else document.getElementById('prev-week').classList.remove('opacity-30', 'pointer-events-none');
     }
   };
 
-  // V7: ScrollEnd Buffer Engine
   const ScrollEngine = {
     timeout: null,
     init: () => {
       UI.container.addEventListener('scroll', () => {
-        clearTimeout(ScrollEngine.timeout);
-        ScrollEngine.timeout = setTimeout(ScrollEngine.onScrollEnd, 150);
+        clearTimeout(ScrollEngine.timeout); ScrollEngine.timeout = setTimeout(ScrollEngine.onScrollEnd, 150);
       });
     },
     onScrollEnd: () => {
@@ -380,17 +364,13 @@
         if (diff < minDiff) { minDiff = diff; focused = page.dataset.weekStart; }
       });
       if (focused && focused !== STATE.focusedWeekStart) {
-        STATE.focusedWeekStart = focused;
-        UI.updateHeader(focused);
-        Engine.evaluateLockState();
-        ScrollEngine.replenish(focused);
+        STATE.focusedWeekStart = focused; UI.updateHeader(focused); Engine.evaluateLockState(); ScrollEngine.replenish(focused);
       }
     },
     replenish: (centerWeekStr) => {
       let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop;
       let prepended = false;
 
-      // Check UP (Max 4 weeks buffer, don't cross MIN_SUNDAY)
       let topWeek = UI.container.firstElementChild.dataset.weekStart;
       while (topWeek > MIN_SUNDAY && (new Date(centerWeekStr) - new Date(topWeek)) / 604800000 < 4) {
         const newWeek = Utils.addDays(topWeek, -7);
@@ -403,7 +383,6 @@
         setTimeout(() => UI.container.classList.remove('instant-scroll'), 50);
       }
 
-      // Check DOWN (Max 4 weeks buffer)
       let bottomWeek = UI.container.lastElementChild.dataset.weekStart;
       while ((new Date(bottomWeek) - new Date(centerWeekStr)) / 604800000 < 4) {
         const newWeek = Utils.addDays(bottomWeek, 7);
@@ -415,19 +394,15 @@
     jumpToAndRebuild: (targetSunday) => {
       UI.container.innerHTML = ''; STATE.renderedWeeks.clear();
       for (let i = -4; i <= 4; i++) {
-        let wk = Utils.addDays(targetSunday, i * 7);
-        if (wk >= MIN_SUNDAY) UI.container.appendChild(UI.createWeekNode(wk));
+        let wk = Utils.addDays(targetSunday, i * 7); if (wk >= MIN_SUNDAY) UI.container.appendChild(UI.createWeekNode(wk));
       }
       setTimeout(() => {
         const targetNode = UI.container.querySelector(`[data-week-start="${targetSunday}"]`);
         if (targetNode) {
-          UI.container.classList.add('instant-scroll');
-          UI.container.scrollTop = targetNode.offsetTop;
+          UI.container.classList.add('instant-scroll'); UI.container.scrollTop = targetNode.offsetTop;
           setTimeout(() => UI.container.classList.remove('instant-scroll'), 100);
         }
-        STATE.focusedWeekStart = targetSunday;
-        UI.updateHeader(targetSunday);
-        Engine.evaluateLockState();
+        STATE.focusedWeekStart = targetSunday; UI.updateHeader(targetSunday); Engine.evaluateLockState();
       }, 0);
     }
   };
@@ -450,8 +425,7 @@
       for (let i = 1; i <= 6; i++) {
         const dStr = Utils.addDays(STATE.focusedWeekStart, i);
         if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-        const dayData = STATE.daysMap[dStr] || {};
-        if (dayData.isFullDayHoliday) continue;
+        const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue;
         const shifts = Utils.normalizeShifts(dayData.shifts);
         if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue;
         if (shifts.length < 6) { STATE.activeDate = dStr; return true; }
@@ -514,23 +488,19 @@
       for (let day = 1; day <= daysInMonth; day++) {
         const dStr = Utils.formatDate(new Date(year, month, day)), dayOfWeek = new Date(year, month, day).getDay();
         const dayData = STATE.daysMap[dStr] || { isFullDayHoliday: false, shifts: [] };
-        
         let isRed = (dayOfWeek === 0 || dayData.isFullDayHoliday);
         let cellClass = "aspect-square rounded-2xl flex flex-col items-center justify-center text-[15px] font-bold transition-transform ";
         if (dStr < CONFIG.SYSTEM_START_DATE) { cellClass += "text-gray-300 opacity-40 pointer-events-none "; }
         else {
           cellClass += "cursor-pointer active:scale-95 ";
-          if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 ";
-          else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
+          if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 "; else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
         }
-
         let dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></div>`;
         if (dStr >= CONFIG.SYSTEM_START_DATE && !isRed && dayOfWeek >= 1 && dayOfWeek <= 5) {
           const shifts = Utils.normalizeShifts(dayData.shifts);
           if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`;
           else if (shifts.length > 0) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
         }
-
         CalendarManager.grid.innerHTML += `<div class="${cellClass}" onclick="window.CalendarManager.jumpTo('${dStr}')"><span>${day}</span>${dotHTML}</div>`;
       }
     },
@@ -552,24 +522,10 @@
     modal: document.getElementById('modal-stats'),
     latestPromptData: null,
     switchTab: (tabId) => {
-      for(let i=1; i<=3; i++) {
-        document.getElementById(`tab-btn-${i}`).className = (i === tabId) ? "flex-1 py-2.5 text-[13px] tab-active" : "flex-1 py-2.5 text-[13px] tab-inactive";
-        document.getElementById(`tab-content-${i}`).className = (i === tabId) ? "block space-y-3" : "hidden space-y-3";
+      for(let i=0; i<=3; i++) {
+        document.getElementById(`tab-btn-${i}`).className = (i === tabId) ? "flex-1 py-2.5 text-[13px] tab-active" : "flex-1 py-2.5 text-[13px] tab-inactive text-gray-500";
+        document.getElementById(`tab-content-${i}`).className = (i === tabId) ? (i===0 ? "flex flex-col gap-2.5 h-full" : "block space-y-3") : "hidden space-y-3";
       }
-    },
-    showDetails: () => {
-      document.getElementById('stats-layer-overview').classList.add('hidden');
-      document.getElementById('stats-layer-details').classList.remove('hidden');
-      document.getElementById('stats-layer-details').classList.add('flex');
-      document.getElementById('stats-title').innerText = '詳細數據指標';
-      document.getElementById('btn-stats-back').classList.remove('hidden');
-    },
-    showOverview: () => {
-      document.getElementById('stats-layer-details').classList.add('hidden');
-      document.getElementById('stats-layer-details').classList.remove('flex');
-      document.getElementById('stats-layer-overview').classList.remove('hidden');
-      document.getElementById('stats-title').innerText = '📊 AI 綜合評估';
-      document.getElementById('btn-stats-back').classList.add('hidden');
     },
     calculate: () => {
       const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
@@ -607,7 +563,6 @@
             const shiftScore = (6 - activeCount + 1) + activeIdx;
             staffStats[shift.staff].sum += shiftScore; staffStats[shift.staff].count++;
             baseSum += shiftScore; baseCount++;
-            // V7: 命中率認「動態分數」
             if (shiftScore <= 2) staffStats[shift.staff].hits.good++;
             else if (shiftScore <= 4) staffStats[shift.staff].hits.mid++;
             else staffStats[shift.staff].hits.bad++;
@@ -617,7 +572,7 @@
       }
 
       const globalAvg = baseCount > 0 ? (baseSum / baseCount) : 0;
-      let pnls = [], maxAbsPnl = 1;
+      let pnls = [], maxAbsPnl = 0.1; 
       Object.keys(staffStats).forEach(s => {
         const d = staffStats[s];
         d.avg = d.count > 0 ? (d.sum / d.count) : 0;
@@ -630,41 +585,70 @@
       StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
     },
     renderDashboard: (pnls, maxAbs) => {
-      // 天秤圖 Dot Plot
-      const plot = document.getElementById('dot-plot-container'); plot.innerHTML = '';
-      pnls.forEach(item => {
-        const leftPercent = 50 + ((item.pnl / maxAbs) * 45); // Scale within 5-95%
-        const color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400');
-        plot.innerHTML += `<div class="absolute w-4 h-4 rounded-full border-2 border-white shadow-md ${color} flex items-center justify-center -translate-x-1/2 -mt-2" style="left: ${leftPercent}%;"><span class="absolute -top-4 text-[9px] font-bold text-gray-700">${item.staff}</span></div>`;
-      });
-
-      // Health Score
+      // 1. Health Score (Mini)
       let score = 100;
       if (pnls.length > 0) {
         const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length;
         score = Math.max(0, Math.round(100 - (avgAbsDev * 15)));
       }
-      document.getElementById('health-score-val').innerText = `${score}%`;
-      const circle = document.getElementById('health-circle'), text = document.getElementById('health-score-text');
-      if(score >= 85) { circle.className = "relative w-28 h-28 flex items-center justify-center rounded-full border-8 border-green-400 text-green-600"; text.innerText = "排班極度健康 🌟"; text.className = "mt-3 font-extrabold text-[16px] text-green-600"; }
-      else if(score >= 65) { circle.className = "relative w-28 h-28 flex items-center justify-center rounded-full border-8 border-yellow-400 text-yellow-600"; text.innerText = "排班尚算平均"; text.className = "mt-3 font-extrabold text-[16px] text-yellow-600"; }
-      else { circle.className = "relative w-28 h-28 flex items-center justify-center rounded-full border-8 border-red-500 text-red-600"; text.innerText = "嚴重失衡 🔴"; text.className = "mt-3 font-extrabold text-[16px] text-red-600"; }
+      document.getElementById('mini-health-score').innerText = `${score}%`;
+      const circle = document.getElementById('mini-health-circle');
+      let bColor = 'border-green-400', tColor = 'text-green-700';
+      if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; }
+      else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
+      circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`;
+      document.getElementById('mini-health-score').className = `text-[12px] font-black ${tColor}`;
 
-      // AI Alert
-      const alertBox = document.getElementById('ai-alert-box');
+      // 2. AI Alert Text
+      const alertBox = document.getElementById('mini-ai-alert');
       const worst = pnls.reduce((prev, curr) => (curr.pnl < prev.pnl ? curr : prev), {pnl: 0, staff: ''});
       const best = pnls.reduce((prev, curr) => (curr.pnl > prev.pnl ? curr : prev), {pnl: 0, staff: ''});
       
       if (worst.pnl < -2.5) {
-        alertBox.className = "rounded-xl p-4 border border-red-200 bg-red-50 text-red-800 shadow-sm font-bold text-[14px] leading-relaxed";
-        alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期食咗太多尾更 (盈虧 ${worst.pnl.toFixed(1)})，建議下週編排 1-2 更作補償。`;
+        alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700";
+        alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期食太多尾更 (盈虧 ${worst.pnl.toFixed(1)})，建議下週編排靚更作補償。`;
       } else if (best.pnl > 2.5) {
-        alertBox.className = "rounded-xl p-4 border border-blue-200 bg-blue-50 text-blue-800 shadow-sm font-bold text-[14px] leading-relaxed";
-        alertBox.innerHTML = `💡 提示：[${best.staff}] 近期經常佔據靚位 (盈虧 +${best.pnl.toFixed(1)})，下週可適當分擔尾更。`;
+        alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700";
+        alertBox.innerHTML = `💡 提示：[${best.staff}] 近期經常佔據靚位 (盈虧 +${best.pnl.toFixed(1)})，可適當分擔尾更。`;
       } else {
-        alertBox.className = "rounded-xl p-4 border border-green-200 bg-green-50 text-green-800 shadow-sm font-bold text-[14px] leading-relaxed";
+        alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700";
         alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無人出現極端硬食情況。`;
       }
+
+      // 3. Dot Plot (Staggered)
+      const plot = document.getElementById('dot-plot-container'); plot.innerHTML = '';
+      pnls.forEach((item, idx) => {
+        const leftPercent = 50 + ((item.pnl / maxAbs) * 45); 
+        const color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400');
+        const labelPos = idx % 2 === 0 ? '-top-4' : 'top-2.5';
+        plot.innerHTML += `<div class="absolute w-2.5 h-2.5 rounded-full border border-white shadow-sm ${color} flex items-center justify-center -translate-x-1/2 -mt-1" style="left: ${leftPercent}%;"><span class="absolute ${labelPos} text-[9px] font-bold text-gray-700">${item.staff}</span></div>`;
+      });
+
+      // 4. Tornado Chart
+      const tornado = document.getElementById('tornado-chart'); tornado.innerHTML = '';
+      const sortedPnls = [...pnls].sort((a,b) => a.pnl - b.pnl); // Most negative at top
+      sortedPnls.forEach(item => {
+        const w = (Math.abs(item.pnl) / maxAbs) * 100;
+        const valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1);
+        const barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-red-400' : 'bg-gray-300');
+        const textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
+
+        tornado.innerHTML += `
+          <div class="flex items-center text-[10px] font-bold">
+            <div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div>
+            <div class="flex-1 flex items-center h-4 relative">
+               <div class="w-1/2 h-full flex justify-end pr-0.5">
+                  ${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}
+               </div>
+               <div class="w-px h-full bg-gray-300"></div>
+               <div class="w-1/2 h-full flex justify-start pl-0.5">
+                  ${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}
+               </div>
+            </div>
+            <div class="w-7 text-right ml-1 ${textColor}">${valStr}</div>
+          </div>
+        `;
+      });
     },
     renderTabs: (globalAvg, stats) => {
       document.getElementById('stats-baseline').innerText = `動態基準均位: ${globalAvg.toFixed(2)}`;
@@ -685,21 +669,18 @@
       });
     },
     init: () => {
-      // Setup Year Filter
       const sel = document.getElementById('stats-year-filter');
       const startYear = new Date(CONFIG.SYSTEM_START_DATE).getFullYear(), currYear = new Date().getFullYear();
       for (let y = currYear; y >= startYear; y--) sel.innerHTML += `<option value="${y}">${y}年</option>`;
-      sel.innerHTML += `<option value="ALL">全部 (跨年)</option>`;
+      sel.innerHTML += `<option value="ALL">全部</option>`;
       STATE.statsYear = currYear.toString(); sel.value = STATE.statsYear;
       sel.addEventListener('change', (e) => { STATE.statsYear = e.target.value; StatsEngine.calculate(); });
 
       document.getElementById('btn-stats').addEventListener('click', () => {
-        StatsEngine.showOverview(); StatsEngine.calculate();
+        StatsEngine.switchTab(0); StatsEngine.calculate();
         StatsEngine.modal.classList.remove('hidden'); StatsEngine.modal.classList.add('flex', 'modal-enter');
       });
       document.getElementById('close-stats').addEventListener('click', () => { StatsEngine.modal.classList.add('hidden'); StatsEngine.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('btn-show-details').addEventListener('click', StatsEngine.showDetails);
-      document.getElementById('btn-stats-back').addEventListener('click', StatsEngine.showOverview);
       
       const btnCopy = document.getElementById('btn-copy-prompt');
       btnCopy.addEventListener('click', () => {
@@ -720,12 +701,12 @@
   const FirebaseSync = {
     init: () => {
       if (!STATE.apiKey) {
-        document.getElementById('conn-status').innerText = '🔴 離線模式'; document.getElementById('conn-status').className = 'bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 text-[10px] font-bold'; return;
+        document.getElementById('conn-status').innerText = '🔴 離線'; document.getElementById('conn-status').className = 'bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 text-[10px] font-bold'; return;
       }
       try {
         const app = initializeApp({ ...CONFIG.firebaseBase, apiKey: STATE.apiKey }); STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
         onValue(ref(STATE.db, CONFIG.dbPath), (snapshot) => {
-          document.getElementById('conn-status').innerText = '🟢 已連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
+          document.getElementById('conn-status').innerText = '🟢 連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
           let data = snapshot.val(); if (!data) return;
           if (data.daysMap) {
             const batchUpdates = {}; Object.keys(data.daysMap).forEach(dateKey => { if (!data[dateKey]) batchUpdates[`${CONFIG.dbPath}/${dateKey}`] = data.daysMap[dateKey]; });
@@ -741,12 +722,7 @@
         });
       } catch (err) { console.error(err); }
     },
-    pushUpdate: (dateStr) => {
-      Utils.saveCache(STATE.daysMap); 
-      if (!STATE.db) return;
-      const updates = {}; updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr];
-      update(ref(STATE.db), updates).catch(console.error);
-    }
+    pushUpdate: (dateStr) => { Utils.saveCache(STATE.daysMap); if (!STATE.db) return; const updates = {}; updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr]; update(ref(STATE.db), updates).catch(console.error); }
   };
 
   const SettingsManager = {
@@ -766,7 +742,6 @@
 
     SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); FirebaseSync.init();
 
-    // V7: 絕對降落中心點 (防止打開 App 飛去 4 個月前)
     const currentSunday = Utils.getSunday(STATE.todayStr);
     const safeCenterSunday = currentSunday < MIN_SUNDAY ? MIN_SUNDAY : currentSunday;
     ScrollEngine.jumpToAndRebuild(safeCenterSunday);
@@ -775,9 +750,7 @@
     document.getElementById('staff-keys').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') Engine.addShift(e.target.textContent); });
     document.getElementById('btn-backspace').addEventListener('click', Engine.backspace);
     document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
-    document.getElementById('lock-overlay').addEventListener('click', () => {
-      if (STATE.inputMode === 'LOCKED') { STATE.inputMode = STATE.activeDate ? 'ACTIVE' : 'WAITING'; UI.refreshAllVisible(); }
-    });
+    document.getElementById('lock-overlay').addEventListener('click', () => { if (STATE.inputMode === 'LOCKED') { STATE.inputMode = STATE.activeDate ? 'ACTIVE' : 'WAITING'; UI.refreshAllVisible(); } });
     
     document.getElementById('btn-manual-lock').addEventListener('click', () => { STATE.inputMode = 'LOCKED'; UI.refreshAllVisible(); });
     document.getElementById('btn-clear-active').addEventListener('click', () => {
