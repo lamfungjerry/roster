@@ -777,10 +777,11 @@
   };
   
     function safeBack() {
-    // 檢查上一頁是否屬於同一個網站
-    if (document.referrer && document.referrer.startsWith(window.location.origin)) {
-      history.back();
-    }
+      // 檢查上一頁是否屬於同一個網站
+      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+        history.back();
+      }
+    };
   initApp();
 </script>
 </body>
