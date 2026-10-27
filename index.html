@@ -61,7 +61,8 @@
     </div>
     <div class="h-12 flex justify-between items-center px-2 bg-gray-50/50 gap-1">
       <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[15px] whitespace-nowrap shrink-0">&lt; 上一週</button>
-      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-2 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center whitespace-nowrap flex-1 mx-1 h-9">
+      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-2 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center gap-1.5">
+        <span>📅</span>
         <span id="header-date-range">載入中...</span>
       </button>
       <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[15px] whitespace-nowrap shrink-0">下一週 &gt;</button>
@@ -81,13 +82,13 @@
     <div id="keyboard-area" class="p-2 pt-2 h-full grid grid-cols-3 grid-rows-3 gap-2 pb-[calc(0.5rem+var(--safe-bottom))]">
       <div id="staff-keys" class="contents"></div>
       <div class="col-span-1 w-full h-full flex gap-1.5">
-        <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[20px] flex items-center justify-center transition-colors">🔒</button>
-        <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-[20px] flex items-center justify-center transition-colors">🧹</button>
+        <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[20px] flex items-center justify-center transition-all">🔒</button>
+        <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-[20px] flex items-center justify-center transition-all">🗑️</button>
       </div>
-      <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1">
+      <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1.5">
         <span>🌴</span>全休
       </button>
-      <button id="btn-backspace" class="col-span-1 w-full h-full bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[17px] flex items-center justify-center gap-1">
+      <button id="btn-backspace" class="col-span-1 w-full h-full bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[17px] flex items-center justify-center gap-1.5">
         <span>⌫</span>退格
       </button>
     </div>
@@ -104,7 +105,7 @@
     <div class="p-5 space-y-5">
       <div>
         <label class="block text-sm font-bold text-gray-700 mb-1">Firebase API Key</label>
-        <input type="password" id="input-api-key" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-mono" placeholder="AIzaSy...">
+        <input type="password" id="input-api-key" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-mono" placeholder="輸入 Firebase API Key...">
       </div>
       <button id="btn-save-settings" class="w-full bg-gray-800 text-white font-bold py-3 rounded-xl shadow-md active:bg-gray-900 transition-colors">儲存並重新載入</button>
     </div>
@@ -128,7 +129,6 @@
       </div>
     </div>
 
-    <!-- 4 Tabs Navigation -->
     <div class="flex border-b border-gray-200 bg-white shrink-0">
       <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(0)" id="tab-btn-0">總覽</button>
       <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位</button>
@@ -137,10 +137,7 @@
     </div>
 
     <div class="flex-1 overflow-y-auto p-3 bg-gray-50 flex flex-col relative">
-      
-      <!-- Tab 0: Overview (V8 緊湊總覽) -->
       <div id="tab-content-0" class="flex flex-col gap-2.5 h-full">
-        <!-- AI Card: Mini Ring + Text -->
         <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex items-center gap-3 shrink-0">
            <div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle">
              <span class="text-[12px] font-black" id="mini-health-score">--</span>
@@ -148,7 +145,6 @@
            <div id="mini-ai-alert" class="flex-1 text-[11px] font-bold leading-snug"></div>
         </div>
 
-        <!-- Dot Plot (上下交錯天秤) -->
         <div class="bg-white rounded-lg px-3 py-4 border border-gray-200 shadow-sm shrink-0">
            <div class="text-center text-[11px] font-bold text-gray-500 mb-5">累積盈虧 (天秤圖)</div>
            <div class="relative w-full h-5 flex items-center px-4">
@@ -158,14 +154,12 @@
            </div>
         </div>
 
-        <!-- Tornado Chart (正負排行榜) -->
         <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex-1 flex flex-col min-h-0">
            <div class="text-center text-[11px] font-bold text-gray-500 mb-2">排行榜 (紅=硬食 / 綠=靚位)</div>
            <div id="tornado-chart" class="flex flex-col justify-around flex-1"></div>
         </div>
       </div>
 
-      <!-- Tab 1: 均位 -->
       <div id="tab-content-1" class="hidden space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
           <div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-2 pb-2 border-b border-gray-100">動態基準均位: --</div>
@@ -174,7 +168,6 @@
         </div>
       </div>
       
-      <!-- Tab 2: 盈虧 -->
       <div id="tab-content-2" class="hidden space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
           <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">累積盈虧分數</div>
@@ -183,7 +176,6 @@
         </div>
       </div>
       
-      <!-- Tab 3: 命中率 -->
       <div id="tab-content-3" class="hidden space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
           <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">真實動態命中率</div>
@@ -193,9 +185,8 @@
       </div>
     </div>
 
-    <!-- Footer Area (Always visible) -->
     <div class="shrink-0 p-3 bg-white border-t border-gray-100">
-      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 text-[15px]">📋 複製 AI Prompt</button>
+      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">📋 複製 AI 提示詞</button>
     </div>
   </div>
 </div>
@@ -288,7 +279,7 @@
       const isActive = STATE.activeDate === dateStr;
       const todayTag = (dateStr === STATE.todayStr) ? `<div class="absolute -left-1 -top-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20">今日</div>` : '';
 
-      const rowWrapperClass = `flex items-center mt-1 bg-white rounded-lg p-1 border shadow-sm cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20 z-10' : 'border-gray-200/75 active:bg-gray-50'}`;
+      const rowWrapperClass = `flex items-center mt-1 bg-white rounded-lg p-1 border shadow-sm cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20 z-10' : 'border-gray-200'} `;
       const leftBlockClass = `w-12 flex flex-col items-center justify-center border-r border-gray-200/60 mr-1 pr-1 shrink-0 relative h-full`;
       const labelBlock = `<div class="${leftBlockClass}">${todayTag}<div class="font-extrabold text-gray-700 text-lg leading-tight">${dayName}</div><div class="text-[10px] text-gray-400 font-bold">${mdStr}</div></div>`;
 
@@ -297,11 +288,11 @@
       }
 
       if (dayIndex === 6 && shifts.length === 0 && !dayData.isFullDayHoliday && !STATE.unlockedSaturdays.has(dateStr)) {
-        return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 h-[42px] px-1"><div class="w-full h-full rounded-lg sat-unlock-btn text-sm font-bold flex items-center justify-center gap-1 cursor-pointer" onclick="Engine.unlockSaturday(event, '${dateStr}')"><span>🔒</span> 點擊解鎖</div></div></div>`;
+        return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 h-[42px] px-1"><div class="w-full h-full rounded-lg border border-dashed border-gray-300 bg-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">點擊解鎖</div></div></div>`;
       }
       
       if (dayData.isFullDayHoliday) {
-        return `<div class="${rowWrapperClass} h-full min-h-[46px] !bg-red-50 !border-red-100" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex justify-center text-red-500 font-bold tracking-widest text-sm pointer-events-none">🌴 全休日</div></div>`;
+        return `<div class="${rowWrapperClass} h-full min-h-[46px] !bg-red-50 !border-red-100" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex items-center justify-center text-red-600 font-black text-sm">休假</div></div>`;
       }
 
       const slotsPointerClass = (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') ? 'pointer-events-none' : '';
@@ -310,13 +301,13 @@
         if (i === 2 || i === 4) slotsHTML += `<div class="shift-divider h-3/4"></div>`;
         const shift = shifts[i];
         if (shift) {
-          const bgClass = shift.status === 'LEAVE' ? 'bg-red-50 border-red-300 text-red-600 font-extrabold' : 'bg-eff6ff border-[#3b82f6] text-[#1e3a8a] font-bold';
-          slotsHTML += `<div onclick="Engine.toggleLeave(event, '${dateStr}', ${i})" class="flex-1 h-[42px] rounded border-[1.5px] ${bgClass} flex items-center justify-center text-lg cursor-pointer active:scale-90 transition-transform">${shift.staff}</div>`;
+          const bgClass = shift.status === 'LEAVE' ? 'bg-red-50 border-red-300 text-red-600 font-extrabold' : 'bg-blue-50 border-blue-300 text-blue-700 font-bold';
+          slotsHTML += `<div onclick="Engine.toggleLeave(event, '${dateStr}', ${i})" class="flex-1 h-[42px] rounded border-[1.5px] ${bgClass} ${slotsPointerClass} flex items-center justify-center text-lg cursor-pointer">${shift.staff}</div>`;
         } else {
-          slotsHTML += `<div class="flex-1 h-[42px] rounded slot-empty flex items-center justify-center text-lg"></div>`;
+          slotsHTML += `<div class="flex-1 h-[42px] rounded slot-empty flex items-center justify-center text-lg ${slotsPointerClass}"></div>`;
         }
       }
-      return `<div class="${rowWrapperClass} h-full min-h-[46px]" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex h-full gap-1 items-center px-1 ${slotsPointerClass}">${slotsHTML}</div></div>`;
+      return `<div class="${rowWrapperClass} h-full min-h-[46px]" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex h-full gap-1 items-center px-1">${slotsHTML}</div></div>`;
     },
 
     refreshAllVisible: () => {
@@ -442,7 +433,8 @@
     toggleLeave: (e, dateStr, idx) => {
       e.stopPropagation(); Engine.setActiveDate(dateStr); 
       if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return;
-      const shifts = STATE.daysMap[dateStr].shifts;
+      const dayData = STATE.daysMap[dateStr] || { shifts: [] };
+      const shifts = dayData.shifts || [];
       if (shifts[idx]) { shifts[idx].status = shifts[idx].status === 'LEAVE' ? 'ON' : 'LEAVE'; UI.silentRefreshDay(dateStr); FirebaseSync.pushUpdate(dateStr); }
     },
     addShift: (staffCode) => {
@@ -485,7 +477,7 @@
       
       const sysStartObj = new Date(CONFIG.SYSTEM_START_DATE);
       const isStartMonth = (year === sysStartObj.getFullYear() && month === sysStartObj.getMonth());
-      document.getElementById('cal-prev').className = isStartMonth ? "w-10 h-10 rounded-full bg-gray-50 text-gray-400 font-bold flex items-center justify-center text-lg opacity-40 pointer-events-none" : "w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200";
+      document.getElementById('cal-prev').className = isStartMonth ? "w-10 h-10 rounded-full bg-gray-50 text-gray-400 font-bold flex items-center justify-center text-lg opacity-40 pointer-events-none" : "w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors";
 
       const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
       for (let i = 0; i < firstDay; i++) CalendarManager.grid.innerHTML += `<div></div>`;
@@ -543,8 +535,8 @@
       
       if (STATE.statsYear !== 'ALL') {
         const y = parseInt(STATE.statsYear);
-        filterStart = new Date(Math.max(sysStart, new Date(y, 0, 1)));
-        filterEnd = new Date(Math.min(filterEnd, new Date(y, 11, 31)));
+        filterStart = new Date(Math.max(sysStart.getTime(), new Date(y, 0, 1).getTime()));
+        filterEnd = new Date(Math.min(filterEnd.getTime(), new Date(y, 11, 31).getTime()));
       }
 
       let curD = new Date(filterStart), promptJSON = {};
@@ -587,91 +579,87 @@
 
       StatsEngine.renderDashboard(pnls, maxAbsPnl);
       StatsEngine.renderTabs(globalAvg, staffStats);
-      document.getElementById('overview-date-range').innerText = `📅 統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`;
+      const rangeEl = document.getElementById('global-date-range');
+      if (rangeEl) rangeEl.innerText = `📅 統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`;
       StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
     },
     renderDashboard: (pnls, maxAbs) => {
-      // 1. Health Score (Mini)
       let score = 100;
       if (pnls.length > 0) {
         const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length;
         score = Math.max(0, Math.round(100 - (avgAbsDev * 15)));
       }
-      document.getElementById('mini-health-score').innerText = `${score}%`;
+      const scoreNode = document.getElementById('mini-health-score');
+      if (scoreNode) scoreNode.innerText = `${score}%`;
       const circle = document.getElementById('mini-health-circle');
       let bColor = 'border-green-400', tColor = 'text-green-700';
       if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; }
       else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
-      circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`;
-      document.getElementById('mini-health-score').className = `text-[12px] font-black ${tColor}`;
+      if (circle) circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`;
+      if (scoreNode) scoreNode.className = `text-[12px] font-black ${tColor}`;
 
-      // 2. AI Alert Text
       const alertBox = document.getElementById('mini-ai-alert');
       const worst = pnls.reduce((prev, curr) => (curr.pnl < prev.pnl ? curr : prev), {pnl: 0, staff: ''});
       const best = pnls.reduce((prev, curr) => (curr.pnl > prev.pnl ? curr : prev), {pnl: 0, staff: ''});
-      
-      if (worst.pnl < -2.5) {
-        alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700";
-        alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期食太多尾更 (盈虧 ${worst.pnl.toFixed(1)})，建議下週編排靚更作補償。`;
-      } else if (best.pnl > 2.5) {
-        alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700";
-        alertBox.innerHTML = `💡 提示：[${best.staff}] 近期經常佔據靚位 (盈虧 +${best.pnl.toFixed(1)})，可適當分擔尾更。`;
-      } else {
-        alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700";
-        alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無人出現極端硬食情況。`;
+      if (alertBox) {
+        if (worst.pnl < -2.5) {
+          alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700";
+          alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期食太多尾更 (盈虧 ${worst.pnl.toFixed(1)})，建議下週編排靚更作補償。`;
+        } else if (best.pnl > 2.5) {
+          alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700";
+          alertBox.innerHTML = `💡 提示：[${best.staff}] 近期經常佔據靚位 (盈虧 +${best.pnl.toFixed(1)})，可適當分擔尾更。`;
+        } else {
+          alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700";
+          alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無人出現極端硬食情況。`;
+        }
       }
 
-      // 3. Dot Plot (Staggered)
-      const plot = document.getElementById('dot-plot-container'); plot.innerHTML = '';
-      pnls.forEach((item, idx) => {
-        const leftPercent = 50 + ((item.pnl / maxAbs) * 45); 
-        const color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400');
-        const labelPos = idx % 2 === 0 ? '-top-4' : 'top-2.5';
-        plot.innerHTML += `<div class="absolute w-2.5 h-2.5 rounded-full border border-white shadow-sm ${color} flex items-center justify-center -translate-x-1/2 -mt-1" style="left: ${leftPercent}%;"><span class="absolute ${labelPos} text-[9px] font-bold text-gray-700">${item.staff}</span></div>`;
-      });
+      const plot = document.getElementById('dot-plot-container'); if (plot) { plot.innerHTML = ''; pnls.forEach((item, idx) => { const leftPercent = 50 + ((item.pnl / maxAbs) * 45); const color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400'); const labelPos = idx % 2 === 0 ? '-top-4' : 'top-2.5'; plot.innerHTML += `<div class="absolute w-2.5 h-2.5 rounded-full border border-white shadow-sm ${color} flex items-center justify-center -translate-x-1/2 -mt-1" style="left: ${leftPercent}%; top: ${idx % 2 === 0 ? '0.5rem' : '1.5rem'};">`;
+      }); }
 
-      // 4. Tornado Chart
-      const tornado = document.getElementById('tornado-chart'); tornado.innerHTML = '';
-      const sortedPnls = [...pnls].sort((a,b) => a.pnl - b.pnl); // Most negative at top
-      sortedPnls.forEach(item => {
-        const w = (Math.abs(item.pnl) / maxAbs) * 100;
-        const valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1);
-        const barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-red-400' : 'bg-gray-300');
-        const textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
+      const tornado = document.getElementById('tornado-chart'); if (tornado) {
+        tornado.innerHTML = '';
+        const sortedPnls = [...pnls].sort((a,b) => a.pnl - b.pnl);
+        sortedPnls.forEach(item => {
+          const w = (Math.abs(item.pnl) / maxAbs) * 100;
+          const valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1);
+          const barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-red-400' : 'bg-gray-300');
+          const textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
 
-        tornado.innerHTML += `
-          <div class="flex items-center text-[10px] font-bold">
-            <div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div>
-            <div class="flex-1 flex items-center h-4 relative">
-               <div class="w-1/2 h-full flex justify-end pr-0.5">
-                  ${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}
-               </div>
-               <div class="w-px h-full bg-gray-300"></div>
-               <div class="w-1/2 h-full flex justify-start pl-0.5">
-                  ${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}
-               </div>
+          tornado.innerHTML += `
+            <div class="flex items-center text-[10px] font-bold">
+              <div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div>
+              <div class="flex-1 flex items-center h-4 relative">
+                 <div class="w-1/2 h-full flex justify-end pr-0.5">
+                    ${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}
+                 </div>
+                 <div class="w-px h-full bg-gray-300"></div>
+                 <div class="w-1/2 h-full flex justify-start pl-0.5">
+                    ${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}
+                 </div>
+              </div>
+              <div class="w-7 text-right ml-1 ${textColor}">${valStr}</div>
             </div>
-            <div class="w-7 text-right ml-1 ${textColor}">${valStr}</div>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
     },
     renderTabs: (globalAvg, stats) => {
-      document.getElementById('stats-baseline').innerText = `動態基準均位: ${globalAvg.toFixed(2)}`;
+      const baseline = document.getElementById('stats-baseline'); if (baseline) baseline.innerText = `動態基準均位: ${globalAvg.toFixed(2)}`;
       const grid1 = document.getElementById('stats-grid-1'), grid2 = document.getElementById('stats-grid-2'), grid3 = document.getElementById('stats-grid-3');
-      grid1.innerHTML = ''; grid2.innerHTML = ''; grid3.innerHTML = '';
+      if (grid1) grid1.innerHTML = ''; if (grid2) grid2.innerHTML = ''; if (grid3) grid3.innerHTML = '';
 
       CONFIG.STAFF_LIST.forEach(staff => {
         const data = stats[staff];
         let color1 = 'text-gray-700'; if (data.count > 0) { if (data.avg - globalAvg > 0.1) color1 = 'text-red-500 font-bold'; else if (data.avg - globalAvg < -0.1) color1 = 'text-green-600 font-bold'; }
-        grid1.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col justify-center pl-3"><div class="flex items-end gap-2 mb-1"><span class="text-lg font-extrabold text-gray-800">${staff}</span><span class="text-xl tracking-tight ${color1}">${data.count > 0 ? data.avg.toFixed(2) : '--'}</span></div><div class="text-[10px] text-gray-500 font-bold">當值: ${data.count} | 🌴 ${data.leaveCount}日</div></div>`;
+        if (grid1) grid1.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col justify-center pl-3"><div class="flex items-end gap-2 mb-1"><span class="text-lg font-extrabold text-gray-800">${staff}</span><span class="${color1}">${data.count > 0 ? data.avg.toFixed(2) : '0.00'}</span></div><div class="text-[10px] text-gray-400">休假 ${data.leaveCount}</div></div>`;
         
         const color2 = data.pnl > 0 ? 'text-green-600' : (data.pnl < 0 ? 'text-red-500' : 'text-gray-500');
-        grid2.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col items-center justify-center"><span class="text-sm font-extrabold text-gray-800 mb-1">${staff}</span><span class="text-[17px] font-bold ${color2}">${data.count > 0 ? (data.pnl > 0 ? `+${data.pnl.toFixed(1)}` : data.pnl.toFixed(1)) : '--'}</span></div>`;
+        if (grid2) grid2.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col items-center justify-center"><span class="text-sm font-extrabold text-gray-800 mb-1">${staff}</span><span class="${color2} text-base font-black">${data.count > 0 ? ((data.pnl > 0 ? '+' : '') + data.pnl.toFixed(2)) : '0.00'}</span></div>`;
         
         const tHits = data.hits.good + data.hits.mid + data.hits.bad;
         const pGood = tHits > 0 ? Math.round((data.hits.good/tHits)*100) : 0, pMid = tHits > 0 ? Math.round((data.hits.mid/tHits)*100) : 0, pBad = tHits > 0 ? Math.round((data.hits.bad/tHits)*100) : 0;
-        grid3.innerHTML += `<div class="flex items-center bg-gray-50 border border-gray-100 p-2 rounded gap-2"><div class="w-8 text-center font-extrabold text-gray-800 text-lg">${staff}</div><div class="flex-1 flex text-[10px] font-bold text-white h-5 rounded overflow-hidden"><div style="width: ${pGood}%" class="bg-green-500 flex items-center justify-center">${pGood}%</div><div style="width: ${pMid}%" class="bg-blue-400 flex items-center justify-center">${pMid}%</div><div style="width: ${pBad}%" class="bg-red-400 flex items-center justify-center">${pBad}%</div></div></div>`;
+        if (grid3) grid3.innerHTML += `<div class="flex items-center bg-gray-50 border border-gray-100 p-2 rounded gap-2"><div class="w-8 text-center font-extrabold text-gray-800 text-lg">${staff}</div><div class="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden flex"><div class="h-full bg-green-500" style="width:${pGood}%"></div><div class="h-full bg-yellow-400" style="width:${pMid}%"></div><div class="h-full bg-red-500" style="width:${pBad}%"></div></div><div class="text-[10px] font-bold text-gray-600 w-12 text-right">${tHits > 0 ? (pGood + pMid + pBad) : 0}%</div></div>`;
       });
     },
     init: () => {
@@ -692,13 +680,16 @@
       btnCopy.addEventListener('click', () => {
         if(!StatsEngine.latestPromptData) return;
         const d = StatsEngine.latestPromptData;
-        let stat1 = `動態基準均位: ${d.globalAvg}\n` + CONFIG.STAFF_LIST.map(s => `${s}: 均位 ${d.staffStats[s].count > 0 ? d.staffStats[s].avg.toFixed(2) : '0'} (休假 ${d.staffStats[s].leaveCount}日)`).join('\n');
-        let stat2 = CONFIG.STAFF_LIST.map(s => `${s}: ${d.staffStats[s].count > 0 ? (d.staffStats[s].pnl > 0 ? '+' : '') + d.staffStats[s].pnl.toFixed(2) : '0'}`).join('\n');
-        let stat3 = CONFIG.STAFF_LIST.map(s => { const h = d.staffStats[s].hits, t = h.good + h.mid + h.bad; return `${s}: 靚 ${t>0?Math.round((h.good/t)*100):0}% | 平 ${t>0?Math.round((h.mid/t)*100):0}% | 差 ${t>0?Math.round((h.bad/t)*100):0}%`; }).join('\n');
-        const finalPrompt = CONFIG.DEFAULT_PROMPT.replace('{{DATE_RANGE}}', d.dateRange).replace('{{STATISTICS}}', stat1).replace('{{STATS_PNL}}', stat2).replace('{{STATS_HITRATE}}', stat3).replace('{{SCHEDULE_DATA}}', JSON.stringify(d.json, null, 2));
+        const stat1 = `動態基準均位: ${d.globalAvg}\n` + CONFIG.STAFF_LIST.map(s => `${s}: 均位 ${d.staffStats[s].count > 0 ? d.staffStats[s].avg.toFixed(2) : '0.00'} (休假 ${d.staffStats[s].leaveCount})`).join('\n');
+        const stat2 = CONFIG.STAFF_LIST.map(s => `${s}: ${d.staffStats[s].count > 0 ? (d.staffStats[s].pnl > 0 ? '+' : '') + d.staffStats[s].pnl.toFixed(2) : '0.00'}`).join('\n');
+        const stat3 = CONFIG.STAFF_LIST.map(s => { const h = d.staffStats[s].hits, t = h.good + h.mid + h.bad; return `${s}: 靚 ${t>0?Math.round((h.good/t)*100):0}% | 平 ${t>0?Math.round((h.mid/t)*100):0}% | 差 ${t>0?Math.round((h.bad/t)*100):0}%`; }).join('\n');
+        const finalPrompt = CONFIG.DEFAULT_PROMPT.replace('{{DATE_RANGE}}', d.dateRange).replace('{{STATISTICS}}', stat1).replace('{{STATS_PNL}}', stat2).replace('{{STATS_HITRATE}}', stat3).replace('{{JSON_DATA}}', JSON.stringify(d.json, null, 2));
         navigator.clipboard.writeText(finalPrompt).then(() => {
           const origHTML = btnCopy.innerHTML; btnCopy.innerHTML = '✅ 已成功複製'; btnCopy.className = btnCopy.className.replace('from-blue-600 to-indigo-600', 'from-green-500 to-emerald-600');
           setTimeout(() => { btnCopy.innerHTML = origHTML; btnCopy.className = btnCopy.className.replace('from-green-500 to-emerald-600', 'from-blue-600 to-indigo-600'); }, 2000);
+        }).catch(() => {
+          btnCopy.innerText = '❌ 複製失敗';
+          setTimeout(() => { btnCopy.innerText = '📋 複製 AI 提示詞'; }, 2000);
         });
       });
     }
@@ -707,12 +698,14 @@
   const FirebaseSync = {
     init: () => {
       if (!STATE.apiKey) {
-        document.getElementById('conn-status').innerText = '🔴 離線'; document.getElementById('conn-status').className = 'bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 text-[10px] font-bold'; return;
+        document.getElementById('conn-status').innerText = '🔴 離線';
+        document.getElementById('conn-status').className = 'bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 text-[10px] font-bold tracking-wider';
+        return;
       }
       try {
         const app = initializeApp({ ...CONFIG.firebaseBase, apiKey: STATE.apiKey }); STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
         onValue(ref(STATE.db, CONFIG.dbPath), (snapshot) => {
-          document.getElementById('conn-status').innerText = '🟢 連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
+          document.getElementById('conn-status').innerText = '🟢 連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold tracking-wider';
           let data = snapshot.val(); if (!data) return;
           if (data.daysMap) {
             const batchUpdates = {}; Object.keys(data.daysMap).forEach(dateKey => { if (!data[dateKey]) batchUpdates[`${CONFIG.dbPath}/${dateKey}`] = data.daysMap[dateKey]; });
@@ -720,7 +713,7 @@
           }
           let hasChanges = false;
           Object.keys(data).forEach(dStr => {
-            if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dStr) && dStr.length !== 10) return; 
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr) && dStr.length !== 10) return; 
             let dayData = data[dStr]; if (dayData && dayData.shifts) dayData.shifts = Utils.normalizeShifts(dayData.shifts);
             if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(dayData)) { STATE.daysMap[dStr] = dayData; hasChanges = true; }
           });
@@ -728,7 +721,7 @@
         });
       } catch (err) { console.error(err); }
     },
-    pushUpdate: (dateStr) => { Utils.saveCache(STATE.daysMap); if (!STATE.db) return; const updates = {}; updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr]; update(ref(STATE.db), updates).catch(console.error); }
+    pushUpdate: (dateStr) => { Utils.saveCache(STATE.daysMap); if (!STATE.db) return; const updates = {}; updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr]; update(ref(STATE.db), updates); }
   };
 
   const SettingsManager = {
@@ -742,7 +735,7 @@
 
   const initApp = () => {
     CONFIG.STAFF_LIST.forEach(staff => {
-      const btn = document.createElement('button'); btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center';
+      const btn = document.createElement('button'); btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors';
       btn.textContent = staff; document.getElementById('staff-keys').appendChild(btn);
     });
 
@@ -776,12 +769,11 @@
     });
   };
   
-    function safeBack() {
-      // 檢查上一頁是否屬於同一個網站
-      if (document.referrer && document.referrer.startsWith(window.location.origin)) {
-        history.back();
-      }
-    };
+  function safeBack() {
+    if (document.referrer && document.referrer.startsWith(window.location.origin)) {
+      history.back();
+    }
+  }
   initApp();
 </script>
 </body>
