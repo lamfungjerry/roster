@@ -6,36 +6,19 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v9</title>
+  <title>排更助手 v10</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
 
   <style>
-    :root {
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-top: env(safe-area-inset-top, 0px);
-    }
-    html, body {
-      height: 100%; margin: 0; overflow: hidden;
-      background-color: #f3f4f6;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      touch-action: pan-y;
-    }
-    #app {
-      display: flex; flex-direction: column; height: 100dvh;
-      padding-bottom: var(--safe-bottom);
-    }
-    #weeks-container {
-      flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; scrollbar-width: none;
-    }
+    :root { --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-top: env(safe-area-inset-top, 0px); }
+    html, body { height: 100%; margin: 0; overflow: hidden; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; touch-action: pan-y; }
+    #app { display: flex; flex-direction: column; height: 100dvh; padding-bottom: var(--safe-bottom); }
+    #weeks-container { flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; scroll-behavior: smooth; scrollbar-width: none; }
     #weeks-container.instant-scroll { scroll-behavior: auto !important; }
     #weeks-container::-webkit-scrollbar { display: none; }
-    
-    .week-page {
-      height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
-      display: flex; flex-direction: column; padding: 0.5rem; box-sizing: border-box;
-    }
+    .week-page { height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding: 0.5rem; box-sizing: border-box; }
     .shift-divider { width: 1px; background-color: #e5e7eb; margin: 0 4px; }
     .slot-empty { border: 1.5px dashed #cbd5e1; background-color: #f8fafc; }
     .sat-unlock-btn { border: 1px dashed #9ca3af; background-color: #f3f4f6; color: #6b7280; }
@@ -50,9 +33,7 @@
 <div id="app">
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
     <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
-      <div class="flex-1 flex justify-start">
-        <span id="conn-status" class="bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold tracking-wider">🔒 尚未解鎖</span>
-      </div>
+      <div class="flex-1 flex justify-start"><span id="conn-status" class="bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold tracking-wider">🔒 尚未解鎖</span></div>
       <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap">編更表</h1>
       <div class="flex-1 flex justify-end gap-3">
         <button id="btn-stats" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">📊</button>
@@ -61,9 +42,7 @@
     </div>
     <div class="h-12 flex justify-between items-center px-2 bg-gray-50/50 gap-1">
       <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[15px] whitespace-nowrap shrink-0">&lt; 上一週</button>
-      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-2 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center whitespace-nowrap flex-1 mx-1 h-9">
-        <span id="header-date-range">載入中...</span>
-      </button>
+      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-2 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center whitespace-nowrap flex-1 mx-1 h-9"><span id="header-date-range">載入中...</span></button>
       <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[15px] whitespace-nowrap shrink-0">下一週 &gt;</button>
     </div>
   </header>
@@ -72,45 +51,32 @@
 
   <footer id="keyboard-container" class="relative shrink-0 bg-white border-t border-gray-200 h-[28dvh] min-h-[210px] max-h-[270px]">
     <div id="lock-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex-col justify-center items-center cursor-pointer active:bg-white/60 transition-colors flex">
-      <div id="lock-msg-box" class="bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1">
-        <span id="lock-icon" class="text-lg">🔒</span> <span id="lock-text">本週已排滿鎖定</span>
-      </div>
-      <p id="lock-subtext" class="text-[11px] text-gray-600 font-bold tracking-widest bg-white/90 px-2 py-0.5 rounded shadow-sm">點擊此處解鎖修改</p>
+      <div id="lock-msg-box" class="bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"><span id="lock-icon" class="text-lg">🔒</span> <span id="lock-text">本週已排滿鎖定</span></div>
+      <p id="lock-subtext" class="text-[11px] text-gray-600 font-bold tracking-widest bg-white/90 px-2 py-0.5 rounded shadow-sm">點擊此處修改</p>
     </div>
-
     <div id="keyboard-area" class="p-2 pt-2 h-full grid grid-cols-3 grid-rows-3 gap-2 pb-[calc(0.5rem+var(--safe-bottom))]">
       <div id="staff-keys" class="contents"></div>
       <div class="col-span-1 w-full h-full flex gap-1.5">
         <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[20px] flex items-center justify-center transition-colors">🔒</button>
         <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-[20px] flex items-center justify-center transition-colors">🧹</button>
       </div>
-      <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1">
-        <span>🌴</span>全休
-      </button>
-      <button id="btn-backspace" class="col-span-1 w-full h-full bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[17px] flex items-center justify-center gap-1">
-        <span>⌫</span>退格
-      </button>
+      <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1"><span>🌴</span>全休</button>
+      <button id="btn-backspace" class="col-span-1 w-full h-full bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[17px] flex items-center justify-center gap-1"><span>⌫</span>退格</button>
     </div>
   </footer>
 </div>
 
-<!-- Modal: Login (無閃爍、無火星文版) -->
 <div id="modal-login" class="fixed inset-0 bg-gray-900/80 z-[60] hidden flex-col justify-center items-center backdrop-blur-md p-4">
   <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center">
     <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-3xl mb-3">🛡️</div>
     <h2 class="text-xl font-extrabold text-gray-800 mb-1 text-center">解鎖排更系統</h2>
     <p class="text-[11px] font-bold text-gray-400 text-center mb-6 tracking-widest">請輸入密碼</p>
-    
     <input type="password" inputmode="decimal" pattern="[0-9\.]*" id="input-pwd" class="w-full border border-gray-300 rounded-xl px-4 py-3.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none text-center font-mono text-xl tracking-widest" placeholder="輸入密碼">
     <p id="login-error" class="text-red-500 text-[12px] font-bold text-center mb-4 h-4 opacity-0 transition-opacity">密碼錯誤，無法解密</p>
-    
-    <button id="btn-login" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
-      解鎖
-    </button>
+    <button id="btn-login" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">解鎖</button>
   </div>
 </div>
 
-<!-- Modal: Settings (已淨化文字) -->
 <div id="modal-settings" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
     <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -118,27 +84,20 @@
       <button id="close-settings" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-5">
-      <button id="btn-logout" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3.5 rounded-xl shadow-sm active:bg-red-100 transition-colors flex items-center justify-center gap-2 text-[15px]">
-        <span>🚪</span> 清除本機密碼
-      </button>
+      <button id="btn-logout" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3.5 rounded-xl shadow-sm active:bg-red-100 transition-colors flex items-center justify-center gap-2 text-[15px]"><span>🚪</span> 清除本機密碼</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Stats (V8/V9 極限瘦身 4-Tab 導航) -->
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
+  <!-- Stats HTML omitted for brevity, same 4-Tab structure as before -->
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[78vh] max-h-[650px] overflow-hidden">
     <div class="shrink-0 px-4 pt-3 pb-2 border-b border-gray-100 bg-blue-50 flex flex-col gap-1">
       <div class="flex justify-between items-center">
         <h2 class="text-[17px] font-bold text-blue-900 flex-1">📊 AI 綜合評估</h2>
-        <div class="flex items-center gap-3">
-          <select id="stats-year-filter" class="bg-white border border-blue-200 text-blue-800 text-[12px] font-bold rounded px-1.5 py-1 outline-none"></select>
-          <button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none">&times;</button>
-        </div>
+        <div class="flex items-center gap-3"><select id="stats-year-filter" class="bg-white border border-blue-200 text-blue-800 text-[12px] font-bold rounded px-1.5 py-1 outline-none"></select><button id="close-stats" class="text-blue-400 hover:text-blue-600 text-3xl leading-none">&times;</button></div>
       </div>
-      <div class="text-right">
-        <span id="global-date-range" class="text-[10px] font-bold text-blue-500/90 tracking-widest"></span>
-      </div>
+      <div class="text-right"><span id="global-date-range" class="text-[10px] font-bold text-blue-500/90 tracking-widest"></span></div>
     </div>
     <div class="flex border-b border-gray-200 bg-white shrink-0">
       <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(0)" id="tab-btn-0">總覽</button>
@@ -147,67 +106,21 @@
       <button class="flex-1 py-2.5 text-[13px] tab-inactive text-gray-500" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
     </div>
     <div class="flex-1 overflow-y-auto p-3 bg-gray-50 flex flex-col relative">
-      <div id="tab-content-0" class="flex flex-col gap-2.5 h-full">
-        <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex items-center gap-3 shrink-0">
-           <div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle"><span class="text-[12px] font-black" id="mini-health-score">--</span></div>
-           <div id="mini-ai-alert" class="flex-1 text-[11px] font-bold leading-snug"></div>
-        </div>
-        <div class="bg-white rounded-lg px-3 py-4 border border-gray-200 shadow-sm shrink-0">
-           <div class="text-center text-[11px] font-bold text-gray-500 mb-5">累積盈虧 (天秤圖)</div>
-           <div class="relative w-full h-5 flex items-center px-4">
-              <div class="absolute inset-x-4 h-1 bg-gradient-to-r from-red-200 via-gray-300 to-green-200 rounded-full"></div>
-              <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-4 bg-gray-400"></div>
-              <div id="dot-plot-container" class="absolute inset-x-4 top-1/2 -translate-y-1/2"></div>
-           </div>
-        </div>
-        <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex-1 flex flex-col min-h-0">
-           <div class="text-center text-[11px] font-bold text-gray-500 mb-2">排行榜 (紅=硬食 / 綠=靚位)</div>
-           <div id="tornado-chart" class="flex flex-col justify-around flex-1"></div>
-        </div>
-      </div>
-      <div id="tab-content-1" class="hidden space-y-3">
-        <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-          <div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-2 pb-2 border-b border-gray-100">動態基準均位: --</div>
-          <div id="stats-grid-1" class="grid grid-cols-2 gap-2"></div>
-        </div>
-      </div>
-      <div id="tab-content-2" class="hidden space-y-3">
-        <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-          <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">累積盈虧分數</div>
-          <div id="stats-grid-2" class="grid grid-cols-3 gap-2"></div>
-        </div>
-      </div>
-      <div id="tab-content-3" class="hidden space-y-3">
-        <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-          <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">真實動態命中率</div>
-          <div id="stats-grid-3" class="flex flex-col gap-2"></div>
-        </div>
-      </div>
+      <div id="tab-content-0" class="flex flex-col gap-2.5 h-full"><div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex items-center gap-3 shrink-0"><div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle"><span class="text-[12px] font-black" id="mini-health-score">--</span></div><div id="mini-ai-alert" class="flex-1 text-[11px] font-bold leading-snug"></div></div><div class="bg-white rounded-lg px-3 py-4 border border-gray-200 shadow-sm shrink-0"><div class="text-center text-[11px] font-bold text-gray-500 mb-5">累積盈虧 (天秤圖)</div><div class="relative w-full h-5 flex items-center px-4"><div class="absolute inset-x-4 h-1 bg-gradient-to-r from-red-200 via-gray-300 to-green-200 rounded-full"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-4 bg-gray-400"></div><div id="dot-plot-container" class="absolute inset-x-4 top-1/2 -translate-y-1/2"></div></div></div><div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex-1 flex flex-col min-h-0"><div class="text-center text-[11px] font-bold text-gray-500 mb-2">排行榜 (紅=硬食 / 綠=靚位)</div><div id="tornado-chart" class="flex flex-col justify-around flex-1"></div></div></div>
+      <div id="tab-content-1" class="hidden space-y-3"><div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"><div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-2 pb-2 border-b border-gray-100">動態基準均位: --</div><div id="stats-grid-1" class="grid grid-cols-2 gap-2"></div></div></div>
+      <div id="tab-content-2" class="hidden space-y-3"><div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"><div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">累積盈虧分數</div><div id="stats-grid-2" class="grid grid-cols-3 gap-2"></div></div></div>
+      <div id="tab-content-3" class="hidden space-y-3"><div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm"><div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">真實動態命中率</div><div id="stats-grid-3" class="flex flex-col gap-2"></div></div></div>
     </div>
-    <div class="shrink-0 p-3 bg-white border-t border-gray-100">
-      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 text-[15px]">📋 複製 AI Prompt</button>
-    </div>
+    <div class="shrink-0 p-3 bg-white border-t border-gray-100"><button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 text-[15px]">📋 複製 AI Prompt</button></div>
   </div>
 </div>
 
-<!-- Modal: Calendar -->
 <div id="modal-calendar" class="fixed inset-0 bg-gray-900/50 z-50 hidden flex-col justify-center items-center backdrop-blur-sm p-4">
   <div class="bg-white w-full max-w-[340px] rounded-[2rem] shadow-2xl flex flex-col p-6">
-    <div class="flex justify-between items-center mb-6">
-      <button id="cal-prev" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors">&lt;</button>
-      <h2 id="cal-month-title" class="text-[17px] font-extrabold text-gray-800">YYYY年 MM月</h2>
-      <button id="cal-next" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors">&gt;</button>
-    </div>
-    <div class="grid grid-cols-7 text-center mb-3">
-      <div class="text-[12px] font-bold text-red-500">日</div><div class="text-[12px] font-bold text-gray-600">一</div><div class="text-[12px] font-bold text-gray-600">二</div>
-      <div class="text-[12px] font-bold text-gray-600">三</div><div class="text-[12px] font-bold text-gray-600">四</div><div class="text-[12px] font-bold text-gray-600">五</div><div class="text-[12px] font-bold text-gray-600">六</div>
-    </div>
+    <div class="flex justify-between items-center mb-6"><button id="cal-prev" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors">&lt;</button><h2 id="cal-month-title" class="text-[17px] font-extrabold text-gray-800">YYYY年 MM月</h2><button id="cal-next" class="w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors">&gt;</button></div>
+    <div class="grid grid-cols-7 text-center mb-3"><div class="text-[12px] font-bold text-red-500">日</div><div class="text-[12px] font-bold text-gray-600">一</div><div class="text-[12px] font-bold text-gray-600">二</div><div class="text-[12px] font-bold text-gray-600">三</div><div class="text-[12px] font-bold text-gray-600">四</div><div class="text-[12px] font-bold text-gray-600">五</div><div class="text-[12px] font-bold text-gray-600">六</div></div>
     <div id="cal-grid" class="grid grid-cols-7 gap-1.5 text-center mb-6"></div>
-    <div class="flex justify-center gap-4 text-[11px] font-bold text-gray-500 mb-5">
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span>已填</span>
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>未填</span>
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span>休假</span>
-    </div>
+    <div class="flex justify-center gap-4 text-[11px] font-bold text-gray-500 mb-5"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span>已填</span><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>未填</span><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span>休假</span></div>
     <button id="close-calendar" class="w-full bg-gray-50 text-gray-700 font-bold py-3.5 rounded-2xl active:bg-gray-200 transition-colors text-[15px]">關閉</button>
   </div>
 </div>
@@ -218,11 +131,12 @@
     throw new Error("Missing config.js");
   }
 
+  // 引入 Firebase SDK (加入 update 用於按日合併寫入)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+  import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v9_e2ee';
+  const CACHE_KEY = 'roster_cache_v10_e2ee';
 
   const Utils = {
     formatDate: (d) => { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; },
@@ -240,37 +154,93 @@
     focusedWeekStart: null,
     inputMode: 'LOCKED', activeDate: null, unlockedSaturdays: new Set(),
     db: null, calRenderMonth: new Date(), statsYear: 'ALL',
-    isUnlocked: false, cryptoKey: null, saltBase64: null, serverPayload: null
+    isUnlocked: false, cryptoKey: null, globalSaltBase64: null, serverPayload: null
   };
-
   const MIN_SUNDAY = Utils.getSunday(CONFIG.SYSTEM_START_DATE);
 
+  // V10 CryptoHelper (Granular Encryption)
   const CryptoHelper = {
     buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
     b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
     deriveKey: async (password, saltUint8Array) => {
       const enc = new TextEncoder();
-      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
-      return await crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt: saltUint8Array, iterations: 100000, hash: "SHA-256" },
-        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
-      );
+      const keyMat = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
+      return await crypto.subtle.deriveKey({ name: "PBKDF2", salt: saltUint8Array, iterations: 100000, hash: "SHA-256" }, keyMat, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
     },
-    decryptPayload: async (payload, password) => {
-      const salt = CryptoHelper.b642buf(payload.salt);
-      const iv = CryptoHelper.b642buf(payload.iv);
-      const cipherBuffer = CryptoHelper.b642buf(payload.ciphertext);
-      const key = await CryptoHelper.deriveKey(password, salt);
-      const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipherBuffer);
-      const dec = new TextDecoder();
-      return { data: JSON.parse(dec.decode(decryptedBuffer)), key: key, saltBase64: payload.salt };
+    decryptDay: async (encObj, cryptoKey) => {
+      const iv = CryptoHelper.b642buf(encObj.iv), cipher = CryptoHelper.b642buf(encObj.ciphertext);
+      const decBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, cryptoKey, cipher);
+      return JSON.parse(new TextDecoder().decode(decBuffer));
     },
-    encryptPayload: async (plainObj, cryptoKey, saltBase64) => {
+    encryptDay: async (plainObj, cryptoKey) => {
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      const enc = new TextEncoder();
-      const encodedData = enc.encode(JSON.stringify(plainObj));
-      const cipherBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, cryptoKey, encodedData);
-      return { salt: saltBase64, iv: CryptoHelper.buf2b64(iv), ciphertext: CryptoHelper.buf2b64(cipherBuffer) };
+      const encoded = new TextEncoder().encode(JSON.stringify(plainObj));
+      const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, cryptoKey, encoded);
+      return { iv: CryptoHelper.buf2b64(iv), ciphertext: CryptoHelper.buf2b64(cipher) };
+    }
+  };
+
+  // V10 SyncManager (包含防抖與離場秒存)
+  const SyncManager = {
+    dirtyDays: new Set(), syncTimer: null,
+    
+    // 將某日標記為已修改，並觸發 1 秒防抖
+    markDirty: (dateStr) => {
+      SyncManager.dirtyDays.add(dateStr);
+      Utils.saveCache(STATE.daysMap); // 保底二：本地即時秒存
+      if (SyncManager.syncTimer) clearTimeout(SyncManager.syncTimer);
+      SyncManager.syncTimer = setTimeout(SyncManager.flush, 1000);
+    },
+    
+    // 立即將未上傳的資料打包推上雲端
+    flush: async () => {
+      if (SyncManager.syncTimer) { clearTimeout(SyncManager.syncTimer); SyncManager.syncTimer = null; }
+      if (SyncManager.dirtyDays.size === 0 || !STATE.isUnlocked || !STATE.cryptoKey || !STATE.db) return;
+      
+      const updates = {};
+      const daysToSync = Array.from(SyncManager.dirtyDays);
+      SyncManager.dirtyDays.clear(); // 提早清空，防止死鎖
+      
+      try {
+        for (const dStr of daysToSync) {
+          const plainObj = STATE.daysMap[dStr] || { shifts: [] };
+          const encObj = await CryptoHelper.encryptDay(plainObj, STATE.cryptoKey);
+          updates[`days/${dStr}`] = encObj; // V10: 按日寫入 (Merge)
+        }
+        await update(ref(STATE.db, CONFIG.dbPath), updates);
+      } catch(e) {
+        console.error("V10 上傳失敗", e);
+        daysToSync.forEach(d => SyncManager.dirtyDays.add(d)); // 失敗回溯
+      }
+    },
+
+    initFirebase: () => {
+      const app = initializeApp(CONFIG.firebaseBase);
+      STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
+      
+      onValue(ref(STATE.db, CONFIG.dbPath), async (snapshot) => {
+        const payload = snapshot.val();
+        if (!payload) return; // 全新資料庫處理會落在登入邏輯
+        STATE.serverPayload = payload;
+
+        if (!STATE.isUnlocked) {
+          await LoginManager.checkAutoLogin();
+        } else {
+          // V10: 背景解密並合併 (保護本地 Dirty 數據不被洗走)
+          try {
+             const serverDays = payload.days || {};
+             let hasChanges = false;
+             for (const [dStr, encObj] of Object.entries(serverDays)) {
+               if (SyncManager.dirtyDays.has(dStr)) continue; // 離線合併核心：自己改緊嘅唔會被覆寫
+               const plainObj = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey);
+               if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(plainObj)) {
+                 STATE.daysMap[dStr] = plainObj; hasChanges = true;
+               }
+             }
+             if(hasChanges) { Utils.saveCache(STATE.daysMap); Engine.evaluateLockState(); UI.refreshAllVisible(); }
+          } catch (e) { console.error("遠端數據同步失敗", e); }
+        }
+      });
     }
   };
 
@@ -283,11 +253,7 @@
       let html = `<div class="bg-gray-50/50 rounded-xl h-full flex flex-col p-1 box-border">
                     <div class="flex text-center text-[11px] font-bold text-gray-500 mb-1 pb-1 border-b border-gray-200 shrink-0">
                       <div class="w-12 flex items-center justify-center">日期</div>
-                      <div class="flex-1 flex justify-between px-1">
-                        <div class="flex-1">1更</div><div class="flex-1">2更</div><div class="shift-divider bg-transparent"></div>
-                        <div class="flex-1">3更</div><div class="flex-1">4更</div><div class="shift-divider bg-transparent"></div>
-                        <div class="flex-1">5更</div><div class="flex-1">6更</div>
-                      </div>
+                      <div class="flex-1 flex justify-between px-1"><div class="flex-1">1更</div><div class="flex-1">2更</div><div class="shift-divider bg-transparent"></div><div class="flex-1">3更</div><div class="flex-1">4更</div><div class="shift-divider bg-transparent"></div><div class="flex-1">5更</div><div class="flex-1">6更</div></div>
                     </div>
                     <div class="flex flex-col flex-1 justify-around gap-0.5 pb-1">`;
       for (let i = 1; i <= 6; i++) html += UI.generateDayHTML(Utils.addDays(sundayStr, i), i);
@@ -300,7 +266,6 @@
       const dayData = STATE.daysMap[dateStr] || { isFullDayHoliday: false, shifts: [] };
       const shifts = Utils.normalizeShifts(dayData.shifts), isActive = STATE.activeDate === dateStr;
       const todayTag = (dateStr === STATE.todayStr) ? `<div class="absolute -left-1 -top-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20">今日</div>` : '';
-
       const rowWrapperClass = `flex items-center mt-1 bg-white rounded-lg p-1 border shadow-sm cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20 z-10' : 'border-gray-200/75 active:bg-gray-50'}`;
       const leftBlockClass = `w-12 flex flex-col items-center justify-center border-r border-gray-200/60 mr-1 pr-1 shrink-0 relative h-full`;
       const labelBlock = `<div class="${leftBlockClass}">${todayTag}<div class="font-extrabold text-gray-700 text-lg leading-tight">${dayName}</div><div class="text-[10px] text-gray-400 font-bold">${mdStr}</div></div>`;
@@ -321,48 +286,31 @@
       }
       return `<div class="${rowWrapperClass} h-full min-h-[46px]" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex h-full gap-1 items-center px-1 ${slotsPointerClass}">${slotsHTML}</div></div>`;
     },
-
     refreshAllVisible: () => {
-      document.querySelectorAll('[data-date]').forEach(el => { if (el.dataset.date >= CONFIG.SYSTEM_START_DATE) el.outerHTML = UI.generateDayHTML(el.dataset.date, new Date(el.dataset.date).getDay()); });
-      UI.updateFooter();
+      document.querySelectorAll('[data-date]').forEach(el => { if (el.dataset.date >= CONFIG.SYSTEM_START_DATE) el.outerHTML = UI.generateDayHTML(el.dataset.date, new Date(el.dataset.date).getDay()); }); UI.updateFooter();
     },
-
     silentRefreshDay: (dateStr) => { const dayEl = document.querySelector(`div[data-date="${dateStr}"]`); if (dayEl) dayEl.outerHTML = UI.generateDayHTML(dateStr, new Date(dateStr).getDay()); },
-
     updateFooter: () => {
       if (STATE.inputMode === 'LOCKED') {
-        document.getElementById('lock-overlay').classList.remove('hidden');
-        document.getElementById('lock-msg-box').className = "bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1";
-        document.getElementById('lock-icon').innerText = "🔒"; document.getElementById('lock-text').innerText = "本週已排滿鎖定";
-        document.getElementById('lock-subtext').classList.remove('hidden');
+        document.getElementById('lock-overlay').classList.remove('hidden'); document.getElementById('lock-msg-box').className = "bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"; document.getElementById('lock-icon').innerText = "🔒"; document.getElementById('lock-text').innerText = "本週已排滿鎖定"; document.getElementById('lock-subtext').classList.remove('hidden');
       } else if (STATE.inputMode === 'WAITING') {
-        document.getElementById('lock-overlay').classList.remove('hidden');
-        document.getElementById('lock-msg-box').className = "bg-blue-100 border border-blue-300 text-blue-800 px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1";
-        document.getElementById('lock-icon').innerText = "👆"; document.getElementById('lock-text').innerText = "請點擊上方更表選擇日子";
-        document.getElementById('lock-subtext').classList.add('hidden');
+        document.getElementById('lock-overlay').classList.remove('hidden'); document.getElementById('lock-msg-box').className = "bg-blue-100 border border-blue-300 text-blue-800 px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"; document.getElementById('lock-icon').innerText = "👆"; document.getElementById('lock-text').innerText = "請點擊上方更表選擇日子"; document.getElementById('lock-subtext').classList.add('hidden');
       } else document.getElementById('lock-overlay').classList.add('hidden');
 
-      // 智能化：按鈕動態變灰防重複
       const buttons = document.getElementById('staff-keys').children;
       const activeShifts = (STATE.activeDate && STATE.daysMap[STATE.activeDate]) ? Utils.normalizeShifts(STATE.daysMap[STATE.activeDate].shifts) : [];
       const scheduledStaff = activeShifts.map(s => s.staff);
 
       Array.from(buttons).forEach(btn => {
-        if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) {
-          btn.className = 'w-full h-full bg-blue-50/50 border border-blue-100 text-blue-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors';
-        } else if (scheduledStaff.includes(btn.textContent)) {
-          btn.className = 'w-full h-full bg-gray-100 border border-gray-200 text-gray-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors';
-        } else {
-          btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center';
-        }
+        if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) { btn.className = 'w-full h-full bg-blue-50/50 border border-blue-100 text-blue-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors'; } 
+        else if (scheduledStaff.includes(btn.textContent)) { btn.className = 'w-full h-full bg-gray-100 border border-gray-200 text-gray-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors'; } 
+        else { btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center'; }
       });
     },
-
     updateHeader: (sundayStr) => {
       const d1 = new Date(sundayStr), d2 = new Date(Utils.addDays(sundayStr, 6));
       UI.headerDate.innerText = `${d1.getMonth()+1}/${d1.getDate()}(日) - ${d2.getMonth()+1}/${d2.getDate()}(六)`;
-      if (sundayStr <= MIN_SUNDAY) document.getElementById('prev-week').classList.add('opacity-30', 'pointer-events-none');
-      else document.getElementById('prev-week').classList.remove('opacity-30', 'pointer-events-none');
+      if (sundayStr <= MIN_SUNDAY) document.getElementById('prev-week').classList.add('opacity-30', 'pointer-events-none'); else document.getElementById('prev-week').classList.remove('opacity-30', 'pointer-events-none');
     }
   };
 
@@ -381,9 +329,7 @@
     replenish: (centerWeekStr) => {
       let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop, prepended = false;
       let topWeek = UI.container.firstElementChild.dataset.weekStart;
-      while (topWeek > MIN_SUNDAY && (new Date(centerWeekStr) - new Date(topWeek)) / 604800000 < 4) {
-        const newWeek = Utils.addDays(topWeek, -7); UI.container.insertBefore(UI.createWeekNode(newWeek), UI.container.firstElementChild); topWeek = newWeek; prepended = true;
-      }
+      while (topWeek > MIN_SUNDAY && (new Date(centerWeekStr) - new Date(topWeek)) / 604800000 < 4) { const newWeek = Utils.addDays(topWeek, -7); UI.container.insertBefore(UI.createWeekNode(newWeek), UI.container.firstElementChild); topWeek = newWeek; prepended = true; }
       if (prepended) { UI.container.classList.add('instant-scroll'); UI.container.scrollTop = oldScrollTop + (UI.container.scrollHeight - oldScrollHeight); setTimeout(() => UI.container.classList.remove('instant-scroll'), 50); }
       let bottomWeek = UI.container.lastElementChild.dataset.weekStart;
       while ((new Date(bottomWeek) - new Date(centerWeekStr)) / 604800000 < 4) { const newWeek = Utils.addDays(bottomWeek, 7); UI.container.appendChild(UI.createWeekNode(newWeek)); bottomWeek = newWeek; }
@@ -403,18 +349,15 @@
   };
 
   window.Engine = {
-    // 智能化：判斷當前星期，自動標記今日或搵位
     smartSetFocusWeekActiveDay: (weekStartStr) => {
+      SyncManager.flush(); // 手動轉頁時，立即儲存舊日誌
       const sundayDate = new Date(weekStartStr), saturdayDate = new Date(Utils.addDays(weekStartStr, 6)), todayObj = new Date(STATE.todayStr);
-      if (todayObj >= sundayDate && todayObj <= saturdayDate) {
-        STATE.activeDate = STATE.todayStr;
-      } else {
+      if (todayObj >= sundayDate && todayObj <= saturdayDate) { STATE.activeDate = STATE.todayStr; } 
+      else {
         STATE.activeDate = null;
         for (let i = 1; i <= 6; i++) {
-          const dStr = Utils.addDays(weekStartStr, i);
-          if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-          const dayData = STATE.daysMap[dStr] || {};
-          if (dayData.isFullDayHoliday) continue;
+          const dStr = Utils.addDays(weekStartStr, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue;
+          const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue;
           const shifts = Utils.normalizeShifts(dayData.shifts);
           if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue;
           if (shifts.length < 6) { STATE.activeDate = dStr; break; }
@@ -425,8 +368,7 @@
       if (!STATE.focusedWeekStart) return;
       let isFull = true;
       for (let i = 1; i <= 5; i++) {
-        const dStr = Utils.addDays(STATE.focusedWeekStart, i);
-        if (dStr < CONFIG.SYSTEM_START_DATE) continue;
+        const dStr = Utils.addDays(STATE.focusedWeekStart, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue;
         const dayData = STATE.daysMap[dStr] || {};
         if (!dayData.isFullDayHoliday && Utils.normalizeShifts(dayData.shifts).length < 6) { isFull = false; break; }
       }
@@ -443,13 +385,16 @@
       }
       STATE.activeDate = null; return false;
     },
-    setActiveDate: (dateStr) => { STATE.activeDate = dateStr; if (STATE.inputMode === 'WAITING') STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); },
+    setActiveDate: (dateStr) => { 
+      if(STATE.activeDate !== dateStr) SyncManager.flush(); // 手動點擊新日子前，立即推上雲端
+      STATE.activeDate = dateStr; if (STATE.inputMode === 'WAITING') STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); 
+    },
     unlockSaturday: (e, dateStr) => { e.stopPropagation(); STATE.unlockedSaturdays.add(dateStr); STATE.activeDate = dateStr; STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); },
     toggleLeave: (e, dateStr, idx) => {
       e.stopPropagation(); Engine.setActiveDate(dateStr); 
       if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return;
       const shifts = STATE.daysMap[dateStr].shifts;
-      if (shifts[idx]) { shifts[idx].status = shifts[idx].status === 'LEAVE' ? 'ON' : 'LEAVE'; UI.silentRefreshDay(dateStr); FirebaseSync.pushUpdate(); }
+      if (shifts[idx]) { shifts[idx].status = shifts[idx].status === 'LEAVE' ? 'ON' : 'LEAVE'; UI.silentRefreshDay(dateStr); SyncManager.markDirty(dateStr); }
     },
     addShift: (staffCode) => {
       if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
@@ -457,22 +402,19 @@
       if (!STATE.daysMap[targetDate]) STATE.daysMap[targetDate] = { shifts: [] };
       STATE.daysMap[targetDate].shifts = Utils.normalizeShifts(STATE.daysMap[targetDate].shifts);
       
-      // 智能化防呆：同一日不能排重覆員工
       if (STATE.daysMap[targetDate].shifts.some(s => s.staff === staffCode)) return;
       if (STATE.daysMap[targetDate].isFullDayHoliday || STATE.daysMap[targetDate].shifts.length >= 6) return;
       
       STATE.daysMap[targetDate].shifts.push({ staff: staffCode, status: 'ON' });
-      FirebaseSync.pushUpdate();
+      SyncManager.markDirty(targetDate); // 標記修改並啟動 1 秒計時器
       
       if (STATE.daysMap[targetDate].shifts.length === 6) {
-        // 智能化自動跳格
+        SyncManager.flush(); // 滿更表：觸發條件 1，立即推上雲端
         let checkDate = targetDate;
         for(let i=0; i<6; i++) {
            checkDate = Utils.addDays(checkDate, 1);
-           const dayIdx = new Date(checkDate).getDay();
-           if (dayIdx === 0) break;
-           const dayData = STATE.daysMap[checkDate] || {};
-           if (dayData.isFullDayHoliday) continue;
+           const dayIdx = new Date(checkDate).getDay(); if (dayIdx === 0) break;
+           const dayData = STATE.daysMap[checkDate] || {}; if (dayData.isFullDayHoliday) continue;
            const shifts = Utils.normalizeShifts(dayData.shifts);
            if (dayIdx === 6 && !STATE.unlockedSaturdays.has(checkDate) && shifts.length === 0) continue;
            if (shifts.length < 6) { STATE.activeDate = checkDate; break; }
@@ -487,17 +429,20 @@
     backspace: () => {
       if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
       const shifts = STATE.daysMap[STATE.activeDate]?.shifts;
-      if (shifts && shifts.length > 0) { shifts.pop(); FirebaseSync.pushUpdate(); Engine.evaluateLockState(); }
+      if (shifts && shifts.length > 0) { shifts.pop(); SyncManager.markDirty(STATE.activeDate); Engine.evaluateLockState(); }
     },
     setAllOff: () => {
       if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
       const td = STATE.activeDate, dayData = STATE.daysMap[td] || {};
       STATE.daysMap[td] = dayData.isFullDayHoliday ? { isFullDayHoliday: false, shifts: [] } : { isFullDayHoliday: true, shifts: [] };
-      FirebaseSync.pushUpdate(); Engine.evaluateLockState();
+      SyncManager.markDirty(td); 
+      SyncManager.flush(); // 全休：立即推上雲端
+      Engine.evaluateLockState();
     }
   };
 
   const CalendarManager = {
+    // ... Calendar unchanged from V9
     modal: document.getElementById('modal-calendar'), grid: document.getElementById('cal-grid'), title: document.getElementById('cal-month-title'),
     render: () => {
       const year = STATE.calRenderMonth.getFullYear(), month = STATE.calRenderMonth.getMonth();
@@ -511,14 +456,12 @@
         const dayData = STATE.daysMap[dStr] || { isFullDayHoliday: false, shifts: [] };
         let isRed = (dayOfWeek === 0 || dayData.isFullDayHoliday), cellClass = "aspect-square rounded-2xl flex flex-col items-center justify-center text-[15px] font-bold transition-transform ";
         if (dStr < CONFIG.SYSTEM_START_DATE) { cellClass += "text-gray-300 opacity-40 pointer-events-none "; } else {
-          cellClass += "cursor-pointer active:scale-95 ";
-          if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 "; else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
+          cellClass += "cursor-pointer active:scale-95 "; if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 "; else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
         }
         let dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></div>`;
         if (dStr >= CONFIG.SYSTEM_START_DATE && !isRed && dayOfWeek >= 1 && dayOfWeek <= 5) {
           const shifts = Utils.normalizeShifts(dayData.shifts);
-          if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`;
-          else if (shifts.length > 0) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
+          if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`; else if (shifts.length > 0) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
         }
         CalendarManager.grid.innerHTML += `<div class="${cellClass}" onclick="window.CalendarManager.jumpTo('${dStr}')"><span>${day}</span>${dotHTML}</div>`;
       }
@@ -534,24 +477,16 @@
   };
 
   window.StatsEngine = {
+    // ... StatsEngine unchanged from V9 (the fixed invalid date version)
     modal: document.getElementById('modal-stats'), latestPromptData: null,
-    switchTab: (tabId) => {
-      for(let i=0; i<=3; i++) {
-        document.getElementById(`tab-btn-${i}`).className = (i === tabId) ? "flex-1 py-2.5 text-[13px] tab-active" : "flex-1 py-2.5 text-[13px] tab-inactive text-gray-500";
-        document.getElementById(`tab-content-${i}`).className = (i === tabId) ? (i===0 ? "flex flex-col gap-2.5 h-full" : "block space-y-3") : "hidden space-y-3";
-      }
-    },
+    switchTab: (tabId) => { for(let i=0; i<=3; i++) { document.getElementById(`tab-btn-${i}`).className = (i === tabId) ? "flex-1 py-2.5 text-[13px] tab-active" : "flex-1 py-2.5 text-[13px] tab-inactive text-gray-500"; document.getElementById(`tab-content-${i}`).className = (i === tabId) ? (i===0 ? "flex flex-col gap-2.5 h-full" : "block space-y-3") : "hidden space-y-3"; } },
     calculate: () => {
       const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
       let baseSum = 0, baseCount = 0;
-      
       const validDateKeys = Object.keys(STATE.daysMap).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
       const sysStart = new Date(CONFIG.SYSTEM_START_DATE);
-      let filterStart = sysStart;
-      let maxDateStr = (validDateKeys.length > 0) ? validDateKeys[validDateKeys.length - 1] : STATE.todayStr;
-      let filterEnd = new Date(maxDateStr);
-      if (isNaN(filterEnd.getTime())) filterEnd = new Date(STATE.todayStr);
-      
+      let filterStart = sysStart; let maxDateStr = (validDateKeys.length > 0) ? validDateKeys[validDateKeys.length - 1] : STATE.todayStr;
+      let filterEnd = new Date(maxDateStr); if (isNaN(filterEnd.getTime())) filterEnd = new Date(STATE.todayStr);
       if (STATE.statsYear !== 'ALL') {
         const y = parseInt(STATE.statsYear);
         filterStart = new Date(Math.max(sysStart.getTime(), new Date(y, 0, 1).getTime()));
@@ -562,16 +497,11 @@
       let curD = new Date(filterStart), promptJSON = {};
       while(curD <= filterEnd) {
         const dStr = Utils.formatDate(curD); curD.setDate(curD.getDate() + 1);
-        const dayData = STATE.daysMap[dStr];
-        if(!dayData || dayData.isFullDayHoliday) continue;
-        
-        const shifts = Utils.normalizeShifts(dayData.shifts);
-        if(shifts.length === 0) continue;
+        const dayData = STATE.daysMap[dStr]; if(!dayData || dayData.isFullDayHoliday) continue;
+        const shifts = Utils.normalizeShifts(dayData.shifts); if(shifts.length === 0) continue;
         promptJSON[dStr] = shifts.map(s => s.status === 'LEAVE' ? s.staff + '(休假)' : s.staff);
-
         const dObj = new Date(dStr), isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
         const activeCount = shifts.filter(s => s.status !== 'LEAVE').length;
-
         let activeIdx = 0;
         shifts.forEach((shift) => {
           if(!staffStats[shift.staff]) return;
@@ -584,44 +514,30 @@
           }
         });
       }
-
       const globalAvg = baseCount > 0 ? (baseSum / baseCount) : 0;
       let pnls = [], maxAbsPnl = 0.1; 
       Object.keys(staffStats).forEach(s => {
         const d = staffStats[s]; d.avg = d.count > 0 ? (d.sum / d.count) : 0; d.pnl = d.count > 0 ? ((globalAvg * d.count) - d.sum) : 0;
         if(d.count > 0) { pnls.push({staff: s, pnl: d.pnl}); maxAbsPnl = Math.max(maxAbsPnl, Math.abs(d.pnl)); }
       });
-
       StatsEngine.renderDashboard(pnls, maxAbsPnl); StatsEngine.renderTabs(globalAvg, staffStats);
       document.getElementById('global-date-range').innerText = `統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`;
       StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
     },
     renderDashboard: (pnls, maxAbs) => {
-      let score = 100;
-      if (pnls.length > 0) { const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length; score = Math.max(0, Math.round(100 - (avgAbsDev * 15))); }
+      let score = 100; if (pnls.length > 0) { const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length; score = Math.max(0, Math.round(100 - (avgAbsDev * 15))); }
       document.getElementById('mini-health-score').innerText = `${score}%`;
       const circle = document.getElementById('mini-health-circle');
-      let bColor = 'border-green-400', tColor = 'text-green-700';
-      if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; } else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
-      circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`;
-      document.getElementById('mini-health-score').className = `text-[12px] font-black ${tColor}`;
-
+      let bColor = 'border-green-400', tColor = 'text-green-700'; if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; } else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
+      circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`; document.getElementById('mini-health-score').className = `text-[12px] font-black ${tColor}`;
       const alertBox = document.getElementById('mini-ai-alert'), worst = pnls.reduce((prev, curr) => (curr.pnl < prev.pnl ? curr : prev), {pnl: 0, staff: ''}), best = pnls.reduce((prev, curr) => (curr.pnl > prev.pnl ? curr : prev), {pnl: 0, staff: ''});
-      if (worst.pnl < -2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700"; alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期食太多尾更 (盈虧 ${worst.pnl.toFixed(1)})，建議下週編排靚更作補償。`; }
-      else if (best.pnl > 2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700"; alertBox.innerHTML = `💡 提示：[${best.staff}] 近期經常佔據靚位 (盈虧 +${best.pnl.toFixed(1)})，可適當分擔尾更。`; }
-      else { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700"; alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無人出現極端硬食情況。`; }
-
+      if (worst.pnl < -2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700"; alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期硬食太多 (盈虧 ${worst.pnl.toFixed(1)})，建議補償靚位。`; }
+      else if (best.pnl > 2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700"; alertBox.innerHTML = `💡 提示：[${best.staff}] 近期常佔靚位 (盈虧 +${best.pnl.toFixed(1)})，可分擔尾更。`; }
+      else { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700"; alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無極端情況。`; }
       const plot = document.getElementById('dot-plot-container'); plot.innerHTML = '';
-      pnls.forEach((item, idx) => {
-        const leftPercent = 50 + ((item.pnl / maxAbs) * 45), color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400'), labelPos = idx % 2 === 0 ? '-top-4' : 'top-2.5';
-        plot.innerHTML += `<div class="absolute w-2.5 h-2.5 rounded-full border border-white shadow-sm ${color} flex items-center justify-center -translate-x-1/2 -mt-1" style="left: ${leftPercent}%;"><span class="absolute ${labelPos} text-[9px] font-bold text-gray-700">${item.staff}</span></div>`;
-      });
-
+      pnls.forEach((item, idx) => { const leftPercent = 50 + ((item.pnl / maxAbs) * 45), color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400'), labelPos = idx % 2 === 0 ? '-top-4' : 'top-2.5'; plot.innerHTML += `<div class="absolute w-2.5 h-2.5 rounded-full border border-white shadow-sm ${color} flex items-center justify-center -translate-x-1/2 -mt-1" style="left: ${leftPercent}%;"><span class="absolute ${labelPos} text-[9px] font-bold text-gray-700">${item.staff}</span></div>`; });
       const tornado = document.getElementById('tornado-chart'); tornado.innerHTML = '';
-      [...pnls].sort((a,b) => a.pnl - b.pnl).forEach(item => {
-        const w = (Math.abs(item.pnl) / maxAbs) * 100, valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1), barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-gray-300' : 'bg-gray-300'), textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
-        tornado.innerHTML += `<div class="flex items-center text-[10px] font-bold"><div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div><div class="flex-1 flex items-center h-4 relative"><div class="w-1/2 h-full flex justify-end pr-0.5">${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}</div><div class="w-px h-full bg-gray-300"></div><div class="w-1/2 h-full flex justify-start pl-0.5">${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}</div></div><div class="w-7 text-right ml-1 ${textColor}">${valStr}</div></div>`;
-      });
+      [...pnls].sort((a,b) => a.pnl - b.pnl).forEach(item => { const w = (Math.abs(item.pnl) / maxAbs) * 100, valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1), barColor = item.pnl > 0 ? 'bg-green-400' : 'bg-red-400', textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500'); tornado.innerHTML += `<div class="flex items-center text-[10px] font-bold"><div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div><div class="flex-1 flex items-center h-4 relative"><div class="w-1/2 h-full flex justify-end pr-0.5">${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}</div><div class="w-px h-full bg-gray-300"></div><div class="w-1/2 h-full flex justify-start pl-0.5">${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}</div></div><div class="w-7 text-right ml-1 ${textColor}">${valStr}</div></div>`; });
     },
     renderTabs: (globalAvg, stats) => {
       document.getElementById('stats-baseline').innerText = `動態基準均位: ${globalAvg.toFixed(2)}`;
@@ -643,14 +559,11 @@
       for (let y = currYear; y >= startYear; y--) sel.innerHTML += `<option value="${y}">${y}年</option>`; sel.innerHTML += `<option value="ALL">全部</option>`;
       STATE.statsYear = currYear.toString(); sel.value = STATE.statsYear;
       sel.addEventListener('change', (e) => { STATE.statsYear = e.target.value; StatsEngine.calculate(); });
-
       document.getElementById('btn-stats').addEventListener('click', () => { StatsEngine.switchTab(0); StatsEngine.calculate(); StatsEngine.modal.classList.remove('hidden'); StatsEngine.modal.classList.add('flex', 'modal-enter'); });
       document.getElementById('close-stats').addEventListener('click', () => { StatsEngine.modal.classList.add('hidden'); StatsEngine.modal.classList.remove('flex', 'modal-enter'); });
-      
       const btnCopy = document.getElementById('btn-copy-prompt');
       btnCopy.addEventListener('click', () => {
-        if(!StatsEngine.latestPromptData) return;
-        const d = StatsEngine.latestPromptData;
+        if(!StatsEngine.latestPromptData) return; const d = StatsEngine.latestPromptData;
         let stat1 = `動態基準均位: ${d.globalAvg}\n` + CONFIG.STAFF_LIST.map(s => `${s}: 均位 ${d.staffStats[s].count > 0 ? d.staffStats[s].avg.toFixed(2) : '0'} (休假 ${d.staffStats[s].leaveCount}日)`).join('\n');
         let stat2 = CONFIG.STAFF_LIST.map(s => `${s}: ${d.staffStats[s].count > 0 ? (d.staffStats[s].pnl > 0 ? '+' : '') + d.staffStats[s].pnl.toFixed(2) : '0'}`).join('\n');
         let stat3 = CONFIG.STAFF_LIST.map(s => { const h = d.staffStats[s].hits, t = h.good + h.mid + h.bad; return `${s}: 靚 ${t>0?Math.round((h.good/t)*100):0}% | 平 ${t>0?Math.round((h.mid/t)*100):0}% | 差 ${t>0?Math.round((h.bad/t)*100):0}%`; }).join('\n');
@@ -664,79 +577,51 @@
   };
 
   const LoginManager = {
-    modal: document.getElementById('modal-login'),
-    input: document.getElementById('input-pwd'),
-    btn: document.getElementById('btn-login'),
-    error: document.getElementById('login-error'),
+    modal: document.getElementById('modal-login'), input: document.getElementById('input-pwd'), btn: document.getElementById('btn-login'), error: document.getElementById('login-error'),
     
     checkAutoLogin: async () => {
       const savedPwd = localStorage.getItem('vault_password');
-      if (savedPwd) {
-        try { await LoginManager.performUnlock(savedPwd); } 
-        catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); }
-      } else { LoginManager.show(); }
+      if (savedPwd) { try { await LoginManager.performUnlock(savedPwd); } catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); } } 
+      else { LoginManager.show(); }
     },
-    
     show: () => {
       LoginManager.modal.classList.remove('hidden'); LoginManager.modal.classList.add('flex', 'modal-enter');
-      document.getElementById('conn-status').innerText = '🔒 尚未解鎖';
-      document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold';
+      document.getElementById('conn-status').innerText = '🔒 尚未解鎖'; document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold';
     },
-
     performUnlock: async (pwd) => {
-      if (!STATE.serverPayload || !STATE.serverPayload.ciphertext) throw new Error("無效的密文庫");
-      const result = await CryptoHelper.decryptPayload(STATE.serverPayload, pwd);
+      if (!STATE.serverPayload) throw new Error("資料庫尚未連接");
       
-      STATE.cryptoKey = result.key;
-      STATE.saltBase64 = result.saltBase64;
-      STATE.daysMap = result.data;
+      // V10: 若資料庫是全新的空陣列，代表還沒做 migrate，這裡直接初始化
+      if (!STATE.serverPayload.global_salt) {
+        if(confirm("偵測到遠端資料庫為空或尚未初始化 V10，是否以此密碼作為新系統起點？")) {
+           const saltBuf = crypto.getRandomValues(new Uint8Array(16));
+           STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf);
+           STATE.globalSaltBase64 = CryptoHelper.buf2b64(saltBuf);
+           await set(ref(STATE.db, CONFIG.dbPath), { global_salt: STATE.globalSaltBase64, days: {} });
+           STATE.daysMap = {};
+        } else throw new Error("使用者取消初始化");
+      } else {
+        const saltBuf = CryptoHelper.b642buf(STATE.serverPayload.global_salt);
+        STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf);
+        STATE.globalSaltBase64 = STATE.serverPayload.global_salt;
+        
+        // 解析並解密所有伺服器上的日子 (本地會保存離線殘留)
+        const serverDays = STATE.serverPayload.days || {};
+        const decryptedDays = {};
+        for (const [dStr, encObj] of Object.entries(serverDays)) {
+           decryptedDays[dStr] = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey);
+        }
+        STATE.daysMap = { ...STATE.daysMap, ...decryptedDays }; // 本地資料 + 雲端資料 (雲端覆蓋舊本地，保留本地獨有)
+      }
+
       STATE.isUnlocked = true;
-      
       localStorage.setItem('vault_password', pwd);
       LoginManager.modal.classList.add('hidden'); LoginManager.modal.classList.remove('flex', 'modal-enter');
-      
-      document.getElementById('conn-status').innerText = '🟢 已連線';
-      document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
+      document.getElementById('conn-status').innerText = '🟢 已連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
       
       Utils.saveCache(STATE.daysMap);
-      
       const safeCenterSunday = Math.max(new Date(MIN_SUNDAY), new Date(Utils.getSunday(STATE.todayStr)));
       ScrollEngine.jumpToAndRebuild(Utils.formatDate(new Date(safeCenterSunday)));
-    }
-  };
-
-  const FirebaseSync = {
-    init: () => {
-      const app = initializeApp(CONFIG.firebaseBase);
-      STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
-      
-      onValue(ref(STATE.db, CONFIG.dbPath), async (snapshot) => {
-        const payload = snapshot.val();
-        if (!payload || !payload.ciphertext) return;
-        STATE.serverPayload = payload;
-
-        if (!STATE.isUnlocked) {
-          await LoginManager.checkAutoLogin();
-        } else {
-          try {
-             const result = await CryptoHelper.decryptPayload(STATE.serverPayload, localStorage.getItem('vault_password'));
-             const newData = result.data;
-             let hasChanges = false;
-             Object.keys(newData).forEach(dStr => {
-               if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(newData[dStr])) { STATE.daysMap[dStr] = newData[dStr]; hasChanges = true; }
-             });
-             if(hasChanges) { Utils.saveCache(STATE.daysMap); Engine.evaluateLockState(); }
-          } catch (e) { console.error("遠端數據解密失敗", e); }
-        }
-      });
-    },
-    pushUpdate: async () => {
-      Utils.saveCache(STATE.daysMap);
-      if (!STATE.db || !STATE.isUnlocked || !STATE.cryptoKey) return;
-      try {
-        const encryptedPackage = await CryptoHelper.encryptPayload(STATE.daysMap, STATE.cryptoKey, STATE.saltBase64);
-        await set(ref(STATE.db, CONFIG.dbPath), encryptedPackage);
-      } catch (err) { console.error("加密或上傳失敗", err); }
     }
   };
 
@@ -745,10 +630,7 @@
     init: () => {
       document.getElementById('btn-settings').addEventListener('click', () => { SettingsManager.modal.classList.remove('hidden'); SettingsManager.modal.classList.add('flex', 'modal-enter'); });
       document.getElementById('close-settings').addEventListener('click', () => { SettingsManager.modal.classList.add('hidden'); SettingsManager.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('btn-logout').addEventListener('click', () => {
-        localStorage.removeItem('vault_password');
-        window.location.reload();
-      });
+      document.getElementById('btn-logout').addEventListener('click', () => { localStorage.removeItem('vault_password'); window.location.reload(); });
     }
   };
 
@@ -758,33 +640,23 @@
       btn.textContent = staff; document.getElementById('staff-keys').appendChild(btn);
     });
 
-    SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); FirebaseSync.init(); ScrollEngine.init();
+    SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); SyncManager.initFirebase(); ScrollEngine.init();
 
-    LoginManager.input.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') LoginManager.btn.click();
+    // 【終極保底神技一】：網頁即將隱藏/關閉前，無條件推上雲端
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') SyncManager.flush();
     });
 
+    LoginManager.input.addEventListener('keyup', (e) => { if (e.key === 'Enter') LoginManager.btn.click(); });
     LoginManager.btn.addEventListener('click', async () => {
-      const pwd = LoginManager.input.value;
-      if (!pwd) return;
-      
-      if (!STATE.serverPayload) {
-        LoginManager.error.innerText = "資料庫連線中，請稍候幾秒...";
-        LoginManager.error.classList.remove('opacity-0');
-        setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000);
-        return;
+      const pwd = LoginManager.input.value; if (!pwd) return;
+      if (STATE.serverPayload === null) {
+        LoginManager.error.innerText = "資料庫連線中，請稍候..."; LoginManager.error.classList.remove('opacity-0'); setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); return;
       }
-
       LoginManager.btn.innerText = '解密中...'; LoginManager.btn.classList.add('opacity-75');
-      try {
-        await LoginManager.performUnlock(pwd);
-      } catch (err) {
-        LoginManager.error.innerText = "密碼錯誤，無法解密";
-        LoginManager.error.classList.remove('opacity-0'); LoginManager.input.value = '';
-        setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000);
-      } finally {
-        LoginManager.btn.innerText = '解鎖'; LoginManager.btn.classList.remove('opacity-75');
-      }
+      try { await LoginManager.performUnlock(pwd); } 
+      catch (err) { LoginManager.error.innerText = err.message || "密碼錯誤"; LoginManager.error.classList.remove('opacity-0'); LoginManager.input.value = ''; setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); } 
+      finally { LoginManager.btn.innerText = '解鎖'; LoginManager.btn.classList.remove('opacity-75'); }
     });
 
     document.getElementById('staff-keys').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') Engine.addShift(e.target.textContent); });
@@ -794,15 +666,11 @@
     
     document.getElementById('btn-manual-lock').addEventListener('click', () => { STATE.inputMode = 'LOCKED'; UI.refreshAllVisible(); });
     document.getElementById('btn-clear-active').addEventListener('click', () => {
-      if (STATE.activeDate) { STATE.daysMap[STATE.activeDate] = { isFullDayHoliday: false, shifts: [] }; STATE.unlockedSaturdays.delete(STATE.activeDate); FirebaseSync.pushUpdate(); Engine.evaluateLockState(); }
+      if (STATE.activeDate) { STATE.daysMap[STATE.activeDate] = { isFullDayHoliday: false, shifts: [] }; STATE.unlockedSaturdays.delete(STATE.activeDate); SyncManager.markDirty(STATE.activeDate); SyncManager.flush(); Engine.evaluateLockState(); }
     });
     
-    document.getElementById('prev-week').addEventListener('click', () => {
-      if (STATE.focusedWeekStart <= MIN_SUNDAY) return; const target = Utils.addDays(STATE.focusedWeekStart, -7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'});
-    });
-    document.getElementById('next-week').addEventListener('click', () => {
-      const target = Utils.addDays(STATE.focusedWeekStart, 7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'});
-    });
+    document.getElementById('prev-week').addEventListener('click', () => { if (STATE.focusedWeekStart <= MIN_SUNDAY) return; const target = Utils.addDays(STATE.focusedWeekStart, -7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'}); });
+    document.getElementById('next-week').addEventListener('click', () => { const target = Utils.addDays(STATE.focusedWeekStart, 7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'}); });
   };
 
   initApp();
