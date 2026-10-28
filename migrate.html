@@ -64,7 +64,7 @@
     }
 
     // --- Firebase 初始化 ---
-    const apiKey = localStorage.getItem('roster_api_key') || '';
+    // --- Firebase 初始化 ---
     let db, dbRef;
     
     const ui = {
@@ -87,8 +87,8 @@
     }
 
     try {
-      if (!apiKey) throw new Error("尚未設定 Firebase API Key，請先在原系統登入或手動設定 localStorage。");
-      const app = initializeApp({ ...CONFIG.firebaseBase, apiKey: apiKey });
+      // ✅ 徹底移除 localStorage 讀取，直接由 config.js 初始化
+      const app = initializeApp(CONFIG.firebaseBase); 
       db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
       dbRef = ref(db, CONFIG.dbPath);
       ui.status.innerText = "🟢 已連線";
@@ -97,7 +97,7 @@
     } catch (err) {
       ui.status.innerText = "🔴 連線失敗";
       ui.status.className = "px-3 py-1 rounded bg-red-100 text-red-700 text-sm font-bold";
-      log("Firebase 初始化失敗: " + err.message, "error");
+      log("Firebase 初始化失敗，請檢查 config.js 內是否已正確加入 apiKey: " + err.message, "error");
     }
 
     // --- Web Crypto API 核心 ---
