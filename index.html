@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v8 (E2EE)</title>
+  <title>排更助手 v9</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -94,23 +94,23 @@
   </footer>
 </div>
 
-<!-- Modal: Login (端對端加密解鎖) -->
-<div id="modal-login" class="fixed inset-0 bg-gray-900/80 z-[60] flex flex-col justify-center items-center backdrop-blur-md p-4">
+<!-- Modal: Login (無閃爍、無火星文版) -->
+<div id="modal-login" class="fixed inset-0 bg-gray-900/80 z-[60] hidden flex-col justify-center items-center backdrop-blur-md p-4">
   <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center">
     <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-3xl mb-3">🛡️</div>
     <h2 class="text-xl font-extrabold text-gray-800 mb-1 text-center">解鎖排更系統</h2>
-    <p class="text-[11px] font-bold text-gray-400 text-center mb-6 tracking-widest">系統已啟用零知識端對端加密 (E2EE)</p>
+    <p class="text-[11px] font-bold text-gray-400 text-center mb-6 tracking-widest">請輸入密碼</p>
     
-    <input type="password" inputmode="decimal" pattern="[0-9\.]*" id="input-pwd" class="w-full border border-gray-300 rounded-xl px-4 py-3.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none text-center font-mono text-xl tracking-widest" placeholder="輸入主密碼">
+    <input type="password" inputmode="decimal" pattern="[0-9\.]*" id="input-pwd" class="w-full border border-gray-300 rounded-xl px-4 py-3.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none text-center font-mono text-xl tracking-widest" placeholder="輸入密碼">
     <p id="login-error" class="text-red-500 text-[12px] font-bold text-center mb-4 h-4 opacity-0 transition-opacity">密碼錯誤，無法解密</p>
     
     <button id="btn-login" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
-      解密並讀取資料
+      解鎖
     </button>
   </div>
 </div>
 
-<!-- Modal: Settings -->
+<!-- Modal: Settings (已淨化文字) -->
 <div id="modal-settings" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
     <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -118,17 +118,14 @@
       <button id="close-settings" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-5">
-      <!-- [Mark: API Key 舊有輸入框已清除] -->
-      <!-- [Mark: 舊有讀取/寫入 localStorage('roster_api_key') 的邏輯已徹底清除] -->
-      
       <button id="btn-logout" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3.5 rounded-xl shadow-sm active:bg-red-100 transition-colors flex items-center justify-center gap-2 text-[15px]">
-        <span>🚪</span> 登出 / 清除本機密碼
+        <span>🚪</span> 清除本機密碼
       </button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Stats (V8 極限瘦身 4-Tab 導航) -->
+<!-- Modal: Stats (V8/V9 極限瘦身 4-Tab 導航) -->
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[78vh] max-h-[650px] overflow-hidden">
     <div class="shrink-0 px-4 pt-3 pb-2 border-b border-gray-100 bg-blue-50 flex flex-col gap-1">
@@ -225,7 +222,7 @@
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v8_e2ee';
+  const CACHE_KEY = 'roster_cache_v9_e2ee';
 
   const Utils = {
     formatDate: (d) => { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; },
@@ -243,20 +240,14 @@
     focusedWeekStart: null,
     inputMode: 'LOCKED', activeDate: null, unlockedSaturdays: new Set(),
     db: null, calRenderMonth: new Date(), statsYear: 'ALL',
-    // E2EE States
-    isUnlocked: false,
-    cryptoKey: null,
-    saltBase64: null,
-    serverPayload: null
+    isUnlocked: false, cryptoKey: null, saltBase64: null, serverPayload: null
   };
 
   const MIN_SUNDAY = Utils.getSunday(CONFIG.SYSTEM_START_DATE);
 
-  // --- E2EE Web Crypto API 核心封裝 ---
   const CryptoHelper = {
     buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
     b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
-    
     deriveKey: async (password, saltUint8Array) => {
       const enc = new TextEncoder();
       const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
@@ -265,26 +256,20 @@
         keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
       );
     },
-
     decryptPayload: async (payload, password) => {
       const salt = CryptoHelper.b642buf(payload.salt);
       const iv = CryptoHelper.b642buf(payload.iv);
       const cipherBuffer = CryptoHelper.b642buf(payload.ciphertext);
-      
       const key = await CryptoHelper.deriveKey(password, salt);
       const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipherBuffer);
-      
       const dec = new TextDecoder();
       return { data: JSON.parse(dec.decode(decryptedBuffer)), key: key, saltBase64: payload.salt };
     },
-
     encryptPayload: async (plainObj, cryptoKey, saltBase64) => {
-      const iv = crypto.getRandomValues(new Uint8Array(12)); // 每次寫入產生全新 IV
+      const iv = crypto.getRandomValues(new Uint8Array(12));
       const enc = new TextEncoder();
       const encodedData = enc.encode(JSON.stringify(plainObj));
-      
       const cipherBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, cryptoKey, encodedData);
-      
       return { salt: saltBase64, iv: CryptoHelper.buf2b64(iv), ciphertext: CryptoHelper.buf2b64(cipherBuffer) };
     }
   };
@@ -356,6 +341,21 @@
         document.getElementById('lock-icon').innerText = "👆"; document.getElementById('lock-text').innerText = "請點擊上方更表選擇日子";
         document.getElementById('lock-subtext').classList.add('hidden');
       } else document.getElementById('lock-overlay').classList.add('hidden');
+
+      // 智能化：按鈕動態變灰防重複
+      const buttons = document.getElementById('staff-keys').children;
+      const activeShifts = (STATE.activeDate && STATE.daysMap[STATE.activeDate]) ? Utils.normalizeShifts(STATE.daysMap[STATE.activeDate].shifts) : [];
+      const scheduledStaff = activeShifts.map(s => s.staff);
+
+      Array.from(buttons).forEach(btn => {
+        if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) {
+          btn.className = 'w-full h-full bg-blue-50/50 border border-blue-100 text-blue-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors';
+        } else if (scheduledStaff.includes(btn.textContent)) {
+          btn.className = 'w-full h-full bg-gray-100 border border-gray-200 text-gray-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors';
+        } else {
+          btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center';
+        }
+      });
     },
 
     updateHeader: (sundayStr) => {
@@ -372,7 +372,11 @@
     onScrollEnd: () => {
       let minDiff = Infinity, focused = null;
       Array.from(UI.container.children).forEach(page => { const diff = Math.abs(page.getBoundingClientRect().top); if (diff < minDiff) { minDiff = diff; focused = page.dataset.weekStart; } });
-      if (focused && focused !== STATE.focusedWeekStart) { STATE.focusedWeekStart = focused; UI.updateHeader(focused); Engine.evaluateLockState(); ScrollEngine.replenish(focused); }
+      if (focused && focused !== STATE.focusedWeekStart) { 
+        STATE.focusedWeekStart = focused; UI.updateHeader(focused); 
+        Engine.smartSetFocusWeekActiveDay(focused);
+        Engine.evaluateLockState(); ScrollEngine.replenish(focused); 
+      }
     },
     replenish: (centerWeekStr) => {
       let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop, prepended = false;
@@ -391,12 +395,32 @@
       setTimeout(() => {
         const targetNode = UI.container.querySelector(`[data-week-start="${targetSunday}"]`);
         if (targetNode) { UI.container.classList.add('instant-scroll'); UI.container.scrollTop = targetNode.offsetTop; setTimeout(() => UI.container.classList.remove('instant-scroll'), 100); }
-        STATE.focusedWeekStart = targetSunday; UI.updateHeader(targetSunday); Engine.evaluateLockState();
+        STATE.focusedWeekStart = targetSunday; UI.updateHeader(targetSunday); 
+        Engine.smartSetFocusWeekActiveDay(targetSunday);
+        Engine.evaluateLockState();
       }, 0);
     }
   };
 
   window.Engine = {
+    // 智能化：判斷當前星期，自動標記今日或搵位
+    smartSetFocusWeekActiveDay: (weekStartStr) => {
+      const sundayDate = new Date(weekStartStr), saturdayDate = new Date(Utils.addDays(weekStartStr, 6)), todayObj = new Date(STATE.todayStr);
+      if (todayObj >= sundayDate && todayObj <= saturdayDate) {
+        STATE.activeDate = STATE.todayStr;
+      } else {
+        STATE.activeDate = null;
+        for (let i = 1; i <= 6; i++) {
+          const dStr = Utils.addDays(weekStartStr, i);
+          if (dStr < CONFIG.SYSTEM_START_DATE) continue;
+          const dayData = STATE.daysMap[dStr] || {};
+          if (dayData.isFullDayHoliday) continue;
+          const shifts = Utils.normalizeShifts(dayData.shifts);
+          if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue;
+          if (shifts.length < 6) { STATE.activeDate = dStr; break; }
+        }
+      }
+    },
     evaluateLockState: () => {
       if (!STATE.focusedWeekStart) return;
       let isFull = true;
@@ -432,11 +456,27 @@
       const targetDate = STATE.activeDate;
       if (!STATE.daysMap[targetDate]) STATE.daysMap[targetDate] = { shifts: [] };
       STATE.daysMap[targetDate].shifts = Utils.normalizeShifts(STATE.daysMap[targetDate].shifts);
+      
+      // 智能化防呆：同一日不能排重覆員工
+      if (STATE.daysMap[targetDate].shifts.some(s => s.staff === staffCode)) return;
       if (STATE.daysMap[targetDate].isFullDayHoliday || STATE.daysMap[targetDate].shifts.length >= 6) return;
+      
       STATE.daysMap[targetDate].shifts.push({ staff: staffCode, status: 'ON' });
       FirebaseSync.pushUpdate();
       
       if (STATE.daysMap[targetDate].shifts.length === 6) {
+        // 智能化自動跳格
+        let checkDate = targetDate;
+        for(let i=0; i<6; i++) {
+           checkDate = Utils.addDays(checkDate, 1);
+           const dayIdx = new Date(checkDate).getDay();
+           if (dayIdx === 0) break;
+           const dayData = STATE.daysMap[checkDate] || {};
+           if (dayData.isFullDayHoliday) continue;
+           const shifts = Utils.normalizeShifts(dayData.shifts);
+           if (dayIdx === 6 && !STATE.unlockedSaturdays.has(checkDate) && shifts.length === 0) continue;
+           if (shifts.length < 6) { STATE.activeDate = checkDate; break; }
+        }
         Engine.evaluateLockState();
         if (STATE.inputMode === 'LOCKED' && new Date(targetDate).getDay() === 5) {
           const nextSun = Utils.addDays(STATE.focusedWeekStart, 7); ScrollEngine.replenish(nextSun);
@@ -505,30 +545,18 @@
       const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
       let baseSum = 0, baseCount = 0;
       
-      // 1. 嚴格過濾出符合 YYYY-MM-DD 格式，並且真係有填更/有記錄的日期 Key
-      const validDateKeys = Object.keys(STATE.daysMap)
-        .filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k))
-        .sort();
-
+      const validDateKeys = Object.keys(STATE.daysMap).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
       const sysStart = new Date(CONFIG.SYSTEM_START_DATE);
       let filterStart = sysStart;
-      
-      // 2. 終點日：以資料庫最後一日為準；若無資料則以今日為準
       let maxDateStr = (validDateKeys.length > 0) ? validDateKeys[validDateKeys.length - 1] : STATE.todayStr;
       let filterEnd = new Date(maxDateStr);
       if (isNaN(filterEnd.getTime())) filterEnd = new Date(STATE.todayStr);
-
-      // 3. 年份篩選
+      
       if (STATE.statsYear !== 'ALL') {
         const y = parseInt(STATE.statsYear);
-        const yearStart = new Date(y, 0, 1);
-        const yearEnd = new Date(y, 11, 31);
-        
-        filterStart = new Date(Math.max(sysStart.getTime(), yearStart.getTime()));
-        filterEnd = new Date(Math.min(filterEnd.getTime(), yearEnd.getTime()));
+        filterStart = new Date(Math.max(sysStart.getTime(), new Date(y, 0, 1).getTime()));
+        filterEnd = new Date(Math.min(filterEnd.getTime(), new Date(y, 11, 31).getTime()));
       }
-
-      // 防呆：確保 filterEnd 永遠唔會早過 filterStart
       if (filterEnd < filterStart) filterEnd = new Date(filterStart);
 
       let curD = new Date(filterStart), promptJSON = {};
@@ -591,7 +619,7 @@
 
       const tornado = document.getElementById('tornado-chart'); tornado.innerHTML = '';
       [...pnls].sort((a,b) => a.pnl - b.pnl).forEach(item => {
-        const w = (Math.abs(item.pnl) / maxAbs) * 100, valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1), barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-red-400' : 'bg-gray-300'), textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
+        const w = (Math.abs(item.pnl) / maxAbs) * 100, valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1), barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-gray-300' : 'bg-gray-300'), textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
         tornado.innerHTML += `<div class="flex items-center text-[10px] font-bold"><div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div><div class="flex-1 flex items-center h-4 relative"><div class="w-1/2 h-full flex justify-end pr-0.5">${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}</div><div class="w-px h-full bg-gray-300"></div><div class="w-1/2 h-full flex justify-start pl-0.5">${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}</div></div><div class="w-7 text-right ml-1 ${textColor}">${valStr}</div></div>`;
       });
     },
@@ -635,7 +663,6 @@
     }
   };
 
-  // --- E2EE 登入管理器 ---
   const LoginManager = {
     modal: document.getElementById('modal-login'),
     input: document.getElementById('input-pwd'),
@@ -668,13 +695,11 @@
       localStorage.setItem('vault_password', pwd);
       LoginManager.modal.classList.add('hidden'); LoginManager.modal.classList.remove('flex', 'modal-enter');
       
-      document.getElementById('conn-status').innerText = '🟢 E2EE 連線';
+      document.getElementById('conn-status').innerText = '🟢 已連線';
       document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
       
       Utils.saveCache(STATE.daysMap);
-      Engine.evaluateLockState();
       
-      // 成功解鎖後才進行跳轉
       const safeCenterSunday = Math.max(new Date(MIN_SUNDAY), new Date(Utils.getSunday(STATE.todayStr)));
       ScrollEngine.jumpToAndRebuild(Utils.formatDate(new Date(safeCenterSunday)));
     }
@@ -687,13 +712,12 @@
       
       onValue(ref(STATE.db, CONFIG.dbPath), async (snapshot) => {
         const payload = snapshot.val();
-        if (!payload || !payload.ciphertext) return; // 略過空白庫
+        if (!payload || !payload.ciphertext) return;
         STATE.serverPayload = payload;
 
         if (!STATE.isUnlocked) {
           await LoginManager.checkAutoLogin();
         } else {
-          // 若處於已解鎖狀態，背景靜默解密更新
           try {
              const result = await CryptoHelper.decryptPayload(STATE.serverPayload, localStorage.getItem('vault_password'));
              const newData = result.data;
@@ -702,7 +726,7 @@
                if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(newData[dStr])) { STATE.daysMap[dStr] = newData[dStr]; hasChanges = true; }
              });
              if(hasChanges) { Utils.saveCache(STATE.daysMap); Engine.evaluateLockState(); }
-          } catch (e) { console.error("遠端數據解密失敗 (密碼可能已被更改)", e); }
+          } catch (e) { console.error("遠端數據解密失敗", e); }
         }
       });
     },
@@ -710,7 +734,6 @@
       Utils.saveCache(STATE.daysMap);
       if (!STATE.db || !STATE.isUnlocked || !STATE.cryptoKey) return;
       try {
-        // 每次寫入強制重新加密，產生全新 IV
         const encryptedPackage = await CryptoHelper.encryptPayload(STATE.daysMap, STATE.cryptoKey, STATE.saltBase64);
         await set(ref(STATE.db, CONFIG.dbPath), encryptedPackage);
       } catch (err) { console.error("加密或上傳失敗", err); }
@@ -737,17 +760,14 @@
 
     SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); FirebaseSync.init(); ScrollEngine.init();
 
-    // 處理 iPhone 鍵盤的「前往 / 完成 (Enter)」按鍵
     LoginManager.input.addEventListener('keyup', (e) => {
       if (e.key === 'Enter') LoginManager.btn.click();
     });
 
-    // 處理手動登入事件
     LoginManager.btn.addEventListener('click', async () => {
       const pwd = LoginManager.input.value;
       if (!pwd) return;
       
-      // 防呆：如果 Firebase 仲未載入完密文，提示等候，防止無反應
       if (!STATE.serverPayload) {
         LoginManager.error.innerText = "資料庫連線中，請稍候幾秒...";
         LoginManager.error.classList.remove('opacity-0');
@@ -759,12 +779,11 @@
       try {
         await LoginManager.performUnlock(pwd);
       } catch (err) {
-        console.error("解密失敗:", err);
         LoginManager.error.innerText = "密碼錯誤，無法解密";
         LoginManager.error.classList.remove('opacity-0'); LoginManager.input.value = '';
         setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000);
       } finally {
-        LoginManager.btn.innerText = '解密並讀取資料'; LoginManager.btn.classList.remove('opacity-75');
+        LoginManager.btn.innerText = '解鎖'; LoginManager.btn.classList.remove('opacity-75');
       }
     });
 
