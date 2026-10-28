@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V10 資料結構升級工具 (Granular E2EE)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 p-6 flex justify-center items-start min-h-screen">
+  <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
+    <div class="flex items-center justify-between mb-6 border-b pb-4">
+      <h1 class="text-2xl font-extrabold text-gray-800">🚀 升級至 V10 按日加密架構</h1>
+      <span id="conn-status" class="px-3 py-1 rounded bg-gray-200 text-gray-600 text-sm font-bold">檢查連線中...</span>
+    </div>
+
+    <div class="mb-8 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+      <h2 class="text-lg font-bold text-blue-900 mb-2">安全升級說明</h2>
+      <p class="text-sm text-blue-700 mb-4">此工具會將現有的「全打包加密 (V9)」資料解開，並轉換為「按日碎片化加密 (V10)」格式。這能徹底解決覆寫衝突，並支援離線同步。</p>
+      
+      <div class="space-y-4 mb-5">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1">請輸入主密碼 (Master Password)</label>
+          <input type="password" id="pwd" inputmode="decimal" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono" placeholder="輸入現有密碼">
+        </div>
+      </div>
+      <button id="btn-migrate" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-md">
+        開始無縫升級
+      </button>
+    </div>
+
+    <div>
+      <h3 class="text-sm font-bold text-gray-500 mb-2">執行日誌</h3>
+      <div id="log-console" class="bg-gray-900 text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto whitespace-pre-wrap">等待操作...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+
+    if (!window.APP_CONFIG) throw new Error("Missing config.js");
+    let db, dbRef;
+    const ui = { status: document.getElementById('conn-status'), log: document.getElementById('log-console'), btn: document.getElementById('btn-migrate'), pwd: document.getElementById('pwd') };
+
+    function log(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      let color = 'text-green-400';
+      if (type === 'error') color = 'text-red-400 font-bold';
+      if (type === 'warn') color = 'text-yellow-400';
+      ui.log.innerHTML += `<div class="${color}">[${time}] ${msg}</div>`; ui.log.scrollTop = ui.log.scrollHeight;
+    }
+
+    try {
+      const app = initializeApp(window.APP_CONFIG.firebaseBase);
+      db = getDatabase(app, window.APP_CONFIG.firebaseBase.databaseURL);
+      dbRef = ref(db, window.APP_CONFIG.dbPath);
+      ui.status.innerText = "🟢 已連線"; ui.status.className = "px-3 py-1 rounded bg-green-100 text-green-700 text-sm font-bold";
+    } catch (err) { log("連線失敗: " + err.message, "error"); }
+
+    const CryptoHelper = {
+      buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
+      b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
+      deriveKey: async (password, saltUint8Array) => {
+        const enc = new TextEncoder();
+        const keyMat = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
+        return crypto.subtle.deriveKey({ name: "PBKDF2", salt: saltUint8Array, iterations: 100000, hash: "SHA-256" }, keyMat, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+      }
+    };
+
+    ui.btn.addEventListener('click', async () => {
+      const pwd = ui.pwd.value;
+      if (!pwd) return log("❌ 請輸入密碼！", "error");
+      
+      try {
+        ui.btn.disabled = true; log("⏳ 正在從 Firebase 抓取現有資料...");
+        const snap = await get(dbRef);
+        if (!snap.exists()) return log("⚠️ 資料庫為空，無須升級。");
+        
+        const data = snap.val();
+        let plainDaysMap = {};
+
+        if (data.global_salt && data.days) return log("✅ 偵測到資料庫已經是 V10 格式，無須轉換！", "warn");
+        
+        if (data.ciphertext && data.salt && data.iv) {
+          log("🔒 偵測到 V9 全打包加密，正在解密...");
+          const saltBuf = CryptoHelper.b642buf(data.salt), ivBuf = CryptoHelper.b642buf(data.iv), cipherBuf = CryptoHelper.b642buf(data.ciphertext);
+          const oldKey = await CryptoHelper.deriveKey(pwd, saltBuf);
+          try {
+            const decBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBuf }, oldKey, cipherBuf);
+            plainDaysMap = JSON.parse(new TextDecoder().decode(decBuf));
+            log("✅ 成功解開 V9 數據！");
+          } catch(e) { throw new Error("解密失敗，請檢查密碼是否正確。"); }
+        } else {
+          log("⚠️ 偵測到明文或舊版資料，將直接進行加密。");
+          plainDaysMap = data;
+        }
+
+        log("⏳ 正在產生 V10 Global Salt 並為每一天獨立加密...");
+        const globalSalt = crypto.getRandomValues(new Uint8Array(16));
+        const newKey = await CryptoHelper.deriveKey(pwd, globalSalt);
+        
+        const newV10Payload = { global_salt: CryptoHelper.buf2b64(globalSalt), days: {} };
+        const enc = new TextEncoder();
+        
+        for (const [dateStr, dayData] of Object.entries(plainDaysMap)) {
+          if (!dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) continue; // 過濾非日期 Key
+          const iv = crypto.getRandomValues(new Uint8Array(12));
+          const encoded = enc.encode(JSON.stringify(dayData));
+          const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, newKey, encoded);
+          newV10Payload.days[dateStr] = { iv: CryptoHelper.buf2b64(iv), ciphertext: CryptoHelper.buf2b64(ciphertext) };
+        }
+
+        log("🚀 正在上傳 V10 結構至 Firebase...");
+        await set(dbRef, newV10Payload);
+        log("🎉 完美升級成功！你的資料庫現已支援按日合併及極速解密！", "success");
+
+      } catch (err) { log("🚨 錯誤: " + err.message, "error"); }
+      finally { ui.btn.disabled = false; }
+    });
+  </script>
+</body>
+</html>
