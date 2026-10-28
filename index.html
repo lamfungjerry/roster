@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v8</title>
+  <title>排更助手 v8 (E2EE)</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -51,9 +51,9 @@
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
     <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
       <div class="flex-1 flex justify-start">
-        <span id="conn-status" class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 text-[10px] font-bold tracking-wider">📶 讀取中</span>
+        <span id="conn-status" class="bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold tracking-wider">🔒 尚未解鎖</span>
       </div>
-      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap" onclick="window.safeBack()">編更表</h1>
+      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap">編更表</h1>
       <div class="flex-1 flex justify-end gap-3">
         <button id="btn-stats" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">📊</button>
         <button id="btn-settings" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">⚙️</button>
@@ -61,8 +61,7 @@
     </div>
     <div class="h-12 flex justify-between items-center px-2 bg-gray-50/50 gap-1">
       <button id="prev-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[15px] whitespace-nowrap shrink-0">&lt; 上一週</button>
-      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-2 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center gap-1.5">
-        <span>📅</span>
+      <button id="btn-open-calendar" class="font-bold text-[16px] text-gray-800 bg-white border border-gray-200 px-2 py-1.5 rounded-lg active:bg-gray-100 shadow-sm transition-colors tracking-wide flex items-center justify-center whitespace-nowrap flex-1 mx-1 h-9">
         <span id="header-date-range">載入中...</span>
       </button>
       <button id="next-week" class="text-blue-600 font-bold px-3 py-2 active:scale-95 transition-transform text-[15px] whitespace-nowrap shrink-0">下一週 &gt;</button>
@@ -85,14 +84,30 @@
         <button id="btn-manual-lock" class="flex-1 bg-gray-50 text-gray-700 border border-gray-200 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[20px] flex items-center justify-center transition-colors">🔒</button>
         <button id="btn-clear-active" class="flex-1 bg-red-50 text-red-500 border border-red-200 font-bold rounded-xl shadow-sm active:bg-red-100 text-[20px] flex items-center justify-center transition-colors">🧹</button>
       </div>
-      <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1.5">
+      <button id="btn-alloff" class="col-span-1 w-full h-full bg-orange-50 text-orange-600 border border-orange-200 font-bold rounded-xl shadow-sm active:bg-orange-100 text-[17px] flex items-center justify-center gap-1">
         <span>🌴</span>全休
       </button>
-      <button id="btn-backspace" class="col-span-1 w-full h-full bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[17px] flex items-center justify-center gap-1.5">
+      <button id="btn-backspace" class="col-span-1 w-full h-full bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-xl shadow-sm active:bg-gray-200 text-[17px] flex items-center justify-center gap-1">
         <span>⌫</span>退格
       </button>
     </div>
   </footer>
+</div>
+
+<!-- Modal: Login (端對端加密解鎖) -->
+<div id="modal-login" class="fixed inset-0 bg-gray-900/80 z-[60] flex flex-col justify-center items-center backdrop-blur-md p-4">
+  <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col items-center">
+    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-3xl mb-3">🛡️</div>
+    <h2 class="text-xl font-extrabold text-gray-800 mb-1 text-center">解鎖排更系統</h2>
+    <p class="text-[11px] font-bold text-gray-400 text-center mb-6 tracking-widest">系統已啟用零知識端對端加密 (E2EE)</p>
+    
+    <input type="password" id="input-pwd" class="w-full border border-gray-300 rounded-xl px-4 py-3.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none text-center font-mono text-xl tracking-widest" placeholder="輸入主密碼">
+    <p id="login-error" class="text-red-500 text-[12px] font-bold text-center mb-4 h-4 opacity-0 transition-opacity">密碼錯誤，無法解密</p>
+    
+    <button id="btn-login" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+      解密並讀取資料
+    </button>
+  </div>
 </div>
 
 <!-- Modal: Settings -->
@@ -103,11 +118,12 @@
       <button id="close-settings" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-5">
-      <div>
-        <label class="block text-sm font-bold text-gray-700 mb-1">Firebase API Key</label>
-        <input type="password" id="input-api-key" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-mono" placeholder="輸入 API Key">
-      </div>
-      <button id="btn-save-settings" class="w-full bg-gray-800 text-white font-bold py-3 rounded-xl shadow-md active:bg-gray-900 transition-colors">儲存並重新載入</button>
+      <!-- [Mark: API Key 舊有輸入框已清除] -->
+      <!-- [Mark: 舊有讀取/寫入 localStorage('roster_api_key') 的邏輯已徹底清除] -->
+      
+      <button id="btn-logout" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3.5 rounded-xl shadow-sm active:bg-red-100 transition-colors flex items-center justify-center gap-2 text-[15px]">
+        <span>🚪</span> 登出 / 清除本機密碼
+      </button>
     </div>
   </div>
 </div>
@@ -115,7 +131,6 @@
 <!-- Modal: Stats (V8 極限瘦身 4-Tab 導航) -->
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[78vh] max-h-[650px] overflow-hidden">
-    
     <div class="shrink-0 px-4 pt-3 pb-2 border-b border-gray-100 bg-blue-50 flex flex-col gap-1">
       <div class="flex justify-between items-center">
         <h2 class="text-[17px] font-bold text-blue-900 flex-1">📊 AI 綜合評估</h2>
@@ -128,23 +143,18 @@
         <span id="global-date-range" class="text-[10px] font-bold text-blue-500/90 tracking-widest"></span>
       </div>
     </div>
-
     <div class="flex border-b border-gray-200 bg-white shrink-0">
       <button class="flex-1 py-2.5 text-[13px] tab-active" onclick="StatsEngine.switchTab(0)" id="tab-btn-0">總覽</button>
-      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位</button>
-      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(2)" id="tab-btn-2">盈虧</button>
-      <button class="flex-1 py-2.5 text-[13px] tab-inactive" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
+      <button class="flex-1 py-2.5 text-[13px] tab-inactive text-gray-500" onclick="StatsEngine.switchTab(1)" id="tab-btn-1">均位</button>
+      <button class="flex-1 py-2.5 text-[13px] tab-inactive text-gray-500" onclick="StatsEngine.switchTab(2)" id="tab-btn-2">盈虧</button>
+      <button class="flex-1 py-2.5 text-[13px] tab-inactive text-gray-500" onclick="StatsEngine.switchTab(3)" id="tab-btn-3">命中率</button>
     </div>
-
     <div class="flex-1 overflow-y-auto p-3 bg-gray-50 flex flex-col relative">
       <div id="tab-content-0" class="flex flex-col gap-2.5 h-full">
         <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex items-center gap-3 shrink-0">
-           <div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle">
-             <span class="text-[12px] font-black" id="mini-health-score">--</span>
-           </div>
+           <div class="relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px]" id="mini-health-circle"><span class="text-[12px] font-black" id="mini-health-score">--</span></div>
            <div id="mini-ai-alert" class="flex-1 text-[11px] font-bold leading-snug"></div>
         </div>
-
         <div class="bg-white rounded-lg px-3 py-4 border border-gray-200 shadow-sm shrink-0">
            <div class="text-center text-[11px] font-bold text-gray-500 mb-5">累積盈虧 (天秤圖)</div>
            <div class="relative w-full h-5 flex items-center px-4">
@@ -153,42 +163,32 @@
               <div id="dot-plot-container" class="absolute inset-x-4 top-1/2 -translate-y-1/2"></div>
            </div>
         </div>
-
         <div class="bg-white rounded-lg p-3 border border-gray-200 shadow-sm flex-1 flex flex-col min-h-0">
            <div class="text-center text-[11px] font-bold text-gray-500 mb-2">排行榜 (紅=硬食 / 綠=靚位)</div>
            <div id="tornado-chart" class="flex flex-col justify-around flex-1"></div>
         </div>
       </div>
-
       <div id="tab-content-1" class="hidden space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
           <div id="stats-baseline" class="text-center font-extrabold text-lg text-blue-600 mb-2 pb-2 border-b border-gray-100">動態基準均位: --</div>
-          <div class="text-[10px] text-gray-400 text-center mb-2">受人手短缺影響，大市基準會動態拉高</div>
           <div id="stats-grid-1" class="grid grid-cols-2 gap-2"></div>
         </div>
       </div>
-      
       <div id="tab-content-2" class="hidden space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
           <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">累積盈虧分數</div>
-          <div class="text-[10px] text-gray-400 text-center mb-3 pb-2 border-b border-gray-100">已包含假期順延補償計算</div>
           <div id="stats-grid-2" class="grid grid-cols-3 gap-2"></div>
         </div>
       </div>
-      
       <div id="tab-content-3" class="hidden space-y-3">
         <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
           <div class="text-center font-extrabold text-[15px] text-gray-800 mb-1">真實動態命中率</div>
-          <div class="text-[10px] text-gray-400 text-center mb-3 pb-2 border-b border-gray-100">以動態分數計算 (靚: 1-2分 | 平: 3-4分 | 差: 5-6分)</div>
           <div id="stats-grid-3" class="flex flex-col gap-2"></div>
         </div>
       </div>
     </div>
-
     <div class="shrink-0 p-3 bg-white border-t border-gray-100">
-      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
-        📋 複製 AI 提示詞
-      </button>
+      <button id="btn-copy-prompt" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 text-[15px]">📋 複製 AI Prompt</button>
     </div>
   </div>
 </div>
@@ -222,10 +222,10 @@
   }
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v8';
+  const CACHE_KEY = 'roster_cache_v8_e2ee';
 
   const Utils = {
     formatDate: (d) => { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; },
@@ -242,19 +242,59 @@
     renderedWeeks: new Set(), 
     focusedWeekStart: null,
     inputMode: 'LOCKED', activeDate: null, unlockedSaturdays: new Set(),
-    apiKey: localStorage.getItem('roster_api_key') || '', db: null,
-    calRenderMonth: new Date(), statsYear: 'ALL'
+    db: null, calRenderMonth: new Date(), statsYear: 'ALL',
+    // E2EE States
+    isUnlocked: false,
+    cryptoKey: null,
+    saltBase64: null,
+    serverPayload: null
   };
 
   const MIN_SUNDAY = Utils.getSunday(CONFIG.SYSTEM_START_DATE);
+
+  // --- E2EE Web Crypto API 核心封裝 ---
+  const CryptoHelper = {
+    buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
+    b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
+    
+    deriveKey: async (password, saltUint8Array) => {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
+      return await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: saltUint8Array, iterations: 100000, hash: "SHA-256" },
+        keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+      );
+    },
+
+    decryptPayload: async (payload, password) => {
+      const salt = CryptoHelper.b642buf(payload.salt);
+      const iv = CryptoHelper.b642buf(payload.iv);
+      const cipherBuffer = CryptoHelper.b642buf(payload.ciphertext);
+      
+      const key = await CryptoHelper.deriveKey(password, salt);
+      const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipherBuffer);
+      
+      const dec = new TextDecoder();
+      return { data: JSON.parse(dec.decode(decryptedBuffer)), key: key, saltBase64: payload.salt };
+    },
+
+    encryptPayload: async (plainObj, cryptoKey, saltBase64) => {
+      const iv = crypto.getRandomValues(new Uint8Array(12)); // 每次寫入產生全新 IV
+      const enc = new TextEncoder();
+      const encodedData = enc.encode(JSON.stringify(plainObj));
+      
+      const cipherBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, cryptoKey, encodedData);
+      
+      return { salt: saltBase64, iv: CryptoHelper.buf2b64(iv), ciphertext: CryptoHelper.buf2b64(cipherBuffer) };
+    }
+  };
 
   const UI = {
     container: document.getElementById('weeks-container'),
     headerDate: document.getElementById('header-date-range'),
     
     createWeekNode: (sundayStr) => {
-      const weekDiv = document.createElement('div');
-      weekDiv.className = 'week-page'; weekDiv.dataset.weekStart = sundayStr;
+      const weekDiv = document.createElement('div'); weekDiv.className = 'week-page'; weekDiv.dataset.weekStart = sundayStr;
       let html = `<div class="bg-gray-50/50 rounded-xl h-full flex flex-col p-1 box-border">
                     <div class="flex text-center text-[11px] font-bold text-gray-500 mb-1 pb-1 border-b border-gray-200 shrink-0">
                       <div class="w-12 flex items-center justify-center">日期</div>
@@ -267,35 +307,22 @@
                     <div class="flex flex-col flex-1 justify-around gap-0.5 pb-1">`;
       for (let i = 1; i <= 6; i++) html += UI.generateDayHTML(Utils.addDays(sundayStr, i), i);
       html += `</div></div>`;
-      weekDiv.innerHTML = html;
-      STATE.renderedWeeks.add(sundayStr);
-      return weekDiv;
+      weekDiv.innerHTML = html; STATE.renderedWeeks.add(sundayStr); return weekDiv;
     },
 
     generateDayHTML: (dateStr, dayIndex) => {
-      const dObj = new Date(dateStr);
-      const dayName = CONFIG.WEEK_DAYS[dayIndex];
-      const mdStr = `${dObj.getMonth()+1}/${dObj.getDate()}`;
+      const dObj = new Date(dateStr), dayName = CONFIG.WEEK_DAYS[dayIndex], mdStr = `${dObj.getMonth()+1}/${dObj.getDate()}`;
       const dayData = STATE.daysMap[dateStr] || { isFullDayHoliday: false, shifts: [] };
-      const shifts = Utils.normalizeShifts(dayData.shifts);
-      const isActive = STATE.activeDate === dateStr;
+      const shifts = Utils.normalizeShifts(dayData.shifts), isActive = STATE.activeDate === dateStr;
       const todayTag = (dateStr === STATE.todayStr) ? `<div class="absolute -left-1 -top-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20">今日</div>` : '';
 
-      const rowWrapperClass = `flex items-center mt-1 bg-white rounded-lg p-1 border shadow-sm cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20 z-10' : 'border-gray-200 hover:border-gray-300'}`;
+      const rowWrapperClass = `flex items-center mt-1 bg-white rounded-lg p-1 border shadow-sm cursor-pointer transition-all ${isActive ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/20 z-10' : 'border-gray-200/75 active:bg-gray-50'}`;
       const leftBlockClass = `w-12 flex flex-col items-center justify-center border-r border-gray-200/60 mr-1 pr-1 shrink-0 relative h-full`;
       const labelBlock = `<div class="${leftBlockClass}">${todayTag}<div class="font-extrabold text-gray-700 text-lg leading-tight">${dayName}</div><div class="text-[10px] text-gray-400 font-bold">${mdStr}</div></div>`;
 
-      if (dateStr < CONFIG.SYSTEM_START_DATE) {
-        return `<div class="${rowWrapperClass} opacity-40 pointer-events-none" data-date="${dateStr}">${labelBlock}<div class="flex-1 flex justify-center text-gray-400 font-bold text-sm">無數據</div></div>`;
-      }
-
-      if (dayIndex === 6 && shifts.length === 0 && !dayData.isFullDayHoliday && !STATE.unlockedSaturdays.has(dateStr)) {
-        return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 h-[42px] px-1"><div class="w-full h-full rounded slot-empty flex items-center justify-center text-[11px] font-bold text-gray-500">點擊解鎖</div></div></div>`;
-      }
-      
-      if (dayData.isFullDayHoliday) {
-        return `<div class="${rowWrapperClass} h-full min-h-[46px] !bg-red-50 !border-red-100" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex justify-center items-center text-red-500 font-extrabold text-xs tracking-widest">休假</div></div>`;
-      }
+      if (dateStr < CONFIG.SYSTEM_START_DATE) return `<div class="${rowWrapperClass} opacity-40 pointer-events-none" data-date="${dateStr}">${labelBlock}<div class="flex-1 flex justify-center text-gray-400 font-bold text-sm">無數據</div></div>`;
+      if (dayIndex === 6 && shifts.length === 0 && !dayData.isFullDayHoliday && !STATE.unlockedSaturdays.has(dateStr)) return `<div class="${rowWrapperClass} h-full min-h-0" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 h-[42px] px-1"><div class="w-full h-full rounded-lg sat-unlock-btn text-sm font-bold flex items-center justify-center gap-1 cursor-pointer" onclick="Engine.unlockSaturday(event, '${dateStr}')"><span>🔒</span> 點擊解鎖</div></div></div>`;
+      if (dayData.isFullDayHoliday) return `<div class="${rowWrapperClass} h-full min-h-[46px] !bg-red-50 !border-red-100" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex justify-center text-red-500 font-bold tracking-widest text-sm pointer-events-none">🌴 全休日</div></div>`;
 
       const slotsPointerClass = (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') ? 'pointer-events-none' : '';
       let slotsHTML = '';
@@ -303,26 +330,19 @@
         if (i === 2 || i === 4) slotsHTML += `<div class="shift-divider h-3/4"></div>`;
         const shift = shifts[i];
         if (shift) {
-          const bgClass = shift.status === 'LEAVE' ? 'bg-red-50 border-red-300 text-red-600 font-extrabold' : 'bg-blue-50 border-blue-300 text-blue-700 font-bold';
-          slotsHTML += `<div onclick="Engine.toggleLeave(event, '${dateStr}', ${i})" class="flex-1 h-[42px] rounded border-[1.5px] ${bgClass} ${slotsPointerClass} flex items-center justify-center text-[11px]">${shift.staff}</div>`;
-        } else {
-          slotsHTML += `<div class="flex-1 h-[42px] rounded slot-empty flex items-center justify-center text-lg ${slotsPointerClass}"></div>`;
-        }
+          const bgClass = shift.status === 'LEAVE' ? 'bg-red-50 border-red-300 text-red-600 font-extrabold' : 'bg-eff6ff border-[#3b82f6] text-[#1e3a8a] font-bold';
+          slotsHTML += `<div onclick="Engine.toggleLeave(event, '${dateStr}', ${i})" class="flex-1 h-[42px] rounded border-[1.5px] ${bgClass} flex items-center justify-center text-lg cursor-pointer active:scale-90 transition-transform">${shift.staff}</div>`;
+        } else slotsHTML += `<div class="flex-1 h-[42px] rounded slot-empty flex items-center justify-center text-lg"></div>`;
       }
-      return `<div class="${rowWrapperClass} h-full min-h-[46px]" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex h-full gap-1 items-center px-1">${slotsHTML}</div></div>`;
+      return `<div class="${rowWrapperClass} h-full min-h-[46px]" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex h-full gap-1 items-center px-1 ${slotsPointerClass}">${slotsHTML}</div></div>`;
     },
 
     refreshAllVisible: () => {
-      document.querySelectorAll('[data-date]').forEach(el => {
-        if (el.dataset.date >= CONFIG.SYSTEM_START_DATE) el.outerHTML = UI.generateDayHTML(el.dataset.date, new Date(el.dataset.date).getDay());
-      });
+      document.querySelectorAll('[data-date]').forEach(el => { if (el.dataset.date >= CONFIG.SYSTEM_START_DATE) el.outerHTML = UI.generateDayHTML(el.dataset.date, new Date(el.dataset.date).getDay()); });
       UI.updateFooter();
     },
 
-    silentRefreshDay: (dateStr) => {
-      const dayEl = document.querySelector(`div[data-date="${dateStr}"]`);
-      if (dayEl) dayEl.outerHTML = UI.generateDayHTML(dateStr, new Date(dateStr).getDay());
-    },
+    silentRefreshDay: (dateStr) => { const dayEl = document.querySelector(`div[data-date="${dateStr}"]`); if (dayEl) dayEl.outerHTML = UI.generateDayHTML(dateStr, new Date(dateStr).getDay()); },
 
     updateFooter: () => {
       if (STATE.inputMode === 'LOCKED') {
@@ -335,9 +355,7 @@
         document.getElementById('lock-msg-box').className = "bg-blue-100 border border-blue-300 text-blue-800 px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1";
         document.getElementById('lock-icon').innerText = "👆"; document.getElementById('lock-text').innerText = "請點擊上方更表選擇日子";
         document.getElementById('lock-subtext').classList.add('hidden');
-      } else {
-        document.getElementById('lock-overlay').classList.add('hidden');
-      }
+      } else document.getElementById('lock-overlay').classList.add('hidden');
     },
 
     updateHeader: (sundayStr) => {
@@ -350,433 +368,22 @@
 
   const ScrollEngine = {
     timeout: null,
-    init: () => {
-      UI.container.addEventListener('scroll', () => {
-        clearTimeout(ScrollEngine.timeout); ScrollEngine.timeout = setTimeout(ScrollEngine.onScrollEnd, 150);
-      });
-    },
+    init: () => { UI.container.addEventListener('scroll', () => { clearTimeout(ScrollEngine.timeout); ScrollEngine.timeout = setTimeout(ScrollEngine.onScrollEnd, 150); }); },
     onScrollEnd: () => {
       let minDiff = Infinity, focused = null;
-      Array.from(UI.container.children).forEach(page => {
-        const diff = Math.abs(page.getBoundingClientRect().top);
-        if (diff < minDiff) { minDiff = diff; focused = page.dataset.weekStart; }
-      });
-      if (focused && focused !== STATE.focusedWeekStart) {
-        STATE.focusedWeekStart = focused; UI.updateHeader(focused); Engine.evaluateLockState(); ScrollEngine.replenish(focused);
-      }
+      Array.from(UI.container.children).forEach(page => { const diff = Math.abs(page.getBoundingClientRect().top); if (diff < minDiff) { minDiff = diff; focused = page.dataset.weekStart; } });
+      if (focused && focused !== STATE.focusedWeekStart) { STATE.focusedWeekStart = focused; UI.updateHeader(focused); Engine.evaluateLockState(); ScrollEngine.replenish(focused); }
     },
     replenish: (centerWeekStr) => {
-      let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop;
-      let prepended = false;
-
+      let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop, prepended = false;
       let topWeek = UI.container.firstElementChild.dataset.weekStart;
       while (topWeek > MIN_SUNDAY && (new Date(centerWeekStr) - new Date(topWeek)) / 604800000 < 4) {
-        const newWeek = Utils.addDays(topWeek, -7);
-        UI.container.insertBefore(UI.createWeekNode(newWeek), UI.container.firstElementChild);
-        topWeek = newWeek; prepended = true;
+        const newWeek = Utils.addDays(topWeek, -7); UI.container.insertBefore(UI.createWeekNode(newWeek), UI.container.firstElementChild); topWeek = newWeek; prepended = true;
       }
-      if (prepended) {
-        UI.container.classList.add('instant-scroll');
-        UI.container.scrollTop = oldScrollTop + (UI.container.scrollHeight - oldScrollHeight);
-        setTimeout(() => UI.container.classList.remove('instant-scroll'), 50);
-      }
-
+      if (prepended) { UI.container.classList.add('instant-scroll'); UI.container.scrollTop = oldScrollTop + (UI.container.scrollHeight - oldScrollHeight); setTimeout(() => UI.container.classList.remove('instant-scroll'), 50); }
       let bottomWeek = UI.container.lastElementChild.dataset.weekStart;
-      while ((new Date(bottomWeek) - new Date(centerWeekStr)) / 604800000 < 4) {
-        const newWeek = Utils.addDays(bottomWeek, 7);
-        UI.container.appendChild(UI.createWeekNode(newWeek));
-        bottomWeek = newWeek;
-      }
+      while ((new Date(bottomWeek) - new Date(centerWeekStr)) / 604800000 < 4) { const newWeek = Utils.addDays(bottomWeek, 7); UI.container.appendChild(UI.createWeekNode(newWeek)); bottomWeek = newWeek; }
       UI.updateHeader(STATE.focusedWeekStart);
     },
     jumpToAndRebuild: (targetSunday) => {
-      UI.container.innerHTML = ''; STATE.renderedWeeks.clear();
-      for (let i = -4; i <= 4; i++) {
-        let wk = Utils.addDays(targetSunday, i * 7); if (wk >= MIN_SUNDAY) UI.container.appendChild(UI.createWeekNode(wk));
-      }
-      setTimeout(() => {
-        const targetNode = UI.container.querySelector(`[data-week-start="${targetSunday}"]`);
-        if (targetNode) {
-          UI.container.classList.add('instant-scroll'); UI.container.scrollTop = targetNode.offsetTop;
-          setTimeout(() => UI.container.classList.remove('instant-scroll'), 100);
-        }
-        STATE.focusedWeekStart = targetSunday; UI.updateHeader(targetSunday); Engine.evaluateLockState();
-      }, 0);
-    }
-  };
-
-  window.Engine = {
-    evaluateLockState: () => {
-      if (!STATE.focusedWeekStart) return;
-      let isFull = true;
-      for (let i = 1; i <= 5; i++) {
-        const dStr = Utils.addDays(STATE.focusedWeekStart, i);
-        if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-        const dayData = STATE.daysMap[dStr] || {};
-        if (!dayData.isFullDayHoliday && Utils.normalizeShifts(dayData.shifts).length < 6) { isFull = false; break; }
-      }
-      if (isFull) STATE.inputMode = 'LOCKED';
-      else STATE.inputMode = (!STATE.activeDate || STATE.inputMode === 'WAITING') ? (Engine.autoSetNextActive() ? 'ACTIVE' : 'WAITING') : 'ACTIVE';
-      UI.refreshAllVisible();
-    },
-    autoSetNextActive: () => {
-      for (let i = 1; i <= 6; i++) {
-        const dStr = Utils.addDays(STATE.focusedWeekStart, i);
-        if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-        const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue;
-        const shifts = Utils.normalizeShifts(dayData.shifts);
-        if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue;
-        if (shifts.length < 6) { STATE.activeDate = dStr; return true; }
-      }
-      STATE.activeDate = null; return false;
-    },
-    setActiveDate: (dateStr) => { STATE.activeDate = dateStr; if (STATE.inputMode === 'WAITING') STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); },
-    unlockSaturday: (e, dateStr) => { e.stopPropagation(); STATE.unlockedSaturdays.add(dateStr); STATE.activeDate = dateStr; STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); },
-    toggleLeave: (e, dateStr, idx) => {
-      e.stopPropagation(); Engine.setActiveDate(dateStr); 
-      if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return;
-      const dayData = STATE.daysMap[dateStr] || { shifts: [] };
-      const shifts = dayData.shifts || [];
-      if (shifts[idx]) { shifts[idx].status = shifts[idx].status === 'LEAVE' ? 'ON' : 'LEAVE'; UI.silentRefreshDay(dateStr); FirebaseSync.pushUpdate(dateStr); }
-    },
-    addShift: (staffCode) => {
-      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
-      const targetDate = STATE.activeDate;
-      if (!STATE.daysMap[targetDate]) STATE.daysMap[targetDate] = { shifts: [] };
-      STATE.daysMap[targetDate].shifts = Utils.normalizeShifts(STATE.daysMap[targetDate].shifts);
-      if (STATE.daysMap[targetDate].isFullDayHoliday || STATE.daysMap[targetDate].shifts.length >= 6) return;
-      STATE.daysMap[targetDate].shifts.push({ staff: staffCode, status: 'ON' });
-      FirebaseSync.pushUpdate(targetDate);
-      
-      if (STATE.daysMap[targetDate].shifts.length === 6) {
-        Engine.evaluateLockState();
-        if (STATE.inputMode === 'LOCKED' && new Date(targetDate).getDay() === 5) {
-          const nextSun = Utils.addDays(STATE.focusedWeekStart, 7);
-          ScrollEngine.replenish(nextSun);
-          setTimeout(() => { const node = UI.container.querySelector(`[data-week-start="${nextSun}"]`); if(node) node.scrollIntoView({behavior: 'smooth'}); }, 100);
-        }
-      } else { UI.refreshAllVisible(); }
-    },
-    backspace: () => {
-      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
-      const shifts = STATE.daysMap[STATE.activeDate]?.shifts;
-      if (shifts && shifts.length > 0) { shifts.pop(); FirebaseSync.pushUpdate(STATE.activeDate); Engine.evaluateLockState(); }
-    },
-    setAllOff: () => {
-      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
-      const td = STATE.activeDate, dayData = STATE.daysMap[td] || {};
-      STATE.daysMap[td] = dayData.isFullDayHoliday ? { isFullDayHoliday: false, shifts: [] } : { isFullDayHoliday: true, shifts: [] };
-      FirebaseSync.pushUpdate(td); Engine.evaluateLockState();
-    }
-  };
-
-  const CalendarManager = {
-    modal: document.getElementById('modal-calendar'), grid: document.getElementById('cal-grid'), title: document.getElementById('cal-month-title'),
-    render: () => {
-      const year = STATE.calRenderMonth.getFullYear(), month = STATE.calRenderMonth.getMonth();
-      CalendarManager.title.innerText = `${year}年 ${month + 1}月`;
-      CalendarManager.grid.innerHTML = '';
-      
-      const sysStartObj = new Date(CONFIG.SYSTEM_START_DATE);
-      const isStartMonth = (year === sysStartObj.getFullYear() && month === sysStartObj.getMonth());
-      document.getElementById('cal-prev').className = isStartMonth ? "w-10 h-10 rounded-full bg-gray-50 text-gray-400 font-bold flex items-center justify-center text-lg opacity-40 pointer-events-none" : "w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200 transition-colors";
-
-      const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
-      for (let i = 0; i < firstDay; i++) CalendarManager.grid.innerHTML += `<div></div>`;
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dStr = Utils.formatDate(new Date(year, month, day)), dayOfWeek = new Date(year, month, day).getDay();
-        const dayData = STATE.daysMap[dStr] || { isFullDayHoliday: false, shifts: [] };
-        let isRed = (dayOfWeek === 0 || dayData.isFullDayHoliday);
-        let cellClass = "aspect-square rounded-2xl flex flex-col items-center justify-center text-[15px] font-bold transition-transform ";
-        if (dStr < CONFIG.SYSTEM_START_DATE) { cellClass += "text-gray-300 opacity-40 pointer-events-none "; }
-        else {
-          cellClass += "cursor-pointer active:scale-95 ";
-          if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 "; else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
-        }
-        let dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></div>`;
-        if (dStr >= CONFIG.SYSTEM_START_DATE && !isRed && dayOfWeek >= 1 && dayOfWeek <= 5) {
-          const shifts = Utils.normalizeShifts(dayData.shifts);
-          if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`;
-          else if (shifts.length > 0) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
-        }
-        CalendarManager.grid.innerHTML += `<div class="${cellClass}" onclick="window.CalendarManager.jumpTo('${dStr}')"><span>${day}</span>${dotHTML}</div>`;
-      }
-    },
-    jumpTo: (dateStr) => { ScrollEngine.jumpToAndRebuild(Utils.getSunday(dateStr)); CalendarManager.modal.classList.add('hidden'); CalendarManager.modal.classList.remove('flex', 'modal-enter'); },
-    init: () => {
-      window.CalendarManager = CalendarManager;
-      document.getElementById('btn-open-calendar').addEventListener('click', () => {
-        STATE.calRenderMonth = STATE.focusedWeekStart ? new Date(STATE.focusedWeekStart) : new Date();
-        CalendarManager.render();
-        CalendarManager.modal.classList.remove('hidden'); CalendarManager.modal.classList.add('flex', 'modal-enter');
-      });
-      document.getElementById('close-calendar').addEventListener('click', () => { CalendarManager.modal.classList.add('hidden'); CalendarManager.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('cal-prev').addEventListener('click', () => { STATE.calRenderMonth.setMonth(STATE.calRenderMonth.getMonth() - 1); CalendarManager.render(); });
-      document.getElementById('cal-next').addEventListener('click', () => { STATE.calRenderMonth.setMonth(STATE.calRenderMonth.getMonth() + 1); CalendarManager.render(); });
-    }
-  };
-
-  window.StatsEngine = {
-    modal: document.getElementById('modal-stats'),
-    latestPromptData: null,
-    switchTab: (tabId) => {
-      for(let i=0; i<=3; i++) {
-        document.getElementById(`tab-btn-${i}`).className = (i === tabId) ? "flex-1 py-2.5 text-[13px] tab-active" : "flex-1 py-2.5 text-[13px] tab-inactive text-gray-500";
-        document.getElementById(`tab-content-${i}`).className = (i === tabId) ? (i===0 ? "flex flex-col gap-2.5 h-full" : "block space-y-3") : "hidden space-y-3";
-      }
-    },
-    calculate: () => {
-      const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
-      let baseSum = 0, baseCount = 0;
-      
-      const sysStart = new Date(CONFIG.SYSTEM_START_DATE);
-      let filterStart = sysStart, filterEnd = new Date(STATE.todayStr);
-      const sortedKeys = Object.keys(STATE.daysMap).sort();
-      if (sortedKeys.length > 0 && sortedKeys[sortedKeys.length-1] > STATE.todayStr) filterEnd = new Date(sortedKeys[sortedKeys.length-1]);
-      
-      if (STATE.statsYear !== 'ALL') {
-        const y = parseInt(STATE.statsYear);
-        filterStart = new Date(Math.max(sysStart.getTime(), new Date(y, 0, 1).getTime()));
-        filterEnd = new Date(Math.min(filterEnd.getTime(), new Date(y, 11, 31).getTime()));
-      }
-
-      let curD = new Date(filterStart), promptJSON = {};
-      while(curD <= filterEnd) {
-        const dStr = Utils.formatDate(curD); curD.setDate(curD.getDate() + 1);
-        const dayData = STATE.daysMap[dStr];
-        if(!dayData || dayData.isFullDayHoliday) continue;
-        
-        const shifts = Utils.normalizeShifts(dayData.shifts);
-        if(shifts.length === 0) continue;
-        promptJSON[dStr] = shifts.map(s => s.status === 'LEAVE' ? s.staff + '(休假)' : s.staff);
-
-        const dObj = new Date(dStr), isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
-        const activeCount = shifts.filter(s => s.status !== 'LEAVE').length;
-
-        let activeIdx = 0;
-        shifts.forEach((shift) => {
-          if(!staffStats[shift.staff]) return;
-          if (shift.status === 'LEAVE') { staffStats[shift.staff].leaveCount++; } 
-          else if (!isWeekend) {
-            const shiftScore = (6 - activeCount + 1) + activeIdx;
-            staffStats[shift.staff].sum += shiftScore; staffStats[shift.staff].count++;
-            baseSum += shiftScore; baseCount++;
-            if (shiftScore <= 2) staffStats[shift.staff].hits.good++;
-            else if (shiftScore <= 4) staffStats[shift.staff].hits.mid++;
-            else staffStats[shift.staff].hits.bad++;
-            activeIdx++;
-          }
-        });
-      }
-
-      const globalAvg = baseCount > 0 ? (baseSum / baseCount) : 0;
-      let pnls = [], maxAbsPnl = 0.1; 
-      Object.keys(staffStats).forEach(s => {
-        const d = staffStats[s];
-        d.avg = d.count > 0 ? (d.sum / d.count) : 0;
-        d.pnl = d.count > 0 ? ((globalAvg * d.count) - d.sum) : 0;
-        if(d.count > 0) { pnls.push({staff: s, pnl: d.pnl}); maxAbsPnl = Math.max(maxAbsPnl, Math.abs(d.pnl)); }
-      });
-
-      StatsEngine.renderDashboard(pnls, maxAbsPnl);
-      StatsEngine.renderTabs(globalAvg, staffStats);
-      const rangeEl = document.getElementById('global-date-range');
-      if (rangeEl) rangeEl.innerText = `📅 統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`;
-      StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
-    },
-    renderDashboard: (pnls, maxAbs) => {
-      let score = 100;
-      if (pnls.length > 0) {
-        const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length;
-        score = Math.max(0, Math.round(100 - (avgAbsDev * 15)));
-      }
-      const scoreNode = document.getElementById('mini-health-score');
-      if (scoreNode) scoreNode.innerText = `${score}%`;
-      const circle = document.getElementById('mini-health-circle');
-      let bColor = 'border-green-400', tColor = 'text-green-700';
-      if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; }
-      else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
-      if (circle) circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`;
-      if (scoreNode) scoreNode.className = `text-[12px] font-black ${tColor}`;
-
-      const alertBox = document.getElementById('mini-ai-alert');
-      const worst = pnls.reduce((prev, curr) => (curr.pnl < prev.pnl ? curr : prev), {pnl: 0, staff: ''});
-      const best = pnls.reduce((prev, curr) => (curr.pnl > prev.pnl ? curr : prev), {pnl: 0, staff: ''});
-      if (alertBox) {
-        if (worst.pnl < -2.5) {
-          alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700";
-          alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期食太多尾更 (盈虧 ${worst.pnl.toFixed(1)})，建議下週編排靚更作補償。`;
-        } else if (best.pnl > 2.5) {
-          alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700";
-          alertBox.innerHTML = `💡 提示：[${best.staff}] 近期經常佔據靚位 (盈虧 +${best.pnl.toFixed(1)})，可適當分擔尾更。`;
-        } else {
-          alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700";
-          alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無人出現極端硬食情況。`;
-        }
-      }
-
-      const plot = document.getElementById('dot-plot-container'); if (plot) { plot.innerHTML = ''; pnls.forEach((item, idx) => { const leftPercent = 50 + ((item.pnl / maxAbs) * 45); const color = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-red-400' : 'bg-gray-300'); plot.innerHTML += `<div class="absolute top-1/2 -translate-y-1/2 h-3 rounded-full ${color}" style="left:${Math.max(0, Math.min(100, leftPercent))}%; width:4px"></div>`; }); }
-
-      const tornado = document.getElementById('tornado-chart'); if (tornado) {
-        tornado.innerHTML = '';
-        const sortedPnls = [...pnls].sort((a,b) => a.pnl - b.pnl);
-        sortedPnls.forEach(item => {
-          const w = (Math.abs(item.pnl) / maxAbs) * 100;
-          const valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1);
-          const barColor = item.pnl > 0 ? 'bg-green-400' : (item.pnl < 0 ? 'bg-red-400' : 'bg-gray-300');
-          const textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500');
-
-          tornado.innerHTML += `
-            <div class="flex items-center text-[10px] font-bold">
-              <div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div>
-              <div class="flex-1 flex items-center h-4 relative">
-                 <div class="w-1/2 h-full flex justify-end pr-0.5">
-                    ${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}
-                 </div>
-                 <div class="w-px h-full bg-gray-300"></div>
-                 <div class="w-1/2 h-full flex justify-start pl-0.5">
-                    ${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}
-                 </div>
-              </div>
-              <div class="w-7 text-right ml-1 ${textColor}">${valStr}</div>
-            </div>
-          `;
-        });
-      }
-    },
-    renderTabs: (globalAvg, stats) => {
-      const baseline = document.getElementById('stats-baseline'); if (baseline) baseline.innerText = `動態基準均位: ${globalAvg.toFixed(2)}`;
-      const grid1 = document.getElementById('stats-grid-1'), grid2 = document.getElementById('stats-grid-2'), grid3 = document.getElementById('stats-grid-3');
-      if (grid1) grid1.innerHTML = ''; if (grid2) grid2.innerHTML = ''; if (grid3) grid3.innerHTML = '';
-
-      CONFIG.STAFF_LIST.forEach(staff => {
-        const data = stats[staff];
-        let color1 = 'text-gray-700'; if (data.count > 0) { if (data.avg - globalAvg > 0.1) color1 = 'text-red-500 font-bold'; else if (data.avg - globalAvg < -0.1) color1 = 'text-green-600 font-bold'; }
-        if (grid1) grid1.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col justify-center pl-3"><div class="flex items-end gap-2 mb-1"><span class="text-lg font-extrabold ${color1}">${staff}</span><span class="text-[11px] text-gray-500">均位</span></div><div class="text-[15px] font-black text-gray-800">${data.count > 0 ? data.avg.toFixed(2) : '0.00'}</div></div>`;
-        
-        const color2 = data.pnl > 0 ? 'text-green-600' : (data.pnl < 0 ? 'text-red-500' : 'text-gray-500');
-        if (grid2) grid2.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col items-center justify-center"><span class="text-sm font-extrabold text-gray-800 mb-1">${staff}</span><span class="text-base font-black ${color2}">${data.count > 0 ? (data.pnl > 0 ? '+' : '') + data.pnl.toFixed(2) : '0.00'}</span></div>`;
-        
-        const tHits = data.hits.good + data.hits.mid + data.hits.bad;
-        const pGood = tHits > 0 ? Math.round((data.hits.good/tHits)*100) : 0, pMid = tHits > 0 ? Math.round((data.hits.mid/tHits)*100) : 0, pBad = tHits > 0 ? Math.round((data.hits.bad/tHits)*100) : 0;
-        if (grid3) grid3.innerHTML += `<div class="flex items-center bg-gray-50 border border-gray-100 p-2 rounded gap-2"><div class="w-8 text-center font-extrabold text-gray-800 text-lg">${staff}</div><div class="flex-1 flex flex-col gap-1"><div class="flex justify-between text-[10px] font-bold text-gray-600"><span>靚 ${pGood}%</span><span>平 ${pMid}%</span><span>差 ${pBad}%</span></div><div class="h-2 bg-gray-200 rounded-full overflow-hidden flex"><div class="h-full bg-green-500" style="width:${pGood}%"></div><div class="h-full bg-yellow-400" style="width:${pMid}%"></div><div class="h-full bg-red-500" style="width:${pBad}%"></div></div></div></div>`;
-      });
-    },
-    init: () => {
-      const sel = document.getElementById('stats-year-filter');
-      const startYear = new Date(CONFIG.SYSTEM_START_DATE).getFullYear(), currYear = new Date().getFullYear();
-      for (let y = currYear; y >= startYear; y--) sel.innerHTML += `<option value="${y}">${y}年</option>`;
-      sel.innerHTML += `<option value="ALL">全部</option>`;
-      STATE.statsYear = currYear.toString(); sel.value = STATE.statsYear;
-      sel.addEventListener('change', (e) => { STATE.statsYear = e.target.value; StatsEngine.calculate(); });
-
-      document.getElementById('btn-stats').addEventListener('click', () => {
-        StatsEngine.switchTab(0); StatsEngine.calculate();
-        StatsEngine.modal.classList.remove('hidden'); StatsEngine.modal.classList.add('flex', 'modal-enter');
-      });
-      document.getElementById('close-stats').addEventListener('click', () => { StatsEngine.modal.classList.add('hidden'); StatsEngine.modal.classList.remove('flex', 'modal-enter'); });
-      
-      const btnCopy = document.getElementById('btn-copy-prompt');
-      btnCopy.addEventListener('click', () => {
-        if(!StatsEngine.latestPromptData) return;
-        const d = StatsEngine.latestPromptData;
-        const stat1 = `動態基準均位: ${d.globalAvg}\n` + CONFIG.STAFF_LIST.map(s => `${s}: 均位 ${d.staffStats[s].count > 0 ? d.staffStats[s].avg.toFixed(2) : '0.00'} (休假 ${d.staffStats[s].leaveCount})`).join('\n');
-        const stat2 = CONFIG.STAFF_LIST.map(s => `${s}: ${d.staffStats[s].count > 0 ? (d.staffStats[s].pnl > 0 ? '+' : '') + d.staffStats[s].pnl.toFixed(2) : '0.00'}`).join('\n');
-        const stat3 = CONFIG.STAFF_LIST.map(s => { const h = d.staffStats[s].hits, t = h.good + h.mid + h.bad; return `${s}: 靚 ${t>0?Math.round((h.good/t)*100):0}% | 平 ${t>0?Math.round((h.mid/t)*100):0}% | 差 ${t>0?Math.round((h.bad/t)*100):0}%`; }).join('\n');
-        const finalPrompt = CONFIG.DEFAULT_PROMPT.replace('{{DATE_RANGE}}', d.dateRange).replace('{{STATISTICS}}', stat1).replace('{{STATS_PNL}}', stat2).replace('{{STATS_HITRATE}}', stat3).replace('{{DATE_RANGE}}', d.dateRange);
-        navigator.clipboard.writeText(finalPrompt).then(() => {
-          const origHTML = btnCopy.innerHTML; btnCopy.innerHTML = '✅ 已成功複製'; btnCopy.className = btnCopy.className.replace('from-blue-600 to-indigo-600', 'from-green-500 to-emerald-600');
-          setTimeout(() => { btnCopy.innerHTML = origHTML; btnCopy.className = btnCopy.className.replace('from-green-500 to-emerald-600', 'from-blue-600 to-indigo-600'); }, 2000);
-        }).catch(() => {
-          btnCopy.innerText = '❌ 複製失敗';
-          setTimeout(() => { btnCopy.innerText = '📋 複製 AI 提示詞'; }, 2000);
-        });
-      });
-    }
-  };
-
-  const FirebaseSync = {
-    init: () => {
-      if (!STATE.apiKey) {
-        document.getElementById('conn-status').innerText = '🔴 離線';
-        document.getElementById('conn-status').className = 'bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-200 text-[10px] font-bold tracking-wider';
-        return;
-      }
-      try {
-        const app = initializeApp({ ...CONFIG.firebaseBase, apiKey: STATE.apiKey }); STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
-        onValue(ref(STATE.db, CONFIG.dbPath), (snapshot) => {
-          document.getElementById('conn-status').innerText = '🟢 連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold tracking-wider';
-          let data = snapshot.val(); if (!data) return;
-          if (data.daysMap) {
-            const batchUpdates = {}; Object.keys(data.daysMap).forEach(dateKey => { if (!data[dateKey]) batchUpdates[`${CONFIG.dbPath}/${dateKey}`] = data.daysMap[dateKey]; });
-            batchUpdates[`${CONFIG.dbPath}/daysMap`] = null; update(ref(STATE.db), batchUpdates); return; 
-          }
-          let hasChanges = false;
-          Object.keys(data).forEach(dStr => {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr) && dStr.length !== 10) return; 
-            let dayData = data[dStr]; if (dayData && dayData.shifts) dayData.shifts = Utils.normalizeShifts(dayData.shifts);
-            if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(dayData)) { STATE.daysMap[dStr] = dayData; hasChanges = true; }
-          });
-          if(hasChanges) { Utils.saveCache(STATE.daysMap); Engine.evaluateLockState(); }
-        });
-      } catch (err) { console.error(err); }
-    },
-    pushUpdate: (dateStr) => { Utils.saveCache(STATE.daysMap); if (!STATE.db) return; const updates = {}; updates[`${CONFIG.dbPath}/${dateStr}`] = STATE.daysMap[dateStr]; update(ref(STATE.db), updates); }
-  };
-
-  const SettingsManager = {
-    modal: document.getElementById('modal-settings'),
-    init: () => {
-      document.getElementById('btn-settings').addEventListener('click', () => { document.getElementById('input-api-key').value = STATE.apiKey; SettingsManager.modal.classList.remove('hidden'); SettingsManager.modal.classList.add('flex', 'modal-enter'); });
-      document.getElementById('close-settings').addEventListener('click', () => { SettingsManager.modal.classList.add('hidden'); SettingsManager.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('btn-save-settings').addEventListener('click', () => { localStorage.setItem('roster_api_key', document.getElementById('input-api-key').value.trim()); window.location.reload(); });
-    }
-  };
-
-  const initApp = () => {
-    CONFIG.STAFF_LIST.forEach(staff => {
-      const btn = document.createElement('button'); btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors';
-      btn.textContent = staff; document.getElementById('staff-keys').appendChild(btn);
-    });
-
-    SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); FirebaseSync.init();
-
-    const currentSunday = Utils.getSunday(STATE.todayStr);
-    const safeCenterSunday = currentSunday < MIN_SUNDAY ? MIN_SUNDAY : currentSunday;
-    ScrollEngine.jumpToAndRebuild(safeCenterSunday);
-    ScrollEngine.init();
-
-    document.getElementById('staff-keys').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') Engine.addShift(e.target.textContent); });
-    document.getElementById('btn-backspace').addEventListener('click', Engine.backspace);
-    document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
-    document.getElementById('lock-overlay').addEventListener('click', () => { if (STATE.inputMode === 'LOCKED') { STATE.inputMode = STATE.activeDate ? 'ACTIVE' : 'WAITING'; UI.refreshAllVisible(); } });
-    
-    document.getElementById('btn-manual-lock').addEventListener('click', () => { STATE.inputMode = 'LOCKED'; UI.refreshAllVisible(); });
-    document.getElementById('btn-clear-active').addEventListener('click', () => {
-      if (STATE.activeDate) { STATE.daysMap[STATE.activeDate] = { isFullDayHoliday: false, shifts: [] }; STATE.unlockedSaturdays.delete(STATE.activeDate); FirebaseSync.pushUpdate(STATE.activeDate); Engine.evaluateLockState(); }
-    });
-    
-    document.getElementById('prev-week').addEventListener('click', () => {
-      if (STATE.focusedWeekStart <= MIN_SUNDAY) return;
-      const target = Utils.addDays(STATE.focusedWeekStart, -7);
-      const node = UI.container.querySelector(`[data-week-start="${target}"]`);
-      if (node) node.scrollIntoView({behavior: 'smooth'});
-    });
-    document.getElementById('next-week').addEventListener('click', () => {
-      const target = Utils.addDays(STATE.focusedWeekStart, 7);
-      const node = UI.container.querySelector(`[data-week-start="${target}"]`);
-      if (node) node.scrollIntoView({behavior: 'smooth'});
-    });
-  };
-  
-  function safeBack() {
-    if (document.referrer && document.referrer.startsWith(window.location.origin)) {
-      history.back();
-    }
-  }
-  window.safeBack = safeBack;
-  initApp();
-</script>
-</body>
-</html>
+      UI.container.innerHTML = ''; STATE.
