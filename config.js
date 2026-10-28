@@ -12,8 +12,9 @@ window.APP_CONFIG = {
   // 星期六是否需要排班：預設為 false (不排週六，自動視為休息日)
   DEFAULT_INCLUDE_SATURDAY: false,
 
-  // Firebase 專案固定參數 (請換成你專案的值，無須填寫 apiKey)
+  // Firebase 專案固定參數
   firebaseBase: {
+    apiKey: AIzaSyA6B-U_ffPcDnGhaeizwYh_uMsi4oAKaPo
     authDomain: "roster-9a699.firebaseapp.com",
     databaseURL: "https://roster-9a699-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "roster-9a699",
