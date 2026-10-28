@@ -505,16 +505,31 @@
       const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
       let baseSum = 0, baseCount = 0;
       
+      // 1. 嚴格過濾出符合 YYYY-MM-DD 格式，並且真係有填更/有記錄的日期 Key
+      const validDateKeys = Object.keys(STATE.daysMap)
+        .filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k))
+        .sort();
+
       const sysStart = new Date(CONFIG.SYSTEM_START_DATE);
-      let filterStart = sysStart, filterEnd = new Date(STATE.todayStr);
-      const sortedKeys = Object.keys(STATE.daysMap).sort();
-      if (sortedKeys.length > 0 && sortedKeys[sortedKeys.length-1] > STATE.todayStr) filterEnd = new Date(sortedKeys[sortedKeys.length-1]);
+      let filterStart = sysStart;
       
+      // 2. 終點日：以資料庫最後一日為準；若無資料則以今日為準
+      let maxDateStr = (validDateKeys.length > 0) ? validDateKeys[validDateKeys.length - 1] : STATE.todayStr;
+      let filterEnd = new Date(maxDateStr);
+      if (isNaN(filterEnd.getTime())) filterEnd = new Date(STATE.todayStr);
+
+      // 3. 年份篩選
       if (STATE.statsYear !== 'ALL') {
         const y = parseInt(STATE.statsYear);
-        filterStart = new Date(Math.max(sysStart, new Date(y, 0, 1)));
-        filterEnd = new Date(Math.min(filterEnd, new Date(y, 11, 31)));
+        const yearStart = new Date(y, 0, 1);
+        const yearEnd = new Date(y, 11, 31);
+        
+        filterStart = new Date(Math.max(sysStart.getTime(), yearStart.getTime()));
+        filterEnd = new Date(Math.min(filterEnd.getTime(), yearEnd.getTime()));
       }
+
+      // 防呆：確保 filterEnd 永遠唔會早過 filterStart
+      if (filterEnd < filterStart) filterEnd = new Date(filterStart);
 
       let curD = new Date(filterStart), promptJSON = {};
       while(curD <= filterEnd) {
