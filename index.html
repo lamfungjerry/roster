@@ -34,7 +34,7 @@
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
     <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
       <div class="flex-1 flex justify-start"><span id="conn-status" class="bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold tracking-wider">🔒 尚未解鎖</span></div>
-      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap">編更表</h1>
+      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap" onclick="window.safeBack()">編更表</h1>
       <div class="flex-1 flex justify-end gap-3">
         <button id="btn-stats" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">📊</button>
         <button id="btn-settings" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">⚙️</button>
@@ -126,6 +126,13 @@
 </div>
 
 <script type="module">
+    // ----------------------------------------------------
+    // 系統安全驗證與初始化
+    // ----------------------------------------------------
+  window.safeBack = function() {
+    if (document.referrer && document.referrer.startsWith(window.location.origin)) { history.back(); }
+  };
+  
   if (!window.APP_CONFIG || !window.APP_CONFIG.DEFAULT_PROMPT) {
     document.body.innerHTML = '<div style="color:red;padding:20px;text-align:center;font-weight:bold;font-size:20px;margin-top:50px;">致命錯誤：無法讀取 config.js，請檢查設定檔。</div>';
     throw new Error("Missing config.js");
