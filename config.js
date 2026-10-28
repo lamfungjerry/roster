@@ -14,7 +14,7 @@ window.APP_CONFIG = {
 
   // Firebase 專案固定參數
   firebaseBase: {
-    apiKey: AIzaSyA6B-U_ffPcDnGhaeizwYh_uMsi4oAKaPo,
+    apiKey: "AIzaSyA6B-U_ffPcDnGhaeizwYh_uMsi4oAKaPo",
     authDomain: "roster-9a699.firebaseapp.com",
     databaseURL: "https://roster-9a699-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "roster-9a699",
