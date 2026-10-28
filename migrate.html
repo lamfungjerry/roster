@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資料加密遷移工具 (Zero-Knowledge Encryption)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 依賴現有的 config.js 來獲取 Firebase 設定 -->
+  <script src="config.js"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 p-6 flex justify-center items-start min-h-screen">
+
+  <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
+    <div class="flex items-center justify-between mb-6 border-b pb-4">
+      <h1 class="text-2xl font-extrabold text-gray-800">🔐 Firebase 加密遷移工具</h1>
+      <span id="conn-status" class="px-3 py-1 rounded bg-gray-200 text-gray-600 text-sm font-bold">檢查連線中...</span>
+    </div>
+
+    <!-- 步驟一：備份 -->
+    <div class="mb-8 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+      <h2 class="text-lg font-bold text-blue-900 mb-2">步驟 1：下載明文本地備份 (極度重要)</h2>
+      <p class="text-sm text-blue-700 mb-4">在進行任何加密覆寫前，請務必先將雲端現有的明文資料下載到本地保存，以防密碼遺失或意外。</p>
+      <button id="btn-backup" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg transition-colors flex items-center gap-2">
+        <span>💾</span> 點擊下載明文備份 JSON
+      </button>
+    </div>
+
+    <!-- 步驟二：加密遷移 -->
+    <div class="mb-8 p-5 bg-gray-50 border border-gray-200 rounded-lg">
+      <h2 class="text-lg font-bold text-gray-800 mb-2">步驟 2：端對端加密與遷移 (AES-256-GCM)</h2>
+      <p class="text-sm text-gray-600 mb-4">請設定你的主密碼 (Master Password)。這組密碼不會上傳至伺服器，若遺失將<strong class="text-red-600">永遠無法還原資料</strong>。</p>
+      
+      <div class="space-y-4 mb-5">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1">設定主密碼 (Master Password)</label>
+          <input type="password" id="pwd1" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none transition-all font-mono" placeholder="請輸入強密碼">
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1">確認主密碼</label>
+          <input type="password" id="pwd2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none transition-all font-mono" placeholder="請再次輸入密碼">
+        </div>
+      </div>
+
+      <button id="btn-migrate" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-md">
+        <span>🚀</span> 開始加密並更新 Firebase
+      </button>
+    </div>
+
+    <!-- 執行日誌與驗證結果 -->
+    <div>
+      <h3 class="text-sm font-bold text-gray-500 mb-2">執行日誌與驗證結果</h3>
+      <div id="log-console" class="bg-gray-900 text-green-400 font-mono text-sm p-4 rounded-lg h-48 overflow-y-auto whitespace-pre-wrap">等待操作...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+
+    const CONFIG = window.APP_CONFIG;
+    if (!CONFIG) {
+      alert("找不到 config.js！請確保此檔案與 config.js 位於同一目錄。");
+      throw new Error("Missing config.js");
+    }
+
+    // --- Firebase 初始化 ---
+    const apiKey = localStorage.getItem('roster_api_key') || '';
+    let db, dbRef;
+    
+    const ui = {
+      status: document.getElementById('conn-status'),
+      log: document.getElementById('log-console'),
+      btnBackup: document.getElementById('btn-backup'),
+      btnMigrate: document.getElementById('btn-migrate'),
+      pwd1: document.getElementById('pwd1'),
+      pwd2: document.getElementById('pwd2')
+    };
+
+    function log(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      let color = 'text-green-400';
+      if (type === 'error') color = 'text-red-400 font-bold';
+      if (type === 'warn') color = 'text-yellow-400';
+      if (type === 'success') color = 'text-blue-300 font-bold bg-blue-900/50 p-1 rounded';
+      ui.log.innerHTML += `<div class="${color}">[${time}] ${msg}</div>`;
+      ui.log.scrollTop = ui.log.scrollHeight;
+    }
+
+    try {
+      if (!apiKey) throw new Error("尚未設定 Firebase API Key，請先在原系統登入或手動設定 localStorage。");
+      const app = initializeApp({ ...CONFIG.firebaseBase, apiKey: apiKey });
+      db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
+      dbRef = ref(db, CONFIG.dbPath);
+      ui.status.innerText = "🟢 已連線";
+      ui.status.className = "px-3 py-1 rounded bg-green-100 text-green-700 text-sm font-bold";
+      log("Firebase 初始化成功，已準備就緒。");
+    } catch (err) {
+      ui.status.innerText = "🔴 連線失敗";
+      ui.status.className = "px-3 py-1 rounded bg-red-100 text-red-700 text-sm font-bold";
+      log("Firebase 初始化失敗: " + err.message, "error");
+    }
+
+    // --- Web Crypto API 核心 ---
+    const CryptoHelper = {
+      buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
+      b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
+      
+      deriveKey: async (password, salt) => {
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
+        return await crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      },
+
+      encrypt: async (plainTextObj, password) => {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await CryptoHelper.deriveKey(password, salt);
+        
+        const enc = new TextEncoder();
+        const encodedData = enc.encode(JSON.stringify(plainTextObj));
+        
+        const cipherBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, encodedData);
+        
+        return {
+          salt: CryptoHelper.buf2b64(salt),
+          iv: CryptoHelper.buf2b64(iv),
+          ciphertext: CryptoHelper.buf2b64(cipherBuffer)
+        };
+      },
+
+      decrypt: async (encryptedPackage, password) => {
+        const salt = CryptoHelper.b642buf(encryptedPackage.salt);
+        const iv = CryptoHelper.b642buf(encryptedPackage.iv);
+        const cipherBuffer = CryptoHelper.b642buf(encryptedPackage.ciphertext);
+        
+        const key = await CryptoHelper.deriveKey(password, salt);
+        const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipherBuffer);
+        
+        const dec = new TextDecoder();
+        return JSON.parse(dec.decode(decryptedBuffer));
+      }
+    };
+
+    // --- 備份功能 ---
+    let originalPlainData = null; // 暫存記憶體中作最後驗證用
+
+    ui.btnBackup.addEventListener('click', async () => {
+      try {
+        ui.btnBackup.disabled = true;
+        log("正在從 Firebase 抓取資料...");
+        const snap = await get(dbRef);
+        if (!snap.exists()) {
+          log("資料庫是空的，無須備份。", "warn");
+          return;
+        }
+        
+        const data = snap.val();
+        if (data.ciphertext && data.salt && data.iv) {
+          log("⚠️ 注意：偵測到資料庫已經是加密狀態。你現在備份的是密文！", "warn");
+        }
+
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.href = url;
+        a.download = `backup_plain_data_${timestamp}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        originalPlainData = data; // 存入記憶體供驗證
+        log("✅ 備份下載成功！", "success");
+      } catch (err) {
+        log("備份失敗: " + err.message, "error");
+      } finally {
+        ui.btnBackup.disabled = false;
+      }
+    });
+
+    // --- 加密與遷移功能 ---
+    ui.btnMigrate.addEventListener('click', async () => {
+      const pwd1 = ui.pwd1.value;
+      const pwd2 = ui.pwd2.value;
+
+      if (!pwd1) return log("❌ 密碼不能為空！", "error");
+      if (pwd1 !== pwd2) return log("❌ 兩次輸入的密碼不一致！", "error");
+      if (!originalPlainData) {
+        log("抓取明文資料中 (因尚未手動備份)...");
+        const snap = await get(dbRef);
+        if (!snap.exists()) return log("❌ 資料庫是空的，無法加密。", "error");
+        originalPlainData = snap.val();
+      }
+
+      if (originalPlainData.ciphertext && originalPlainData.salt && originalPlainData.iv) {
+        const confirmDouble = confirm("警告：資料庫看起來已經是加密狀態。如果再次加密，會造成雙重加密。確定要繼續嗎？");
+        if (!confirmDouble) return log("已取消遷移操作。", "warn");
+      }
+
+      try {
+        ui.btnMigrate.disabled = true;
+        log("⏳ 正在進行 PBKDF2 金鑰派生與 AES-256-GCM 加密 (可能需要幾秒鐘)...");
+        
+        const encryptedPackage = await CryptoHelper.encrypt(originalPlainData, pwd1);
+        log("✅ 加密完成，產生 Salt(16-byte) 與 IV(12-byte)。");
+        log("⏳ 正在將密文覆寫至 Firebase...");
+        
+        await set(dbRef, encryptedPackage);
+        log("✅ 密文上傳成功！開始進行雙向解密驗證...", "warn");
+
+        // --- 雙向驗證 (Migration Verification) ---
+        log("⏳ 重新從 Firebase 抓取密文...");
+        const verifySnap = await get(dbRef);
+        const verifyData = verifySnap.val();
+
+        if (!verifyData || !verifyData.ciphertext) throw new Error("抓取回來的資料格式異常");
+
+        log("⏳ 正在嘗試使用剛才的密碼解密還原...");
+        const decryptedData = await CryptoHelper.decrypt(verifyData, pwd1);
+
+        // 比對資料 (簡易 JSON 字串化比對)
+        if (JSON.stringify(decryptedData) === JSON.stringify(originalPlainData)) {
+          log("🎉 驗證完美通過！記憶體明文與解密結果 100% 吻合。", "success");
+          log("🟢 遷移成功！請妥善保管你的主密碼！", "success");
+          ui.pwd1.value = ''; ui.pwd2.value = '';
+        } else {
+          throw new Error("解密後的資料與原始資料不一致！");
+        }
+
+      } catch (err) {
+        log("🚨 遷移或驗證過程發生錯誤: " + err.message, "error");
+        log("🚨 請立即檢查剛才下載的 JSON 備份檔，並考慮手動還原至 Firebase！", "error");
+      } finally {
+        ui.btnMigrate.disabled = false;
+      }
+    });
+
+  </script>
+</body>
+</html>
