@@ -90,7 +90,6 @@
 </div>
 
 <div id="modal-stats" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex-col justify-end sm:justify-center items-center backdrop-blur-sm">
-  <!-- Stats HTML omitted for brevity, same 4-Tab structure as before -->
   <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col h-[78vh] max-h-[650px] overflow-hidden">
     <div class="shrink-0 px-4 pt-3 pb-2 border-b border-gray-100 bg-blue-50 flex flex-col gap-1">
       <div class="flex justify-between items-center">
@@ -126,21 +125,19 @@
 </div>
 
 <script type="module">
-    // ----------------------------------------------------
-    // 系統安全驗證與初始化
-    // ----------------------------------------------------
-  window.safeBack = function() {
-    if (document.referrer && document.referrer.startsWith(window.location.origin)) { history.back(); }
-  };
-  
   if (!window.APP_CONFIG || !window.APP_CONFIG.DEFAULT_PROMPT) {
     document.body.innerHTML = '<div style="color:red;padding:20px;text-align:center;font-weight:bold;font-size:20px;margin-top:50px;">致命錯誤：無法讀取 config.js，請檢查設定檔。</div>';
     throw new Error("Missing config.js");
   }
 
-  // 引入 Firebase SDK (加入 update 用於按日合併寫入)
+  // 引入 Firebase SDK (加入 Auth 模組)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
   import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+
+  window.safeBack = function() {
+    if (document.referrer && document.referrer.startsWith(window.location.origin)) { history.back(); }
+  };
 
   const CONFIG = window.APP_CONFIG;
   const CACHE_KEY = 'roster_cache_v10_e2ee';
@@ -155,17 +152,13 @@
   };
 
   const STATE = {
-    todayStr: Utils.formatDate(new Date()), 
-    daysMap: Utils.loadCache(), 
-    renderedWeeks: new Set(), 
-    focusedWeekStart: null,
+    todayStr: Utils.formatDate(new Date()), daysMap: Utils.loadCache(), renderedWeeks: new Set(), focusedWeekStart: null,
     inputMode: 'LOCKED', activeDate: null, unlockedSaturdays: new Set(),
-    db: null, calRenderMonth: new Date(), statsYear: 'ALL',
+    db: null, auth: null, calRenderMonth: new Date(), statsYear: 'ALL',
     isUnlocked: false, cryptoKey: null, globalSaltBase64: null, serverPayload: null
   };
   const MIN_SUNDAY = Utils.getSunday(CONFIG.SYSTEM_START_DATE);
 
-  // V10 CryptoHelper (Granular Encryption)
   const CryptoHelper = {
     buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
     b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
@@ -187,62 +180,42 @@
     }
   };
 
-  // V10 SyncManager (包含防抖與離場秒存)
   const SyncManager = {
     dirtyDays: new Set(), syncTimer: null,
-    
-    // 將某日標記為已修改，並觸發 1 秒防抖
     markDirty: (dateStr) => {
-      SyncManager.dirtyDays.add(dateStr);
-      Utils.saveCache(STATE.daysMap); // 保底二：本地即時秒存
+      SyncManager.dirtyDays.add(dateStr); Utils.saveCache(STATE.daysMap);
       if (SyncManager.syncTimer) clearTimeout(SyncManager.syncTimer);
       SyncManager.syncTimer = setTimeout(SyncManager.flush, 1000);
     },
-    
-    // 立即將未上傳的資料打包推上雲端
     flush: async () => {
       if (SyncManager.syncTimer) { clearTimeout(SyncManager.syncTimer); SyncManager.syncTimer = null; }
       if (SyncManager.dirtyDays.size === 0 || !STATE.isUnlocked || !STATE.cryptoKey || !STATE.db) return;
-      
-      const updates = {};
-      const daysToSync = Array.from(SyncManager.dirtyDays);
-      SyncManager.dirtyDays.clear(); // 提早清空，防止死鎖
-      
+      const updates = {}; const daysToSync = Array.from(SyncManager.dirtyDays); SyncManager.dirtyDays.clear();
       try {
         for (const dStr of daysToSync) {
           const plainObj = STATE.daysMap[dStr] || { shifts: [] };
           const encObj = await CryptoHelper.encryptDay(plainObj, STATE.cryptoKey);
-          updates[`days/${dStr}`] = encObj; // V10: 按日寫入 (Merge)
+          updates[`days/${dStr}`] = encObj;
         }
         await update(ref(STATE.db, CONFIG.dbPath), updates);
-      } catch(e) {
-        console.error("V10 上傳失敗", e);
-        daysToSync.forEach(d => SyncManager.dirtyDays.add(d)); // 失敗回溯
-      }
+      } catch(e) { console.error("V10 上傳失敗", e); daysToSync.forEach(d => SyncManager.dirtyDays.add(d)); }
     },
-
     initFirebase: () => {
       const app = initializeApp(CONFIG.firebaseBase);
       STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
+      STATE.auth = getAuth(app); // 初始化 Auth
       
       onValue(ref(STATE.db, CONFIG.dbPath), async (snapshot) => {
-        const payload = snapshot.val();
-        if (!payload) return; // 全新資料庫處理會落在登入邏輯
+        const payload = snapshot.val(); if (!payload) return; 
         STATE.serverPayload = payload;
-
-        if (!STATE.isUnlocked) {
-          await LoginManager.checkAutoLogin();
-        } else {
-          // V10: 背景解密並合併 (保護本地 Dirty 數據不被洗走)
+        if (!STATE.isUnlocked) { await LoginManager.checkAutoLogin(); } 
+        else {
           try {
-             const serverDays = payload.days || {};
-             let hasChanges = false;
+             const serverDays = payload.days || {}; let hasChanges = false;
              for (const [dStr, encObj] of Object.entries(serverDays)) {
-               if (SyncManager.dirtyDays.has(dStr)) continue; // 離線合併核心：自己改緊嘅唔會被覆寫
+               if (SyncManager.dirtyDays.has(dStr)) continue;
                const plainObj = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey);
-               if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(plainObj)) {
-                 STATE.daysMap[dStr] = plainObj; hasChanges = true;
-               }
+               if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(plainObj)) { STATE.daysMap[dStr] = plainObj; hasChanges = true; }
              }
              if(hasChanges) { Utils.saveCache(STATE.daysMap); Engine.evaluateLockState(); UI.refreshAllVisible(); }
           } catch (e) { console.error("遠端數據同步失敗", e); }
@@ -252,22 +225,13 @@
   };
 
   const UI = {
-    container: document.getElementById('weeks-container'),
-    headerDate: document.getElementById('header-date-range'),
-    
+    container: document.getElementById('weeks-container'), headerDate: document.getElementById('header-date-range'),
     createWeekNode: (sundayStr) => {
       const weekDiv = document.createElement('div'); weekDiv.className = 'week-page'; weekDiv.dataset.weekStart = sundayStr;
-      let html = `<div class="bg-gray-50/50 rounded-xl h-full flex flex-col p-1 box-border">
-                    <div class="flex text-center text-[11px] font-bold text-gray-500 mb-1 pb-1 border-b border-gray-200 shrink-0">
-                      <div class="w-12 flex items-center justify-center">日期</div>
-                      <div class="flex-1 flex justify-between px-1"><div class="flex-1">1更</div><div class="flex-1">2更</div><div class="shift-divider bg-transparent"></div><div class="flex-1">3更</div><div class="flex-1">4更</div><div class="shift-divider bg-transparent"></div><div class="flex-1">5更</div><div class="flex-1">6更</div></div>
-                    </div>
-                    <div class="flex flex-col flex-1 justify-around gap-0.5 pb-1">`;
+      let html = `<div class="bg-gray-50/50 rounded-xl h-full flex flex-col p-1 box-border"><div class="flex text-center text-[11px] font-bold text-gray-500 mb-1 pb-1 border-b border-gray-200 shrink-0"><div class="w-12 flex items-center justify-center">日期</div><div class="flex-1 flex justify-between px-1"><div class="flex-1">1更</div><div class="flex-1">2更</div><div class="shift-divider bg-transparent"></div><div class="flex-1">3更</div><div class="flex-1">4更</div><div class="shift-divider bg-transparent"></div><div class="flex-1">5更</div><div class="flex-1">6更</div></div></div><div class="flex flex-col flex-1 justify-around gap-0.5 pb-1">`;
       for (let i = 1; i <= 6; i++) html += UI.generateDayHTML(Utils.addDays(sundayStr, i), i);
-      html += `</div></div>`;
-      weekDiv.innerHTML = html; STATE.renderedWeeks.add(sundayStr); return weekDiv;
+      html += `</div></div>`; weekDiv.innerHTML = html; STATE.renderedWeeks.add(sundayStr); return weekDiv;
     },
-
     generateDayHTML: (dateStr, dayIndex) => {
       const dObj = new Date(dateStr), dayName = CONFIG.WEEK_DAYS[dayIndex], mdStr = `${dObj.getMonth()+1}/${dObj.getDate()}`;
       const dayData = STATE.daysMap[dateStr] || { isFullDayHoliday: false, shifts: [] };
@@ -286,28 +250,19 @@
       for (let i = 0; i < 6; i++) {
         if (i === 2 || i === 4) slotsHTML += `<div class="shift-divider h-3/4"></div>`;
         const shift = shifts[i];
-        if (shift) {
-          const bgClass = shift.status === 'LEAVE' ? 'bg-red-50 border-red-300 text-red-600 font-extrabold' : 'bg-eff6ff border-[#3b82f6] text-[#1e3a8a] font-bold';
-          slotsHTML += `<div onclick="Engine.toggleLeave(event, '${dateStr}', ${i})" class="flex-1 h-[42px] rounded border-[1.5px] ${bgClass} flex items-center justify-center text-lg cursor-pointer active:scale-90 transition-transform">${shift.staff}</div>`;
-        } else slotsHTML += `<div class="flex-1 h-[42px] rounded slot-empty flex items-center justify-center text-lg"></div>`;
+        if (shift) { const bgClass = shift.status === 'LEAVE' ? 'bg-red-50 border-red-300 text-red-600 font-extrabold' : 'bg-eff6ff border-[#3b82f6] text-[#1e3a8a] font-bold'; slotsHTML += `<div onclick="Engine.toggleLeave(event, '${dateStr}', ${i})" class="flex-1 h-[42px] rounded border-[1.5px] ${bgClass} flex items-center justify-center text-lg cursor-pointer active:scale-90 transition-transform">${shift.staff}</div>`; } 
+        else slotsHTML += `<div class="flex-1 h-[42px] rounded slot-empty flex items-center justify-center text-lg"></div>`;
       }
       return `<div class="${rowWrapperClass} h-full min-h-[46px]" data-date="${dateStr}" onclick="Engine.setActiveDate('${dateStr}')">${labelBlock}<div class="flex-1 flex h-full gap-1 items-center px-1 ${slotsPointerClass}">${slotsHTML}</div></div>`;
     },
-    refreshAllVisible: () => {
-      document.querySelectorAll('[data-date]').forEach(el => { if (el.dataset.date >= CONFIG.SYSTEM_START_DATE) el.outerHTML = UI.generateDayHTML(el.dataset.date, new Date(el.dataset.date).getDay()); }); UI.updateFooter();
-    },
+    refreshAllVisible: () => { document.querySelectorAll('[data-date]').forEach(el => { if (el.dataset.date >= CONFIG.SYSTEM_START_DATE) el.outerHTML = UI.generateDayHTML(el.dataset.date, new Date(el.dataset.date).getDay()); }); UI.updateFooter(); },
     silentRefreshDay: (dateStr) => { const dayEl = document.querySelector(`div[data-date="${dateStr}"]`); if (dayEl) dayEl.outerHTML = UI.generateDayHTML(dateStr, new Date(dateStr).getDay()); },
     updateFooter: () => {
-      if (STATE.inputMode === 'LOCKED') {
-        document.getElementById('lock-overlay').classList.remove('hidden'); document.getElementById('lock-msg-box').className = "bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"; document.getElementById('lock-icon').innerText = "🔒"; document.getElementById('lock-text').innerText = "本週已排滿鎖定"; document.getElementById('lock-subtext').classList.remove('hidden');
-      } else if (STATE.inputMode === 'WAITING') {
-        document.getElementById('lock-overlay').classList.remove('hidden'); document.getElementById('lock-msg-box').className = "bg-blue-100 border border-blue-300 text-blue-800 px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"; document.getElementById('lock-icon').innerText = "👆"; document.getElementById('lock-text').innerText = "請點擊上方更表選擇日子"; document.getElementById('lock-subtext').classList.add('hidden');
-      } else document.getElementById('lock-overlay').classList.add('hidden');
+      if (STATE.inputMode === 'LOCKED') { document.getElementById('lock-overlay').classList.remove('hidden'); document.getElementById('lock-msg-box').className = "bg-gray-800 text-white px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"; document.getElementById('lock-icon').innerText = "🔒"; document.getElementById('lock-text').innerText = "本週已排滿鎖定"; document.getElementById('lock-subtext').classList.remove('hidden'); } 
+      else if (STATE.inputMode === 'WAITING') { document.getElementById('lock-overlay').classList.remove('hidden'); document.getElementById('lock-msg-box').className = "bg-blue-100 border border-blue-300 text-blue-800 px-5 py-2.5 rounded-full font-bold shadow-lg flex items-center gap-2 mb-1"; document.getElementById('lock-icon').innerText = "👆"; document.getElementById('lock-text').innerText = "請點擊上方更表選擇日子"; document.getElementById('lock-subtext').classList.add('hidden'); } 
+      else document.getElementById('lock-overlay').classList.add('hidden');
 
-      const buttons = document.getElementById('staff-keys').children;
-      const activeShifts = (STATE.activeDate && STATE.daysMap[STATE.activeDate]) ? Utils.normalizeShifts(STATE.daysMap[STATE.activeDate].shifts) : [];
-      const scheduledStaff = activeShifts.map(s => s.staff);
-
+      const buttons = document.getElementById('staff-keys').children, activeShifts = (STATE.activeDate && STATE.daysMap[STATE.activeDate]) ? Utils.normalizeShifts(STATE.daysMap[STATE.activeDate].shifts) : [], scheduledStaff = activeShifts.map(s => s.staff);
       Array.from(buttons).forEach(btn => {
         if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) { btn.className = 'w-full h-full bg-blue-50/50 border border-blue-100 text-blue-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors'; } 
         else if (scheduledStaff.includes(btn.textContent)) { btn.className = 'w-full h-full bg-gray-100 border border-gray-200 text-gray-300 text-2xl font-extrabold rounded-xl pointer-events-none flex items-center justify-center transition-colors'; } 
@@ -315,8 +270,7 @@
       });
     },
     updateHeader: (sundayStr) => {
-      const d1 = new Date(sundayStr), d2 = new Date(Utils.addDays(sundayStr, 6));
-      UI.headerDate.innerText = `${d1.getMonth()+1}/${d1.getDate()}(日) - ${d2.getMonth()+1}/${d2.getDate()}(六)`;
+      const d1 = new Date(sundayStr), d2 = new Date(Utils.addDays(sundayStr, 6)); UI.headerDate.innerText = `${d1.getMonth()+1}/${d1.getDate()}(日) - ${d2.getMonth()+1}/${d2.getDate()}(六)`;
       if (sundayStr <= MIN_SUNDAY) document.getElementById('prev-week').classList.add('opacity-30', 'pointer-events-none'); else document.getElementById('prev-week').classList.remove('opacity-30', 'pointer-events-none');
     }
   };
@@ -325,17 +279,11 @@
     timeout: null,
     init: () => { UI.container.addEventListener('scroll', () => { clearTimeout(ScrollEngine.timeout); ScrollEngine.timeout = setTimeout(ScrollEngine.onScrollEnd, 150); }); },
     onScrollEnd: () => {
-      let minDiff = Infinity, focused = null;
-      Array.from(UI.container.children).forEach(page => { const diff = Math.abs(page.getBoundingClientRect().top); if (diff < minDiff) { minDiff = diff; focused = page.dataset.weekStart; } });
-      if (focused && focused !== STATE.focusedWeekStart) { 
-        STATE.focusedWeekStart = focused; UI.updateHeader(focused); 
-        Engine.smartSetFocusWeekActiveDay(focused);
-        Engine.evaluateLockState(); ScrollEngine.replenish(focused); 
-      }
+      let minDiff = Infinity, focused = null; Array.from(UI.container.children).forEach(page => { const diff = Math.abs(page.getBoundingClientRect().top); if (diff < minDiff) { minDiff = diff; focused = page.dataset.weekStart; } });
+      if (focused && focused !== STATE.focusedWeekStart) { STATE.focusedWeekStart = focused; UI.updateHeader(focused); Engine.smartSetFocusWeekActiveDay(focused); Engine.evaluateLockState(); ScrollEngine.replenish(focused); }
     },
     replenish: (centerWeekStr) => {
-      let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop, prepended = false;
-      let topWeek = UI.container.firstElementChild.dataset.weekStart;
+      let oldScrollHeight = UI.container.scrollHeight, oldScrollTop = UI.container.scrollTop, prepended = false, topWeek = UI.container.firstElementChild.dataset.weekStart;
       while (topWeek > MIN_SUNDAY && (new Date(centerWeekStr) - new Date(topWeek)) / 604800000 < 4) { const newWeek = Utils.addDays(topWeek, -7); UI.container.insertBefore(UI.createWeekNode(newWeek), UI.container.firstElementChild); topWeek = newWeek; prepended = true; }
       if (prepended) { UI.container.classList.add('instant-scroll'); UI.container.scrollTop = oldScrollTop + (UI.container.scrollHeight - oldScrollHeight); setTimeout(() => UI.container.classList.remove('instant-scroll'), 50); }
       let bottomWeek = UI.container.lastElementChild.dataset.weekStart;
@@ -343,292 +291,142 @@
       UI.updateHeader(STATE.focusedWeekStart);
     },
     jumpToAndRebuild: (targetSunday) => {
-      UI.container.innerHTML = ''; STATE.renderedWeeks.clear();
-      for (let i = -4; i <= 4; i++) { let wk = Utils.addDays(targetSunday, i * 7); if (wk >= MIN_SUNDAY) UI.container.appendChild(UI.createWeekNode(wk)); }
-      setTimeout(() => {
-        const targetNode = UI.container.querySelector(`[data-week-start="${targetSunday}"]`);
-        if (targetNode) { UI.container.classList.add('instant-scroll'); UI.container.scrollTop = targetNode.offsetTop; setTimeout(() => UI.container.classList.remove('instant-scroll'), 100); }
-        STATE.focusedWeekStart = targetSunday; UI.updateHeader(targetSunday); 
-        Engine.smartSetFocusWeekActiveDay(targetSunday);
-        Engine.evaluateLockState();
-      }, 0);
+      UI.container.innerHTML = ''; STATE.renderedWeeks.clear(); for (let i = -4; i <= 4; i++) { let wk = Utils.addDays(targetSunday, i * 7); if (wk >= MIN_SUNDAY) UI.container.appendChild(UI.createWeekNode(wk)); }
+      setTimeout(() => { const targetNode = UI.container.querySelector(`[data-week-start="${targetSunday}"]`); if (targetNode) { UI.container.classList.add('instant-scroll'); UI.container.scrollTop = targetNode.offsetTop; setTimeout(() => UI.container.classList.remove('instant-scroll'), 100); } STATE.focusedWeekStart = targetSunday; UI.updateHeader(targetSunday); Engine.smartSetFocusWeekActiveDay(targetSunday); Engine.evaluateLockState(); }, 0);
     }
   };
 
   window.Engine = {
     smartSetFocusWeekActiveDay: (weekStartStr) => {
-      SyncManager.flush(); // 手動轉頁時，立即儲存舊日誌
-      const sundayDate = new Date(weekStartStr), saturdayDate = new Date(Utils.addDays(weekStartStr, 6)), todayObj = new Date(STATE.todayStr);
+      SyncManager.flush(); const sundayDate = new Date(weekStartStr), saturdayDate = new Date(Utils.addDays(weekStartStr, 6)), todayObj = new Date(STATE.todayStr);
       if (todayObj >= sundayDate && todayObj <= saturdayDate) { STATE.activeDate = STATE.todayStr; } 
-      else {
-        STATE.activeDate = null;
-        for (let i = 1; i <= 6; i++) {
-          const dStr = Utils.addDays(weekStartStr, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-          const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue;
-          const shifts = Utils.normalizeShifts(dayData.shifts);
-          if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue;
-          if (shifts.length < 6) { STATE.activeDate = dStr; break; }
-        }
-      }
+      else { STATE.activeDate = null; for (let i = 1; i <= 6; i++) { const dStr = Utils.addDays(weekStartStr, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue; const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue; const shifts = Utils.normalizeShifts(dayData.shifts); if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue; if (shifts.length < 6) { STATE.activeDate = dStr; break; } } }
     },
     evaluateLockState: () => {
-      if (!STATE.focusedWeekStart) return;
-      let isFull = true;
-      for (let i = 1; i <= 5; i++) {
-        const dStr = Utils.addDays(STATE.focusedWeekStart, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-        const dayData = STATE.daysMap[dStr] || {};
-        if (!dayData.isFullDayHoliday && Utils.normalizeShifts(dayData.shifts).length < 6) { isFull = false; break; }
-      }
-      if (isFull) STATE.inputMode = 'LOCKED'; else STATE.inputMode = (!STATE.activeDate || STATE.inputMode === 'WAITING') ? (Engine.autoSetNextActive() ? 'ACTIVE' : 'WAITING') : 'ACTIVE';
-      UI.refreshAllVisible();
+      if (!STATE.focusedWeekStart) return; let isFull = true; for (let i = 1; i <= 5; i++) { const dStr = Utils.addDays(STATE.focusedWeekStart, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue; const dayData = STATE.daysMap[dStr] || {}; if (!dayData.isFullDayHoliday && Utils.normalizeShifts(dayData.shifts).length < 6) { isFull = false; break; } }
+      if (isFull) STATE.inputMode = 'LOCKED'; else STATE.inputMode = (!STATE.activeDate || STATE.inputMode === 'WAITING') ? (Engine.autoSetNextActive() ? 'ACTIVE' : 'WAITING') : 'ACTIVE'; UI.refreshAllVisible();
     },
     autoSetNextActive: () => {
-      for (let i = 1; i <= 6; i++) {
-        const dStr = Utils.addDays(STATE.focusedWeekStart, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue;
-        const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue;
-        const shifts = Utils.normalizeShifts(dayData.shifts);
-        if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue;
-        if (shifts.length < 6) { STATE.activeDate = dStr; return true; }
-      }
-      STATE.activeDate = null; return false;
+      for (let i = 1; i <= 6; i++) { const dStr = Utils.addDays(STATE.focusedWeekStart, i); if (dStr < CONFIG.SYSTEM_START_DATE) continue; const dayData = STATE.daysMap[dStr] || {}; if (dayData.isFullDayHoliday) continue; const shifts = Utils.normalizeShifts(dayData.shifts); if (i === 6 && !STATE.unlockedSaturdays.has(dStr) && shifts.length === 0) continue; if (shifts.length < 6) { STATE.activeDate = dStr; return true; } } return false;
     },
-    setActiveDate: (dateStr) => { 
-      if(STATE.activeDate !== dateStr) SyncManager.flush(); // 手動點擊新日子前，立即推上雲端
-      STATE.activeDate = dateStr; if (STATE.inputMode === 'WAITING') STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); 
-    },
+    setActiveDate: (dateStr) => { if(STATE.activeDate !== dateStr) SyncManager.flush(); STATE.activeDate = dateStr; if (STATE.inputMode === 'WAITING') STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); },
     unlockSaturday: (e, dateStr) => { e.stopPropagation(); STATE.unlockedSaturdays.add(dateStr); STATE.activeDate = dateStr; STATE.inputMode = 'ACTIVE'; UI.refreshAllVisible(); },
-    toggleLeave: (e, dateStr, idx) => {
-      e.stopPropagation(); Engine.setActiveDate(dateStr); 
-      if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return;
-      const shifts = STATE.daysMap[dateStr].shifts;
-      if (shifts[idx]) { shifts[idx].status = shifts[idx].status === 'LEAVE' ? 'ON' : 'LEAVE'; UI.silentRefreshDay(dateStr); SyncManager.markDirty(dateStr); }
-    },
+    toggleLeave: (e, dateStr, idx) => { e.stopPropagation(); Engine.setActiveDate(dateStr); if (STATE.inputMode === 'LOCKED' || STATE.inputMode === 'WAITING') return; const shifts = STATE.daysMap[dateStr].shifts; if (shifts[idx]) { shifts[idx].status = shifts[idx].status === 'LEAVE' ? 'ON' : 'LEAVE'; UI.silentRefreshDay(dateStr); SyncManager.markDirty(dateStr); } },
     addShift: (staffCode) => {
-      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
-      const targetDate = STATE.activeDate;
-      if (!STATE.daysMap[targetDate]) STATE.daysMap[targetDate] = { shifts: [] };
-      STATE.daysMap[targetDate].shifts = Utils.normalizeShifts(STATE.daysMap[targetDate].shifts);
-      
-      if (STATE.daysMap[targetDate].shifts.some(s => s.staff === staffCode)) return;
-      if (STATE.daysMap[targetDate].isFullDayHoliday || STATE.daysMap[targetDate].shifts.length >= 6) return;
-      
-      STATE.daysMap[targetDate].shifts.push({ staff: staffCode, status: 'ON' });
-      SyncManager.markDirty(targetDate); // 標記修改並啟動 1 秒計時器
-      
+      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return; const targetDate = STATE.activeDate; if (!STATE.daysMap[targetDate]) STATE.daysMap[targetDate] = { shifts: [] }; STATE.daysMap[targetDate].shifts = Utils.normalizeShifts(STATE.daysMap[targetDate].shifts);
+      if (STATE.daysMap[targetDate].shifts.some(s => s.staff === staffCode)) return; if (STATE.daysMap[targetDate].isFullDayHoliday || STATE.daysMap[targetDate].shifts.length >= 6) return;
+      STATE.daysMap[targetDate].shifts.push({ staff: staffCode, status: 'ON' }); SyncManager.markDirty(targetDate);
       if (STATE.daysMap[targetDate].shifts.length === 6) {
-        SyncManager.flush(); // 滿更表：觸發條件 1，立即推上雲端
-        let checkDate = targetDate;
-        for(let i=0; i<6; i++) {
-           checkDate = Utils.addDays(checkDate, 1);
-           const dayIdx = new Date(checkDate).getDay(); if (dayIdx === 0) break;
-           const dayData = STATE.daysMap[checkDate] || {}; if (dayData.isFullDayHoliday) continue;
-           const shifts = Utils.normalizeShifts(dayData.shifts);
-           if (dayIdx === 6 && !STATE.unlockedSaturdays.has(checkDate) && shifts.length === 0) continue;
-           if (shifts.length < 6) { STATE.activeDate = checkDate; break; }
-        }
-        Engine.evaluateLockState();
-        if (STATE.inputMode === 'LOCKED' && new Date(targetDate).getDay() === 5) {
-          const nextSun = Utils.addDays(STATE.focusedWeekStart, 7); ScrollEngine.replenish(nextSun);
-          setTimeout(() => { const node = UI.container.querySelector(`[data-week-start="${nextSun}"]`); if(node) node.scrollIntoView({behavior: 'smooth'}); }, 100);
-        }
+        SyncManager.flush(); let checkDate = targetDate;
+        for(let i=0; i<6; i++) { checkDate = Utils.addDays(checkDate, 1); const dayIdx = new Date(checkDate).getDay(); if (dayIdx === 0) break; const dayData = STATE.daysMap[checkDate] || {}; if (dayData.isFullDayHoliday) continue; const shifts = Utils.normalizeShifts(dayData.shifts); if (dayIdx === 6 && !STATE.unlockedSaturdays.has(checkDate) && shifts.length === 0) continue; if (shifts.length < 6) { STATE.activeDate = checkDate; break; } }
+        Engine.evaluateLockState(); if (STATE.inputMode === 'LOCKED' && new Date(targetDate).getDay() === 5) { const nextSun = Utils.addDays(STATE.focusedWeekStart, 7); ScrollEngine.replenish(nextSun); setTimeout(() => { const node = UI.container.querySelector(`[data-week-start="${nextSun}"]`); if(node) node.scrollIntoView({behavior: 'smooth'}); }, 100); }
       } else { UI.refreshAllVisible(); }
     },
-    backspace: () => {
-      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
-      const shifts = STATE.daysMap[STATE.activeDate]?.shifts;
-      if (shifts && shifts.length > 0) { shifts.pop(); SyncManager.markDirty(STATE.activeDate); Engine.evaluateLockState(); }
-    },
-    setAllOff: () => {
-      if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return;
-      const td = STATE.activeDate, dayData = STATE.daysMap[td] || {};
-      STATE.daysMap[td] = dayData.isFullDayHoliday ? { isFullDayHoliday: false, shifts: [] } : { isFullDayHoliday: true, shifts: [] };
-      SyncManager.markDirty(td); 
-      SyncManager.flush(); // 全休：立即推上雲端
-      Engine.evaluateLockState();
-    }
+    backspace: () => { if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return; const shifts = STATE.daysMap[STATE.activeDate]?.shifts; if (shifts && shifts.length > 0) { shifts.pop(); SyncManager.markDirty(STATE.activeDate); Engine.evaluateLockState(); } },
+    setAllOff: () => { if (STATE.inputMode !== 'ACTIVE' || !STATE.activeDate) return; const td = STATE.activeDate, dayData = STATE.daysMap[td] || {}; STATE.daysMap[td] = dayData.isFullDayHoliday ? { isFullDayHoliday: false, shifts: [] } : { isFullDayHoliday: true, shifts: [] }; SyncManager.markDirty(td); SyncManager.flush(); Engine.evaluateLockState(); }
   };
 
   const CalendarManager = {
-    // ... Calendar unchanged from V9
     modal: document.getElementById('modal-calendar'), grid: document.getElementById('cal-grid'), title: document.getElementById('cal-month-title'),
     render: () => {
-      const year = STATE.calRenderMonth.getFullYear(), month = STATE.calRenderMonth.getMonth();
-      CalendarManager.title.innerText = `${year}年 ${month + 1}月`; CalendarManager.grid.innerHTML = '';
-      const sysStartObj = new Date(CONFIG.SYSTEM_START_DATE), isStartMonth = (year === sysStartObj.getFullYear() && month === sysStartObj.getMonth());
-      document.getElementById('cal-prev').className = isStartMonth ? "w-10 h-10 rounded-full bg-gray-50 text-gray-400 font-bold flex items-center justify-center text-lg opacity-40 pointer-events-none" : "w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200";
-      const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate();
-      for (let i = 0; i < firstDay; i++) CalendarManager.grid.innerHTML += `<div></div>`;
+      const year = STATE.calRenderMonth.getFullYear(), month = STATE.calRenderMonth.getMonth(); CalendarManager.title.innerText = `${year}年 ${month + 1}月`; CalendarManager.grid.innerHTML = '';
+      const sysStartObj = new Date(CONFIG.SYSTEM_START_DATE), isStartMonth = (year === sysStartObj.getFullYear() && month === sysStartObj.getMonth()); document.getElementById('cal-prev').className = isStartMonth ? "w-10 h-10 rounded-full bg-gray-50 text-gray-400 font-bold flex items-center justify-center text-lg opacity-40 pointer-events-none" : "w-10 h-10 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center text-lg active:bg-gray-200";
+      const firstDay = new Date(year, month, 1).getDay(), daysInMonth = new Date(year, month + 1, 0).getDate(); for (let i = 0; i < firstDay; i++) CalendarManager.grid.innerHTML += `<div></div>`;
       for (let day = 1; day <= daysInMonth; day++) {
-        const dStr = Utils.formatDate(new Date(year, month, day)), dayOfWeek = new Date(year, month, day).getDay();
-        const dayData = STATE.daysMap[dStr] || { isFullDayHoliday: false, shifts: [] };
+        const dStr = Utils.formatDate(new Date(year, month, day)), dayOfWeek = new Date(year, month, day).getDay(); const dayData = STATE.daysMap[dStr] || { isFullDayHoliday: false, shifts: [] };
         let isRed = (dayOfWeek === 0 || dayData.isFullDayHoliday), cellClass = "aspect-square rounded-2xl flex flex-col items-center justify-center text-[15px] font-bold transition-transform ";
-        if (dStr < CONFIG.SYSTEM_START_DATE) { cellClass += "text-gray-300 opacity-40 pointer-events-none "; } else {
-          cellClass += "cursor-pointer active:scale-95 "; if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 "; else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 ";
-        }
+        if (dStr < CONFIG.SYSTEM_START_DATE) { cellClass += "text-gray-300 opacity-40 pointer-events-none "; } else { cellClass += "cursor-pointer active:scale-95 "; if (isRed) cellClass += "text-red-500 bg-red-50/50 border border-red-100 "; else cellClass += "text-gray-800 bg-gray-50/50 border border-gray-100 "; }
         let dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-transparent mt-0.5"></div>`;
-        if (dStr >= CONFIG.SYSTEM_START_DATE && !isRed && dayOfWeek >= 1 && dayOfWeek <= 5) {
-          const shifts = Utils.normalizeShifts(dayData.shifts);
-          if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`; else if (shifts.length > 0) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`;
-        }
+        if (dStr >= CONFIG.SYSTEM_START_DATE && !isRed && dayOfWeek >= 1 && dayOfWeek <= 5) { const shifts = Utils.normalizeShifts(dayData.shifts); if (shifts.length === 6) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5"></div>`; else if (shifts.length > 0) dotHTML = `<div class="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-0.5"></div>`; }
         CalendarManager.grid.innerHTML += `<div class="${cellClass}" onclick="window.CalendarManager.jumpTo('${dStr}')"><span>${day}</span>${dotHTML}</div>`;
       }
     },
     jumpTo: (dateStr) => { ScrollEngine.jumpToAndRebuild(Utils.getSunday(dateStr)); CalendarManager.modal.classList.add('hidden'); CalendarManager.modal.classList.remove('flex', 'modal-enter'); },
-    init: () => {
-      window.CalendarManager = CalendarManager;
-      document.getElementById('btn-open-calendar').addEventListener('click', () => { STATE.calRenderMonth = STATE.focusedWeekStart ? new Date(STATE.focusedWeekStart) : new Date(); CalendarManager.render(); CalendarManager.modal.classList.remove('hidden'); CalendarManager.modal.classList.add('flex', 'modal-enter'); });
-      document.getElementById('close-calendar').addEventListener('click', () => { CalendarManager.modal.classList.add('hidden'); CalendarManager.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('cal-prev').addEventListener('click', () => { STATE.calRenderMonth.setMonth(STATE.calRenderMonth.getMonth() - 1); CalendarManager.render(); });
-      document.getElementById('cal-next').addEventListener('click', () => { STATE.calRenderMonth.setMonth(STATE.calRenderMonth.getMonth() + 1); CalendarManager.render(); });
-    }
+    init: () => { window.CalendarManager = CalendarManager; document.getElementById('btn-open-calendar').addEventListener('click', () => { STATE.calRenderMonth = STATE.focusedWeekStart ? new Date(STATE.focusedWeekStart) : new Date(); CalendarManager.render(); CalendarManager.modal.classList.remove('hidden'); CalendarManager.modal.classList.add('flex', 'modal-enter'); }); document.getElementById('close-calendar').addEventListener('click', () => { CalendarManager.modal.classList.add('hidden'); CalendarManager.modal.classList.remove('flex', 'modal-enter'); }); document.getElementById('cal-prev').addEventListener('click', () => { STATE.calRenderMonth.setMonth(STATE.calRenderMonth.getMonth() - 1); CalendarManager.render(); }); document.getElementById('cal-next').addEventListener('click', () => { STATE.calRenderMonth.setMonth(STATE.calRenderMonth.getMonth() + 1); CalendarManager.render(); }); }
   };
 
   window.StatsEngine = {
-    // ... StatsEngine unchanged from V9 (the fixed invalid date version)
     modal: document.getElementById('modal-stats'), latestPromptData: null,
     switchTab: (tabId) => { for(let i=0; i<=3; i++) { document.getElementById(`tab-btn-${i}`).className = (i === tabId) ? "flex-1 py-2.5 text-[13px] tab-active" : "flex-1 py-2.5 text-[13px] tab-inactive text-gray-500"; document.getElementById(`tab-content-${i}`).className = (i === tabId) ? (i===0 ? "flex flex-col gap-2.5 h-full" : "block space-y-3") : "hidden space-y-3"; } },
     calculate: () => {
-      const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } });
-      let baseSum = 0, baseCount = 0;
-      const validDateKeys = Object.keys(STATE.daysMap).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
-      const sysStart = new Date(CONFIG.SYSTEM_START_DATE);
-      let filterStart = sysStart; let maxDateStr = (validDateKeys.length > 0) ? validDateKeys[validDateKeys.length - 1] : STATE.todayStr;
-      let filterEnd = new Date(maxDateStr); if (isNaN(filterEnd.getTime())) filterEnd = new Date(STATE.todayStr);
-      if (STATE.statsYear !== 'ALL') {
-        const y = parseInt(STATE.statsYear);
-        filterStart = new Date(Math.max(sysStart.getTime(), new Date(y, 0, 1).getTime()));
-        filterEnd = new Date(Math.min(filterEnd.getTime(), new Date(y, 11, 31).getTime()));
-      }
+      const staffStats = {}; CONFIG.STAFF_LIST.forEach(s => staffStats[s] = { sum: 0, count: 0, leaveCount: 0, hits: { good: 0, mid: 0, bad: 0 } }); let baseSum = 0, baseCount = 0; const validDateKeys = Object.keys(STATE.daysMap).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort(); const sysStart = new Date(CONFIG.SYSTEM_START_DATE); let filterStart = sysStart; let maxDateStr = (validDateKeys.length > 0) ? validDateKeys[validDateKeys.length - 1] : STATE.todayStr; let filterEnd = new Date(maxDateStr); if (isNaN(filterEnd.getTime())) filterEnd = new Date(STATE.todayStr);
+      if (STATE.statsYear !== 'ALL') { const y = parseInt(STATE.statsYear); filterStart = new Date(Math.max(sysStart.getTime(), new Date(y, 0, 1).getTime())); filterEnd = new Date(Math.min(filterEnd.getTime(), new Date(y, 11, 31).getTime())); }
       if (filterEnd < filterStart) filterEnd = new Date(filterStart);
-
       let curD = new Date(filterStart), promptJSON = {};
       while(curD <= filterEnd) {
-        const dStr = Utils.formatDate(curD); curD.setDate(curD.getDate() + 1);
-        const dayData = STATE.daysMap[dStr]; if(!dayData || dayData.isFullDayHoliday) continue;
-        const shifts = Utils.normalizeShifts(dayData.shifts); if(shifts.length === 0) continue;
-        promptJSON[dStr] = shifts.map(s => s.status === 'LEAVE' ? s.staff + '(休假)' : s.staff);
-        const dObj = new Date(dStr), isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
-        const activeCount = shifts.filter(s => s.status !== 'LEAVE').length;
-        let activeIdx = 0;
-        shifts.forEach((shift) => {
-          if(!staffStats[shift.staff]) return;
-          if (shift.status === 'LEAVE') { staffStats[shift.staff].leaveCount++; } 
-          else if (!isWeekend) {
-            const shiftScore = (6 - activeCount + 1) + activeIdx;
-            staffStats[shift.staff].sum += shiftScore; staffStats[shift.staff].count++; baseSum += shiftScore; baseCount++;
-            if (shiftScore <= 2) staffStats[shift.staff].hits.good++; else if (shiftScore <= 4) staffStats[shift.staff].hits.mid++; else staffStats[shift.staff].hits.bad++;
-            activeIdx++;
-          }
-        });
+        const dStr = Utils.formatDate(curD); curD.setDate(curD.getDate() + 1); const dayData = STATE.daysMap[dStr]; if(!dayData || dayData.isFullDayHoliday) continue; const shifts = Utils.normalizeShifts(dayData.shifts); if(shifts.length === 0) continue; promptJSON[dStr] = shifts.map(s => s.status === 'LEAVE' ? s.staff + '(休假)' : s.staff); const dObj = new Date(dStr), isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6); const activeCount = shifts.filter(s => s.status !== 'LEAVE').length; let activeIdx = 0;
+        shifts.forEach((shift) => { if(!staffStats[shift.staff]) return; if (shift.status === 'LEAVE') { staffStats[shift.staff].leaveCount++; } else if (!isWeekend) { const shiftScore = (6 - activeCount + 1) + activeIdx; staffStats[shift.staff].sum += shiftScore; staffStats[shift.staff].count++; baseSum += shiftScore; baseCount++; if (shiftScore <= 2) staffStats[shift.staff].hits.good++; else if (shiftScore <= 4) staffStats[shift.staff].hits.mid++; else staffStats[shift.staff].hits.bad++; activeIdx++; } });
       }
-      const globalAvg = baseCount > 0 ? (baseSum / baseCount) : 0;
-      let pnls = [], maxAbsPnl = 0.1; 
-      Object.keys(staffStats).forEach(s => {
-        const d = staffStats[s]; d.avg = d.count > 0 ? (d.sum / d.count) : 0; d.pnl = d.count > 0 ? ((globalAvg * d.count) - d.sum) : 0;
-        if(d.count > 0) { pnls.push({staff: s, pnl: d.pnl}); maxAbsPnl = Math.max(maxAbsPnl, Math.abs(d.pnl)); }
-      });
-      StatsEngine.renderDashboard(pnls, maxAbsPnl); StatsEngine.renderTabs(globalAvg, staffStats);
-      document.getElementById('global-date-range').innerText = `統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`;
-      StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
+      const globalAvg = baseCount > 0 ? (baseSum / baseCount) : 0; let pnls = [], maxAbsPnl = 0.1; 
+      Object.keys(staffStats).forEach(s => { const d = staffStats[s]; d.avg = d.count > 0 ? (d.sum / d.count) : 0; d.pnl = d.count > 0 ? ((globalAvg * d.count) - d.sum) : 0; if(d.count > 0) { pnls.push({staff: s, pnl: d.pnl}); maxAbsPnl = Math.max(maxAbsPnl, Math.abs(d.pnl)); } });
+      StatsEngine.renderDashboard(pnls, maxAbsPnl); StatsEngine.renderTabs(globalAvg, staffStats); document.getElementById('global-date-range').innerText = `統計範圍：${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`; StatsEngine.latestPromptData = { dateRange: `${Utils.formatDate(filterStart)} ~ ${Utils.formatDate(filterEnd)}`, globalAvg: globalAvg.toFixed(2), staffStats: staffStats, json: promptJSON };
     },
     renderDashboard: (pnls, maxAbs) => {
-      let score = 100; if (pnls.length > 0) { const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length; score = Math.max(0, Math.round(100 - (avgAbsDev * 15))); }
-      document.getElementById('mini-health-score').innerText = `${score}%`;
-      const circle = document.getElementById('mini-health-circle');
-      let bColor = 'border-green-400', tColor = 'text-green-700'; if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; } else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
+      let score = 100; if (pnls.length > 0) { const avgAbsDev = pnls.reduce((sum, item) => sum + Math.abs(item.pnl), 0) / pnls.length; score = Math.max(0, Math.round(100 - (avgAbsDev * 15))); } document.getElementById('mini-health-score').innerText = `${score}%`;
+      const circle = document.getElementById('mini-health-circle'); let bColor = 'border-green-400', tColor = 'text-green-700'; if(score < 85 && score >= 65) { bColor = 'border-yellow-400'; tColor = 'text-yellow-700'; } else if(score < 65) { bColor = 'border-red-500'; tColor = 'text-red-700'; }
       circle.className = `relative w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full border-[3px] ${bColor}`; document.getElementById('mini-health-score').className = `text-[12px] font-black ${tColor}`;
       const alertBox = document.getElementById('mini-ai-alert'), worst = pnls.reduce((prev, curr) => (curr.pnl < prev.pnl ? curr : prev), {pnl: 0, staff: ''}), best = pnls.reduce((prev, curr) => (curr.pnl > prev.pnl ? curr : prev), {pnl: 0, staff: ''});
-      if (worst.pnl < -2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700"; alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期硬食太多 (盈虧 ${worst.pnl.toFixed(1)})，建議補償靚位。`; }
-      else if (best.pnl > 2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700"; alertBox.innerHTML = `💡 提示：[${best.staff}] 近期常佔靚位 (盈虧 +${best.pnl.toFixed(1)})，可分擔尾更。`; }
-      else { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700"; alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無極端情況。`; }
+      if (worst.pnl < -2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-red-700"; alertBox.innerHTML = `⚠️ 警告：[${worst.staff}] 近期硬食太多 (盈虧 ${worst.pnl.toFixed(1)})，建議補償靚位。`; } else if (best.pnl > 2.5) { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-blue-700"; alertBox.innerHTML = `💡 提示：[${best.staff}] 近期常佔靚位 (盈虧 +${best.pnl.toFixed(1)})，可分擔尾更。`; } else { alertBox.className = "flex-1 text-[11px] font-bold leading-snug text-green-700"; alertBox.innerHTML = `🟢 健康狀態：目前排班分配非常平均，無極端情況。`; }
       const plot = document.getElementById('dot-plot-container'); plot.innerHTML = '';
       pnls.forEach((item, idx) => { const leftPercent = 50 + ((item.pnl / maxAbs) * 45), color = item.pnl > 0.5 ? 'bg-green-500' : (item.pnl < -0.5 ? 'bg-red-500' : 'bg-gray-400'), labelPos = idx % 2 === 0 ? '-top-4' : 'top-2.5'; plot.innerHTML += `<div class="absolute w-2.5 h-2.5 rounded-full border border-white shadow-sm ${color} flex items-center justify-center -translate-x-1/2 -mt-1" style="left: ${leftPercent}%;"><span class="absolute ${labelPos} text-[9px] font-bold text-gray-700">${item.staff}</span></div>`; });
       const tornado = document.getElementById('tornado-chart'); tornado.innerHTML = '';
       [...pnls].sort((a,b) => a.pnl - b.pnl).forEach(item => { const w = (Math.abs(item.pnl) / maxAbs) * 100, valStr = item.pnl > 0 ? `+${item.pnl.toFixed(1)}` : item.pnl.toFixed(1), barColor = item.pnl > 0 ? 'bg-green-400' : 'bg-red-400', textColor = item.pnl > 0 ? 'text-green-700' : (item.pnl < 0 ? 'text-red-700' : 'text-gray-500'); tornado.innerHTML += `<div class="flex items-center text-[10px] font-bold"><div class="w-6 text-right mr-1.5 text-gray-700">${item.staff}</div><div class="flex-1 flex items-center h-4 relative"><div class="w-1/2 h-full flex justify-end pr-0.5">${item.pnl < 0 ? `<div class="${barColor} h-full rounded-l-sm" style="width:${w}%"></div>` : ''}</div><div class="w-px h-full bg-gray-300"></div><div class="w-1/2 h-full flex justify-start pl-0.5">${item.pnl > 0 ? `<div class="${barColor} h-full rounded-r-sm" style="width:${w}%"></div>` : ''}</div></div><div class="w-7 text-right ml-1 ${textColor}">${valStr}</div></div>`; });
     },
     renderTabs: (globalAvg, stats) => {
-      document.getElementById('stats-baseline').innerText = `動態基準均位: ${globalAvg.toFixed(2)}`;
-      const grid1 = document.getElementById('stats-grid-1'), grid2 = document.getElementById('stats-grid-2'), grid3 = document.getElementById('stats-grid-3');
-      grid1.innerHTML = ''; grid2.innerHTML = ''; grid3.innerHTML = '';
+      document.getElementById('stats-baseline').innerText = `動態基準均位: ${globalAvg.toFixed(2)}`; const grid1 = document.getElementById('stats-grid-1'), grid2 = document.getElementById('stats-grid-2'), grid3 = document.getElementById('stats-grid-3'); grid1.innerHTML = ''; grid2.innerHTML = ''; grid3.innerHTML = '';
       CONFIG.STAFF_LIST.forEach(staff => {
-        const data = stats[staff];
-        let color1 = 'text-gray-700'; if (data.count > 0) { if (data.avg - globalAvg > 0.1) color1 = 'text-red-500 font-bold'; else if (data.avg - globalAvg < -0.1) color1 = 'text-green-600 font-bold'; }
+        const data = stats[staff]; let color1 = 'text-gray-700'; if (data.count > 0) { if (data.avg - globalAvg > 0.1) color1 = 'text-red-500 font-bold'; else if (data.avg - globalAvg < -0.1) color1 = 'text-green-600 font-bold'; }
         grid1.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col justify-center pl-3"><div class="flex items-end gap-2 mb-1"><span class="text-lg font-extrabold text-gray-800">${staff}</span><span class="text-xl tracking-tight ${color1}">${data.count > 0 ? data.avg.toFixed(2) : '--'}</span></div><div class="text-[10px] text-gray-500 font-bold">當值: ${data.count} | 🌴 ${data.leaveCount}日</div></div>`;
-        const color2 = data.pnl > 0 ? 'text-green-600' : (data.pnl < 0 ? 'text-red-500' : 'text-gray-500');
-        grid2.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col items-center justify-center"><span class="text-sm font-extrabold text-gray-800 mb-1">${staff}</span><span class="text-[17px] font-bold ${color2}">${data.count > 0 ? (data.pnl > 0 ? `+${data.pnl.toFixed(1)}` : data.pnl.toFixed(1)) : '--'}</span></div>`;
-        const tHits = data.hits.good + data.hits.mid + data.hits.bad;
-        const pGood = tHits > 0 ? Math.round((data.hits.good/tHits)*100) : 0, pMid = tHits > 0 ? Math.round((data.hits.mid/tHits)*100) : 0, pBad = tHits > 0 ? Math.round((data.hits.bad/tHits)*100) : 0;
+        const color2 = data.pnl > 0 ? 'text-green-600' : (data.pnl < 0 ? 'text-red-500' : 'text-gray-500'); grid2.innerHTML += `<div class="bg-gray-50 rounded p-2 border border-gray-100 flex flex-col items-center justify-center"><span class="text-sm font-extrabold text-gray-800 mb-1">${staff}</span><span class="text-[17px] font-bold ${color2}">${data.count > 0 ? (data.pnl > 0 ? `+${data.pnl.toFixed(1)}` : data.pnl.toFixed(1)) : '--'}</span></div>`;
+        const tHits = data.hits.good + data.hits.mid + data.hits.bad, pGood = tHits > 0 ? Math.round((data.hits.good/tHits)*100) : 0, pMid = tHits > 0 ? Math.round((data.hits.mid/tHits)*100) : 0, pBad = tHits > 0 ? Math.round((data.hits.bad/tHits)*100) : 0;
         grid3.innerHTML += `<div class="flex items-center bg-gray-50 border border-gray-100 p-2 rounded gap-2"><div class="w-8 text-center font-extrabold text-gray-800 text-lg">${staff}</div><div class="flex-1 flex text-[10px] font-bold text-white h-5 rounded overflow-hidden"><div style="width: ${pGood}%" class="bg-green-500 flex items-center justify-center">${pGood}%</div><div style="width: ${pMid}%" class="bg-blue-400 flex items-center justify-center">${pMid}%</div><div style="width: ${pBad}%" class="bg-red-400 flex items-center justify-center">${pBad}%</div></div></div>`;
       });
     },
     init: () => {
-      const sel = document.getElementById('stats-year-filter'), startYear = new Date(CONFIG.SYSTEM_START_DATE).getFullYear(), currYear = new Date().getFullYear();
-      for (let y = currYear; y >= startYear; y--) sel.innerHTML += `<option value="${y}">${y}年</option>`; sel.innerHTML += `<option value="ALL">全部</option>`;
-      STATE.statsYear = currYear.toString(); sel.value = STATE.statsYear;
-      sel.addEventListener('change', (e) => { STATE.statsYear = e.target.value; StatsEngine.calculate(); });
-      document.getElementById('btn-stats').addEventListener('click', () => { StatsEngine.switchTab(0); StatsEngine.calculate(); StatsEngine.modal.classList.remove('hidden'); StatsEngine.modal.classList.add('flex', 'modal-enter'); });
-      document.getElementById('close-stats').addEventListener('click', () => { StatsEngine.modal.classList.add('hidden'); StatsEngine.modal.classList.remove('flex', 'modal-enter'); });
+      const sel = document.getElementById('stats-year-filter'), startYear = new Date(CONFIG.SYSTEM_START_DATE).getFullYear(), currYear = new Date().getFullYear(); for (let y = currYear; y >= startYear; y--) sel.innerHTML += `<option value="${y}">${y}年</option>`; sel.innerHTML += `<option value="ALL">全部</option>`; STATE.statsYear = currYear.toString(); sel.value = STATE.statsYear;
+      sel.addEventListener('change', (e) => { STATE.statsYear = e.target.value; StatsEngine.calculate(); }); document.getElementById('btn-stats').addEventListener('click', () => { StatsEngine.switchTab(0); StatsEngine.calculate(); StatsEngine.modal.classList.remove('hidden'); StatsEngine.modal.classList.add('flex', 'modal-enter'); }); document.getElementById('close-stats').addEventListener('click', () => { StatsEngine.modal.classList.add('hidden'); StatsEngine.modal.classList.remove('flex', 'modal-enter'); });
       const btnCopy = document.getElementById('btn-copy-prompt');
       btnCopy.addEventListener('click', () => {
-        if(!StatsEngine.latestPromptData) return; const d = StatsEngine.latestPromptData;
-        let stat1 = `動態基準均位: ${d.globalAvg}\n` + CONFIG.STAFF_LIST.map(s => `${s}: 均位 ${d.staffStats[s].count > 0 ? d.staffStats[s].avg.toFixed(2) : '0'} (休假 ${d.staffStats[s].leaveCount}日)`).join('\n');
-        let stat2 = CONFIG.STAFF_LIST.map(s => `${s}: ${d.staffStats[s].count > 0 ? (d.staffStats[s].pnl > 0 ? '+' : '') + d.staffStats[s].pnl.toFixed(2) : '0'}`).join('\n');
-        let stat3 = CONFIG.STAFF_LIST.map(s => { const h = d.staffStats[s].hits, t = h.good + h.mid + h.bad; return `${s}: 靚 ${t>0?Math.round((h.good/t)*100):0}% | 平 ${t>0?Math.round((h.mid/t)*100):0}% | 差 ${t>0?Math.round((h.bad/t)*100):0}%`; }).join('\n');
-        const finalPrompt = CONFIG.DEFAULT_PROMPT.replace('{{DATE_RANGE}}', d.dateRange).replace('{{STATISTICS}}', stat1).replace('{{STATS_PNL}}', stat2).replace('{{STATS_HITRATE}}', stat3).replace('{{SCHEDULE_DATA}}', JSON.stringify(d.json, null, 2));
-        navigator.clipboard.writeText(finalPrompt).then(() => {
-          const origHTML = btnCopy.innerHTML; btnCopy.innerHTML = '✅ 已成功複製'; btnCopy.className = btnCopy.className.replace('from-blue-600 to-indigo-600', 'from-green-500 to-emerald-600');
-          setTimeout(() => { btnCopy.innerHTML = origHTML; btnCopy.className = btnCopy.className.replace('from-green-500 to-emerald-600', 'from-blue-600 to-indigo-600'); }, 2000);
-        });
+        if(!StatsEngine.latestPromptData) return; const d = StatsEngine.latestPromptData; let stat1 = `動態基準均位: ${d.globalAvg}\n` + CONFIG.STAFF_LIST.map(s => `${s}: 均位 ${d.staffStats[s].count > 0 ? d.staffStats[s].avg.toFixed(2) : '0'} (休假 ${d.staffStats[s].leaveCount}日)`).join('\n'); let stat2 = CONFIG.STAFF_LIST.map(s => `${s}: ${d.staffStats[s].count > 0 ? (d.staffStats[s].pnl > 0 ? '+' : '') + d.staffStats[s].pnl.toFixed(2) : '0'}`).join('\n'); let stat3 = CONFIG.STAFF_LIST.map(s => { const h = d.staffStats[s].hits, t = h.good + h.mid + h.bad; return `${s}: 靚 ${t>0?Math.round((h.good/t)*100):0}% | 平 ${t>0?Math.round((h.mid/t)*100):0}% | 差 ${t>0?Math.round((h.bad/t)*100):0}%`; }).join('\n'); const finalPrompt = CONFIG.DEFAULT_PROMPT.replace('{{DATE_RANGE}}', d.dateRange).replace('{{STATISTICS}}', stat1).replace('{{STATS_PNL}}', stat2).replace('{{STATS_HITRATE}}', stat3).replace('{{SCHEDULE_DATA}}', JSON.stringify(d.json, null, 2));
+        navigator.clipboard.writeText(finalPrompt).then(() => { const origHTML = btnCopy.innerHTML; btnCopy.innerHTML = '✅ 已成功複製'; btnCopy.className = btnCopy.className.replace('from-blue-600 to-indigo-600', 'from-green-500 to-emerald-600'); setTimeout(() => { btnCopy.innerHTML = origHTML; btnCopy.className = btnCopy.className.replace('from-green-500 to-emerald-600', 'from-blue-600 to-indigo-600'); }, 2000); });
       });
     }
   };
 
   const LoginManager = {
     modal: document.getElementById('modal-login'), input: document.getElementById('input-pwd'), btn: document.getElementById('btn-login'), error: document.getElementById('login-error'),
-    
     checkAutoLogin: async () => {
       const savedPwd = localStorage.getItem('vault_password');
-      if (savedPwd) { try { await LoginManager.performUnlock(savedPwd); } catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); } } 
-      else { LoginManager.show(); }
+      if (savedPwd) { try { await LoginManager.performUnlock(savedPwd); } catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); } } else { LoginManager.show(); }
     },
-    show: () => {
-      LoginManager.modal.classList.remove('hidden'); LoginManager.modal.classList.add('flex', 'modal-enter');
-      document.getElementById('conn-status').innerText = '🔒 尚未解鎖'; document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold';
-    },
+    show: () => { LoginManager.modal.classList.remove('hidden'); LoginManager.modal.classList.add('flex', 'modal-enter'); document.getElementById('conn-status').innerText = '🔒 尚未解鎖'; document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold'; },
     performUnlock: async (pwd) => {
       if (!STATE.serverPayload) throw new Error("資料庫尚未連接");
       
-      // V10: 若資料庫是全新的空陣列，代表還沒做 migrate，這裡直接初始化
+      const authPwd = pwd + "roster";
+      
+      try { await signInWithEmailAndPassword(STATE.auth, "roster@internal.local", authPwd); } 
+      catch (err) { throw new Error("密碼錯誤，或尚未在後台建立帳號"); }
+
+      // 登入成功後，開始 E2EE 解密邏輯
       if (!STATE.serverPayload.global_salt) {
         if(confirm("偵測到遠端資料庫為空或尚未初始化 V10，是否以此密碼作為新系統起點？")) {
            const saltBuf = crypto.getRandomValues(new Uint8Array(16));
-           STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf);
-           STATE.globalSaltBase64 = CryptoHelper.buf2b64(saltBuf);
-           await set(ref(STATE.db, CONFIG.dbPath), { global_salt: STATE.globalSaltBase64, days: {} });
-           STATE.daysMap = {};
+           STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf); STATE.globalSaltBase64 = CryptoHelper.buf2b64(saltBuf);
+           await set(ref(STATE.db, CONFIG.dbPath), { global_salt: STATE.globalSaltBase64, days: {} }); STATE.daysMap = {};
         } else throw new Error("使用者取消初始化");
       } else {
         const saltBuf = CryptoHelper.b642buf(STATE.serverPayload.global_salt);
-        STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf);
-        STATE.globalSaltBase64 = STATE.serverPayload.global_salt;
-        
-        // 解析並解密所有伺服器上的日子 (本地會保存離線殘留)
-        const serverDays = STATE.serverPayload.days || {};
-        const decryptedDays = {};
-        for (const [dStr, encObj] of Object.entries(serverDays)) {
-           decryptedDays[dStr] = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey);
-        }
-        STATE.daysMap = { ...STATE.daysMap, ...decryptedDays }; // 本地資料 + 雲端資料 (雲端覆蓋舊本地，保留本地獨有)
+        STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf); STATE.globalSaltBase64 = STATE.serverPayload.global_salt;
+        const serverDays = STATE.serverPayload.days || {}; const decryptedDays = {};
+        for (const [dStr, encObj] of Object.entries(serverDays)) { decryptedDays[dStr] = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey); }
+        STATE.daysMap = { ...STATE.daysMap, ...decryptedDays };
       }
 
-      STATE.isUnlocked = true;
-      localStorage.setItem('vault_password', pwd);
+      STATE.isUnlocked = true; localStorage.setItem('vault_password', pwd);
       LoginManager.modal.classList.add('hidden'); LoginManager.modal.classList.remove('flex', 'modal-enter');
       document.getElementById('conn-status').innerText = '🟢 已連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
-      
-      Utils.saveCache(STATE.daysMap);
-      const safeCenterSunday = Math.max(new Date(MIN_SUNDAY), new Date(Utils.getSunday(STATE.todayStr)));
-      ScrollEngine.jumpToAndRebuild(Utils.formatDate(new Date(safeCenterSunday)));
+      Utils.saveCache(STATE.daysMap); const safeCenterSunday = Math.max(new Date(MIN_SUNDAY), new Date(Utils.getSunday(STATE.todayStr))); ScrollEngine.jumpToAndRebuild(Utils.formatDate(new Date(safeCenterSunday)));
     }
   };
 
@@ -637,29 +435,19 @@
     init: () => {
       document.getElementById('btn-settings').addEventListener('click', () => { SettingsManager.modal.classList.remove('hidden'); SettingsManager.modal.classList.add('flex', 'modal-enter'); });
       document.getElementById('close-settings').addEventListener('click', () => { SettingsManager.modal.classList.add('hidden'); SettingsManager.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('btn-logout').addEventListener('click', () => { localStorage.removeItem('vault_password'); window.location.reload(); });
+      document.getElementById('btn-logout').addEventListener('click', () => { localStorage.removeItem('vault_password'); STATE.auth.signOut(); window.location.reload(); });
     }
   };
 
   const initApp = () => {
-    CONFIG.STAFF_LIST.forEach(staff => {
-      const btn = document.createElement('button'); btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center';
-      btn.textContent = staff; document.getElementById('staff-keys').appendChild(btn);
-    });
-
+    CONFIG.STAFF_LIST.forEach(staff => { const btn = document.createElement('button'); btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center'; btn.textContent = staff; document.getElementById('staff-keys').appendChild(btn); });
     SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); SyncManager.initFirebase(); ScrollEngine.init();
 
-    // 【終極保底神技一】：網頁即將隱藏/關閉前，無條件推上雲端
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') SyncManager.flush();
-    });
-
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') SyncManager.flush(); });
     LoginManager.input.addEventListener('keyup', (e) => { if (e.key === 'Enter') LoginManager.btn.click(); });
     LoginManager.btn.addEventListener('click', async () => {
       const pwd = LoginManager.input.value; if (!pwd) return;
-      if (STATE.serverPayload === null) {
-        LoginManager.error.innerText = "資料庫連線中，請稍候..."; LoginManager.error.classList.remove('opacity-0'); setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); return;
-      }
+      if (STATE.serverPayload === null) { LoginManager.error.innerText = "資料庫連線中，請稍候..."; LoginManager.error.classList.remove('opacity-0'); setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); return; }
       LoginManager.btn.innerText = '解密中...'; LoginManager.btn.classList.add('opacity-75');
       try { await LoginManager.performUnlock(pwd); } 
       catch (err) { LoginManager.error.innerText = err.message || "密碼錯誤"; LoginManager.error.classList.remove('opacity-0'); LoginManager.input.value = ''; setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); } 
@@ -667,19 +455,13 @@
     });
 
     document.getElementById('staff-keys').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') Engine.addShift(e.target.textContent); });
-    document.getElementById('btn-backspace').addEventListener('click', Engine.backspace);
-    document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
+    document.getElementById('btn-backspace').addEventListener('click', Engine.backspace); document.getElementById('btn-alloff').addEventListener('click', Engine.setAllOff);
     document.getElementById('lock-overlay').addEventListener('click', () => { if (STATE.inputMode === 'LOCKED') { STATE.inputMode = STATE.activeDate ? 'ACTIVE' : 'WAITING'; UI.refreshAllVisible(); } });
-    
     document.getElementById('btn-manual-lock').addEventListener('click', () => { STATE.inputMode = 'LOCKED'; UI.refreshAllVisible(); });
-    document.getElementById('btn-clear-active').addEventListener('click', () => {
-      if (STATE.activeDate) { STATE.daysMap[STATE.activeDate] = { isFullDayHoliday: false, shifts: [] }; STATE.unlockedSaturdays.delete(STATE.activeDate); SyncManager.markDirty(STATE.activeDate); SyncManager.flush(); Engine.evaluateLockState(); }
-    });
-    
+    document.getElementById('btn-clear-active').addEventListener('click', () => { if (STATE.activeDate) { STATE.daysMap[STATE.activeDate] = { isFullDayHoliday: false, shifts: [] }; STATE.unlockedSaturdays.delete(STATE.activeDate); SyncManager.markDirty(STATE.activeDate); SyncManager.flush(); Engine.evaluateLockState(); } });
     document.getElementById('prev-week').addEventListener('click', () => { if (STATE.focusedWeekStart <= MIN_SUNDAY) return; const target = Utils.addDays(STATE.focusedWeekStart, -7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'}); });
     document.getElementById('next-week').addEventListener('click', () => { const target = Utils.addDays(STATE.focusedWeekStart, 7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'}); });
   };
-
   initApp();
 </script>
 </body>
