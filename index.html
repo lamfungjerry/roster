@@ -390,8 +390,7 @@
     },
     show: () => { LoginManager.modal.classList.remove('hidden'); LoginManager.modal.classList.add('flex', 'modal-enter'); document.getElementById('conn-status').innerText = '🔒 尚未登入'; document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold'; },
     performLogin: async (pwd) => {
-      // 一密登入：背後自動拼湊 _Auth 後綴通過 Firebase 6 字元限制
-      const authPwd = pwd + "_Auth";
+      const authPwd = pwd + "roster";
       await signInWithEmailAndPassword(STATE.auth, "roster@internal.local", authPwd);
 
       STATE.isUnlocked = true;
