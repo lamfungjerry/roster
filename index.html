@@ -588,6 +588,7 @@
     
     checkAutoLogin: async () => {
       const savedPwd = localStorage.getItem('vault_password');
+      alert(savedPwd);
       if (savedPwd) { try { await LoginManager.performUnlock(savedPwd); } catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); } } 
       else { LoginManager.show(); }
     },
