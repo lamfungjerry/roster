@@ -79,7 +79,7 @@
       try {
         ui.btn.disabled = true;
         log("🔑 正在進行 Firebase Auth 身分認證 (使用 _Auth 自動後綴)...");
-        await signInWithEmailAndPassword(auth, "roster@internal.local", pwd + "_Auth");
+        await signInWithEmailAndPassword(auth, "roster@internal.local", pwd + "roster");
         log("✅ Auth 登入成功！");
 
         log("⏳ 正在獲取雲端資料庫...");
