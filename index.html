@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ffffff">
-  <title>排更助手 v10</title>
+  <title>排更助手</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="config.js"></script>
@@ -33,8 +33,8 @@
 <div id="app">
   <header class="bg-white shadow-sm z-20 shrink-0 pt-[var(--safe-top)]">
     <div class="h-11 flex justify-between items-center px-3 border-b border-gray-100">
-      <div class="flex-1 flex justify-start"><span id="conn-status" class="bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold tracking-wider">🔒 尚未解鎖</span></div>
-      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap" onclick="window.safeBack()">編更表</h1>
+      <div class="flex-1 flex justify-start"><span id="conn-status" class="bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold tracking-wider">🔒 尚未登入</span></div>
+      <h1 class="font-extrabold text-[19px] text-gray-900 tracking-widest text-center flex-1 whitespace-nowrap cursor-pointer select-none active:opacity-60 transition-opacity" onclick="window.safeBack()">編更表</h1>
       <div class="flex-1 flex justify-end gap-3">
         <button id="btn-stats" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">📊</button>
         <button id="btn-settings" class="text-[26px] active:scale-75 transition-transform opacity-80 leading-none">⚙️</button>
@@ -72,7 +72,7 @@
     <h2 class="text-xl font-extrabold text-gray-800 mb-1 text-center">解鎖排更系統</h2>
     <p class="text-[11px] font-bold text-gray-400 text-center mb-6 tracking-widest">請輸入密碼</p>
     <input type="password" inputmode="decimal" pattern="[0-9\.]*" id="input-pwd" class="w-full border border-gray-300 rounded-xl px-4 py-3.5 mb-2 focus:ring-2 focus:ring-blue-500 outline-none text-center font-mono text-xl tracking-widest" placeholder="輸入密碼">
-    <p id="login-error" class="text-red-500 text-[12px] font-bold text-center mb-4 h-4 opacity-0 transition-opacity">密碼錯誤，無法解密</p>
+    <p id="login-error" class="text-red-500 text-[12px] font-bold text-center mb-4 h-4 opacity-0 transition-opacity">密碼錯誤</p>
     <button id="btn-login" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">解鎖</button>
   </div>
 </div>
@@ -84,7 +84,7 @@
       <button id="close-settings" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-5">
-      <button id="btn-logout" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3.5 rounded-xl shadow-sm active:bg-red-100 transition-colors flex items-center justify-center gap-2 text-[15px]"><span>🚪</span> 清除本機密碼</button>
+      <button id="btn-logout" class="w-full bg-red-50 text-red-600 border border-red-200 font-bold py-3.5 rounded-xl shadow-sm active:bg-red-100 transition-colors flex items-center justify-center gap-2 text-[15px]"><span>🚪</span> 登出並清除本機密碼</button>
     </div>
   </div>
 </div>
@@ -130,17 +130,17 @@
     throw new Error("Missing config.js");
   }
 
-  // 引入 Firebase SDK (加入 Auth 模組)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
-  import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
 
+  // 防跳出外部網站的安全返回機制
   window.safeBack = function() {
     if (document.referrer && document.referrer.startsWith(window.location.origin)) { history.back(); }
   };
 
   const CONFIG = window.APP_CONFIG;
-  const CACHE_KEY = 'roster_cache_v10_e2ee';
+  const CACHE_KEY = 'roster_cache_plain';
 
   const Utils = {
     formatDate: (d) => { const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; },
@@ -155,70 +155,56 @@
     todayStr: Utils.formatDate(new Date()), daysMap: Utils.loadCache(), renderedWeeks: new Set(), focusedWeekStart: null,
     inputMode: 'LOCKED', activeDate: null, unlockedSaturdays: new Set(),
     db: null, auth: null, calRenderMonth: new Date(), statsYear: 'ALL',
-    isUnlocked: false, cryptoKey: null, globalSaltBase64: null, serverPayload: null
+    isUnlocked: false
   };
   const MIN_SUNDAY = Utils.getSunday(CONFIG.SYSTEM_START_DATE);
 
-  const CryptoHelper = {
-    buf2b64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
-    b642buf: (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer,
-    deriveKey: async (password, saltUint8Array) => {
-      const enc = new TextEncoder();
-      const keyMat = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits", "deriveKey"]);
-      return await crypto.subtle.deriveKey({ name: "PBKDF2", salt: saltUint8Array, iterations: 100000, hash: "SHA-256" }, keyMat, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-    },
-    decryptDay: async (encObj, cryptoKey) => {
-      const iv = CryptoHelper.b642buf(encObj.iv), cipher = CryptoHelper.b642buf(encObj.ciphertext);
-      const decBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, cryptoKey, cipher);
-      return JSON.parse(new TextDecoder().decode(decBuffer));
-    },
-    encryptDay: async (plainObj, cryptoKey) => {
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encoded = new TextEncoder().encode(JSON.stringify(plainObj));
-      const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, cryptoKey, encoded);
-      return { iv: CryptoHelper.buf2b64(iv), ciphertext: CryptoHelper.buf2b64(cipher) };
-    }
-  };
-
+  // 明文同步管理器（保留防抖與離場秒存保底）
   const SyncManager = {
     dirtyDays: new Set(), syncTimer: null,
     markDirty: (dateStr) => {
-      SyncManager.dirtyDays.add(dateStr); Utils.saveCache(STATE.daysMap);
+      SyncManager.dirtyDays.add(dateStr);
+      Utils.saveCache(STATE.daysMap); // 保底二：本地即時秒存
       if (SyncManager.syncTimer) clearTimeout(SyncManager.syncTimer);
-      SyncManager.syncTimer = setTimeout(SyncManager.flush, 1000);
+      SyncManager.syncTimer = setTimeout(SyncManager.flush, 1000); // 條件 3：停頓 1 秒防抖推上雲端
     },
     flush: async () => {
       if (SyncManager.syncTimer) { clearTimeout(SyncManager.syncTimer); SyncManager.syncTimer = null; }
-      if (SyncManager.dirtyDays.size === 0 || !STATE.isUnlocked || !STATE.cryptoKey || !STATE.db) return;
+      if (SyncManager.dirtyDays.size === 0 || !STATE.isUnlocked || !STATE.db) return;
       const updates = {}; const daysToSync = Array.from(SyncManager.dirtyDays); SyncManager.dirtyDays.clear();
       try {
         for (const dStr of daysToSync) {
           const plainObj = STATE.daysMap[dStr] || { shifts: [] };
-          const encObj = await CryptoHelper.encryptDay(plainObj, STATE.cryptoKey);
-          updates[`days/${dStr}`] = encObj;
+          updates[`days/${dStr}`] = plainObj; // 純明文按日寫入
         }
         await update(ref(STATE.db, CONFIG.dbPath), updates);
-      } catch(e) { console.error("V10 上傳失敗", e); daysToSync.forEach(d => SyncManager.dirtyDays.add(d)); }
+      } catch(e) {
+        console.error("明文上傳失敗", e);
+        daysToSync.forEach(d => SyncManager.dirtyDays.add(d));
+      }
     },
     initFirebase: () => {
       const app = initializeApp(CONFIG.firebaseBase);
       STATE.db = getDatabase(app, CONFIG.firebaseBase.databaseURL);
-      STATE.auth = getAuth(app); // 初始化 Auth
-      
-      onValue(ref(STATE.db, CONFIG.dbPath), async (snapshot) => {
-        const payload = snapshot.val(); if (!payload) return; 
-        STATE.serverPayload = payload;
-        if (!STATE.isUnlocked) { await LoginManager.checkAutoLogin(); } 
-        else {
-          try {
-             const serverDays = payload.days || {}; let hasChanges = false;
-             for (const [dStr, encObj] of Object.entries(serverDays)) {
-               if (SyncManager.dirtyDays.has(dStr)) continue;
-               const plainObj = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey);
-               if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(plainObj)) { STATE.daysMap[dStr] = plainObj; hasChanges = true; }
-             }
-             if(hasChanges) { Utils.saveCache(STATE.daysMap); Engine.evaluateLockState(); UI.refreshAllVisible(); }
-          } catch (e) { console.error("遠端數據同步失敗", e); }
+      STATE.auth = getAuth(app);
+
+      onValue(ref(STATE.db, CONFIG.dbPath), (snapshot) => {
+        const payload = snapshot.val();
+        if (!payload || !payload.days) return;
+
+        // 背景合併遠端明文（不覆蓋本地正在編輯的 dirty 日子）
+        let hasChanges = false;
+        for (const [dStr, dayObj] of Object.entries(payload.days)) {
+          if (SyncManager.dirtyDays.has(dStr)) continue;
+          if (JSON.stringify(STATE.daysMap[dStr]) !== JSON.stringify(dayObj)) {
+            STATE.daysMap[dStr] = dayObj;
+            hasChanges = true;
+          }
+        }
+        if (hasChanges) {
+          Utils.saveCache(STATE.daysMap);
+          Engine.evaluateLockState();
+          UI.refreshAllVisible();
         }
       });
     }
@@ -397,37 +383,26 @@
     modal: document.getElementById('modal-login'), input: document.getElementById('input-pwd'), btn: document.getElementById('btn-login'), error: document.getElementById('login-error'),
     checkAutoLogin: async () => {
       const savedPwd = localStorage.getItem('vault_password');
-      if (savedPwd) { try { await LoginManager.performUnlock(savedPwd); } catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); } } else { LoginManager.show(); }
+      if (savedPwd) {
+        try { await LoginManager.performLogin(savedPwd); } 
+        catch (e) { localStorage.removeItem('vault_password'); LoginManager.show(); }
+      } else { LoginManager.show(); }
     },
-    show: () => { LoginManager.modal.classList.remove('hidden'); LoginManager.modal.classList.add('flex', 'modal-enter'); document.getElementById('conn-status').innerText = '🔒 尚未解鎖'; document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold'; },
-    performUnlock: async (pwd) => {
-      if (!STATE.serverPayload) throw new Error("資料庫尚未連接");
-      
-      const authPwd = pwd + "roster";
-      
-      // 【一密雙用】：先使用 Firebase Auth 背景隱形登入
-      try { await signInWithEmailAndPassword(STATE.auth, "roster@internal.local", authPwd); } 
-      catch (err) { throw new Error("密碼錯誤，或尚未在後台建立帳號"); }
+    show: () => { LoginManager.modal.classList.remove('hidden'); LoginManager.modal.classList.add('flex', 'modal-enter'); document.getElementById('conn-status').innerText = '🔒 尚未登入'; document.getElementById('conn-status').className = 'bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded border border-yellow-200 text-[10px] font-bold'; },
+    performLogin: async (pwd) => {
+      // 一密登入：背後自動拼湊 _Auth 後綴通過 Firebase 6 字元限制
+      const authPwd = pwd + "_Auth";
+      await signInWithEmailAndPassword(STATE.auth, "roster@internal.local", authPwd);
 
-      // 登入成功後，開始 E2EE 解密邏輯
-      if (!STATE.serverPayload.global_salt) {
-        if(confirm("偵測到遠端資料庫為空或尚未初始化 V10，是否以此密碼作為新系統起點？")) {
-           const saltBuf = crypto.getRandomValues(new Uint8Array(16));
-           STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf); STATE.globalSaltBase64 = CryptoHelper.buf2b64(saltBuf);
-           await set(ref(STATE.db, CONFIG.dbPath), { global_salt: STATE.globalSaltBase64, days: {} }); STATE.daysMap = {};
-        } else throw new Error("使用者取消初始化");
-      } else {
-        const saltBuf = CryptoHelper.b642buf(STATE.serverPayload.global_salt);
-        STATE.cryptoKey = await CryptoHelper.deriveKey(pwd, saltBuf); STATE.globalSaltBase64 = STATE.serverPayload.global_salt;
-        const serverDays = STATE.serverPayload.days || {}; const decryptedDays = {};
-        for (const [dStr, encObj] of Object.entries(serverDays)) { decryptedDays[dStr] = await CryptoHelper.decryptDay(encObj, STATE.cryptoKey); }
-        STATE.daysMap = { ...STATE.daysMap, ...decryptedDays };
-      }
+      STATE.isUnlocked = true;
+      localStorage.setItem('vault_password', pwd);
+      LoginManager.modal.classList.add('hidden');
+      LoginManager.modal.classList.remove('flex', 'modal-enter');
+      document.getElementById('conn-status').innerText = '🟢 已連線';
+      document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
 
-      STATE.isUnlocked = true; localStorage.setItem('vault_password', pwd);
-      LoginManager.modal.classList.add('hidden'); LoginManager.modal.classList.remove('flex', 'modal-enter');
-      document.getElementById('conn-status').innerText = '🟢 已連線'; document.getElementById('conn-status').className = 'bg-green-50 text-green-600 px-1.5 py-0.5 rounded border border-green-200 text-[10px] font-bold';
-      Utils.saveCache(STATE.daysMap); const safeCenterSunday = Math.max(new Date(MIN_SUNDAY), new Date(Utils.getSunday(STATE.todayStr))); ScrollEngine.jumpToAndRebuild(Utils.formatDate(new Date(safeCenterSunday)));
+      const safeCenterSunday = Math.max(new Date(MIN_SUNDAY), new Date(Utils.getSunday(STATE.todayStr)));
+      ScrollEngine.jumpToAndRebuild(Utils.formatDate(new Date(safeCenterSunday)));
     }
   };
 
@@ -436,7 +411,11 @@
     init: () => {
       document.getElementById('btn-settings').addEventListener('click', () => { SettingsManager.modal.classList.remove('hidden'); SettingsManager.modal.classList.add('flex', 'modal-enter'); });
       document.getElementById('close-settings').addEventListener('click', () => { SettingsManager.modal.classList.add('hidden'); SettingsManager.modal.classList.remove('flex', 'modal-enter'); });
-      document.getElementById('btn-logout').addEventListener('click', () => { localStorage.removeItem('vault_password'); STATE.auth.signOut(); window.location.reload(); });
+      document.getElementById('btn-logout').addEventListener('click', async () => {
+        localStorage.removeItem('vault_password');
+        await signOut(STATE.auth);
+        window.location.reload();
+      });
     }
   };
 
@@ -444,15 +423,24 @@
     CONFIG.STAFF_LIST.forEach(staff => { const btn = document.createElement('button'); btn.className = 'w-full h-full bg-blue-50 border border-blue-200 text-blue-700 text-2xl font-extrabold rounded-xl shadow-sm active:bg-blue-200 transition-colors flex items-center justify-center'; btn.textContent = staff; document.getElementById('staff-keys').appendChild(btn); });
     SettingsManager.init(); StatsEngine.init(); CalendarManager.init(); SyncManager.initFirebase(); ScrollEngine.init();
 
+    // 保底神技一：離場/縮小/關閉時無條件即時推上雲端
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') SyncManager.flush(); });
+
     LoginManager.input.addEventListener('keyup', (e) => { if (e.key === 'Enter') LoginManager.btn.click(); });
     LoginManager.btn.addEventListener('click', async () => {
       const pwd = LoginManager.input.value; if (!pwd) return;
-      if (STATE.serverPayload === null) { LoginManager.error.innerText = "資料庫連線中，請稍候..."; LoginManager.error.classList.remove('opacity-0'); setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); return; }
-      LoginManager.btn.innerText = '解密中...'; LoginManager.btn.classList.add('opacity-75');
-      try { await LoginManager.performUnlock(pwd); } 
-      catch (err) { LoginManager.error.innerText = err.message || "密碼錯誤"; LoginManager.error.classList.remove('opacity-0'); LoginManager.input.value = ''; setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000); } 
-      finally { LoginManager.btn.innerText = '解鎖'; LoginManager.btn.classList.remove('opacity-75'); }
+      LoginManager.btn.innerText = '登入中...'; LoginManager.btn.classList.add('opacity-75');
+      try {
+        await LoginManager.performLogin(pwd);
+      } catch (err) {
+        LoginManager.error.innerText = "密碼錯誤";
+        LoginManager.error.classList.remove('opacity-0');
+        LoginManager.input.value = '';
+        setTimeout(() => LoginManager.error.classList.add('opacity-0'), 3000);
+      } finally {
+        LoginManager.btn.innerText = '解鎖';
+        LoginManager.btn.classList.remove('opacity-75');
+      }
     });
 
     document.getElementById('staff-keys').addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') Engine.addShift(e.target.textContent); });
@@ -462,7 +450,11 @@
     document.getElementById('btn-clear-active').addEventListener('click', () => { if (STATE.activeDate) { STATE.daysMap[STATE.activeDate] = { isFullDayHoliday: false, shifts: [] }; STATE.unlockedSaturdays.delete(STATE.activeDate); SyncManager.markDirty(STATE.activeDate); SyncManager.flush(); Engine.evaluateLockState(); } });
     document.getElementById('prev-week').addEventListener('click', () => { if (STATE.focusedWeekStart <= MIN_SUNDAY) return; const target = Utils.addDays(STATE.focusedWeekStart, -7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'}); });
     document.getElementById('next-week').addEventListener('click', () => { const target = Utils.addDays(STATE.focusedWeekStart, 7); const node = UI.container.querySelector(`[data-week-start="${target}"]`); if (node) node.scrollIntoView({behavior: 'smooth'}); });
+
+    // 啟動時自動檢查登入狀態
+    LoginManager.checkAutoLogin();
   };
+
   initApp();
 </script>
 </body>
