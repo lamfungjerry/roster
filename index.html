@@ -403,8 +403,10 @@
     performUnlock: async (pwd) => {
       if (!STATE.serverPayload) throw new Error("資料庫尚未連接");
       
+      const authPwd = pwd + "roster";
+      
       // 【一密雙用】：先使用 Firebase Auth 背景隱形登入
-      try { await signInWithEmailAndPassword(STATE.auth, "roster@internal.local", pwd); } 
+      try { await signInWithEmailAndPassword(STATE.auth, "roster@internal.local", authPwd); } 
       catch (err) { throw new Error("密碼錯誤，或尚未在後台建立帳號"); }
 
       // 登入成功後，開始 E2EE 解密邏輯
